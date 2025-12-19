@@ -286,8 +286,13 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                   <div className="p-1">
                       <div className="text-xs font-bold text-muted-foreground mb-1 px-2">Especialidades</div>
                       <SelectItem value="Ciencia">Ciencia...</SelectItem>
+                      <SelectItem value="Combatir">Combatir...</SelectItem>
+                      <SelectItem value="Armas de fuego">Armas de fuego...</SelectItem>
                       <SelectItem value="Arte/Artesanía">Arte/Artesanía...</SelectItem>
-                      <SelectItem value="Otras lenguas">Idioma...</SelectItem>
+                      <SelectItem value="Otras lenguas">Otras lenguas...</SelectItem>
+                      <SelectItem value="Lengua propia">Lengua propia...</SelectItem>
+                      <SelectItem value="Pilotar">Pilotar...</SelectItem>
+                      <SelectItem value="Supervivencia">Supervivencia...</SelectItem>
                       <div className="border-t dark:border-slate-800 my-1"></div>
                       <div className="text-xs font-bold text-muted-foreground mb-1 px-2">Comunes</div>
                       {COMMON_SKILLS.filter(n => !character.skills.some(s => s.name === n && s.isOccupational)).map(sk => (

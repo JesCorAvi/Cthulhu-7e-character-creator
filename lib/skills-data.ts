@@ -12,7 +12,7 @@ const skills1920sAndModern: SkillDefinition[] = [
   { name: "Antropología", baseValue: 1 },
   {
     name: "Armas de fuego",
-    baseValue: 0,
+    baseValue: 0, // Campo base vacío
     isFieldHeader: true,
     fieldSlots: 1,
     subSkills: [
@@ -29,7 +29,7 @@ const skills1920sAndModern: SkillDefinition[] = [
   { name: "Ciencias ocultas", baseValue: 5 },
   {
     name: "Combatir",
-    baseValue: 0,
+    baseValue: 0, // Campo base vacío
     isFieldHeader: true,
     fieldSlots: 2,
     subSkills: [{ name: "Pelea", baseValue: 25 }],

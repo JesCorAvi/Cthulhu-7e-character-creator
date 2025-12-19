@@ -39,7 +39,7 @@ const CHAR_LABELS: Record<string, string> = {
   MOV: "MOV",
 }
 
-// 2. TRACKER ESTILO GRID (DISEÑO SOLICITADO + LÓGICA DE LÍMITE)
+// 2. TRACKER ESTILO GRID CON LÓGICA DE LÍMITE
 function SheetTracker({
   max = 0,
   current,
@@ -53,7 +53,7 @@ function SheetTracker({
 }) {
   // Si no hay límite definido (o es 0), mostramos el aviso
   if (!max || max <= 0) {
-      return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">Introduce un valor inicial para ver el marcador</div>;
+      return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded dark:border-stone-800">Introduce un valor inicial para ver el marcador</div>;
   }
 
   // Calculamos cuántas filas de 10 necesitamos
@@ -281,7 +281,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                  value={skill.customName} 
                  onChange={(e) => updateSkill(actualIndex, { customName: e.target.value })}
                  className="h-5 p-1 text-[11px] border-none bg-transparent w-full focus-visible:ring-0 font-serif placeholder:text-stone-400 italic"
-                 placeholder={isSlot ? `.................................` : "Nombre..."}
+                 placeholder={isSlot ? `Especialidad` : "Nombre..."}
                />
             ) : (
                <span className={cn("text-[11px] truncate", skill.isOccupational && "font-bold text-stone-900 dark:text-stone-100")}>

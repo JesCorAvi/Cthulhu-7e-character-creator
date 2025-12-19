@@ -1,5 +1,4 @@
-// lib/occupation-utils.ts
-import { Character, CharacteristicValue } from "./character-types";
+import { Character } from "./character-types";
 import { OccupationFormula } from "./occupations-data";
 
 export function calculateOccupationalPoints(
@@ -7,11 +6,12 @@ export function calculateOccupationalPoints(
   formula: OccupationFormula,
   selectedStat?: "STR" | "DEX" | "APP" | "POW" // Para fórmulas con elección
 ): number {
-  const edu = character.characteristics.EDU.value;
-  const str = character.characteristics.STR.value;
-  const dex = character.characteristics.DEX.value;
-  const app = character.characteristics.APP.value;
-  const pow = character.characteristics.POW.value;
+  // Aseguramos que existan las características antes de acceder (fallback a 0)
+  const edu = character.characteristics?.EDU?.value || 0;
+  const str = character.characteristics?.STR?.value || 0;
+  const dex = character.characteristics?.DEX?.value || 0;
+  const app = character.characteristics?.APP?.value || 0;
+  const pow = character.characteristics?.POW?.value || 0;
 
   switch (formula) {
     case "EDU*4":
@@ -41,7 +41,7 @@ export function calculateOccupationalPoints(
 }
 
 export function calculatePersonalInterestPoints(character: Character): number {
-  return character.characteristics.INT.value * 2;
+  return (character.characteristics?.INT?.value || 0) * 2;
 }
 
 // Calcula cuántos puntos se han gastado ya en las habilidades
@@ -49,24 +49,12 @@ export function calculateSpentPoints(character: Character) {
   let occupationalSpent = 0;
   let personalSpent = 0;
 
-  // IMPORTANTE: Necesitarás añadir un campo a tus Skills en character-types.ts
-  // para saber cuántos puntos son "de ocupación" y cuántos "personales".
-  // Por ahora, asumiremos que la UI maneja esto o que sumamos el total añadido sobre la base.
-  
-  // Como tu tipo Skill actual solo tiene 'value' y 'baseValue',
-  // necesitaremos una forma de rastrear de dónde vienen los puntos.
-  // SUGERENCIA: Añade 'occupationalPoints' y 'personalPoints' a la interfaz Skill.
-  
-  character.skills.forEach(skill => {
-    // Esta lógica es provisional si no modificas el tipo Skill.
-    // Lo ideal es modificar Skill para guardar { occupationalPoints: number, personalPoints: number }
-    const addedPoints = skill.value - skill.baseValue;
-    if (addedPoints > 0) {
-      // Sin la distinción en el tipo, es difícil saber cuál es cuál.
-      // Asumiremos para este ejemplo visual que el componente maneja el estado localmente
-      // o que modificamos el tipo.
-    }
-  });
+  if (character.skills) {
+    character.skills.forEach(skill => {
+      occupationalSpent += skill.occupationalPoints || 0;
+      personalSpent += skill.personalPoints || 0;
+    });
+  }
 
   return { occupationalSpent, personalSpent };
 }

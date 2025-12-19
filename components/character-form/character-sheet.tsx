@@ -22,10 +22,11 @@ import {
   calculateMagicPoints,
   createDefaultWeapon,
 } from "@/lib/character-utils"
-import { Plus, Trash2, Search, Shield, Sun, Moon } from "lucide-react"
+import { Plus, Trash2, Search, Shield, Sun, Moon, Settings2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
+import { OccupationDetailsModal } from "./occupation-details-modal"
 
 interface CharacterSheetProps {
   character: Character
@@ -106,6 +107,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const [skillSearch, setSkillSearch] = useState("")
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [isOccupationModalOpen, setIsOccupationModalOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -117,6 +119,11 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
   const handleBasicChange = (field: keyof Character, value: string | number) => {
     onChange({ ...character, [field]: value })
+  }
+
+  // Helper para manejar cambios parciales desde el modal
+  const handleModalChange = (updates: Partial<Character>) => {
+    onChange({ ...character, ...updates })
   }
 
   // Lógica para cambiar Ocupación (Select)
@@ -249,6 +256,9 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     return skill.name.toLowerCase().includes(term) || (skill.customName && skill.customName.toLowerCase().includes(term))
   })
 
+  // Determinar si mostrar el botón de gestión
+  const showOccupationButton = character.occupation && character.occupation !== "Personalizada";
+
   const renderSkillRow = (skill: Skill, idx: number) => {
     const actualIndex = character.skills.indexOf(skill)
     const half = Math.floor(skill.value / 2)
@@ -369,7 +379,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                     <Input value={character.name} onChange={(e) => handleBasicChange("name", e.target.value)} className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 font-serif text-xl bg-transparent font-bold"/>
                 </div>
                 
-                {/* --- SECCIÓN DE OCUPACIÓN CORREGIDA --- */}
+                {/* --- SECCIÓN DE OCUPACIÓN --- */}
                 <div className="col-span-2 space-y-1">
                     <Label className="text-[9px] uppercase font-bold text-stone-500">Ocupación</Label>
                     <div className="relative">
@@ -401,6 +411,18 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                              className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 bg-transparent mt-1 placeholder:italic"
                              placeholder="Escribe el nombre de la profesión..."
                            />
+                        )}
+
+                        {showOccupationButton && (
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="w-full mt-1 h-7 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900"
+                                onClick={() => setIsOccupationModalOpen(true)}
+                            >
+                                <Settings2 className="mr-1 h-3 w-3" />
+                                Gestionar Habilidades
+                            </Button>
                         )}
                     </div>
                 </div>
@@ -693,6 +715,13 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             </Button>
          </div>
       </div>
+      
+      <OccupationDetailsModal 
+        isOpen={isOccupationModalOpen} 
+        onClose={() => setIsOccupationModalOpen(false)}
+        character={character}
+        onChange={handleModalChange}
+      />
     </div>
   )
 }

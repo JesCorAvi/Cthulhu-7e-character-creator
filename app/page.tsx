@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { CharacterCard } from "@/components/character-card"
 import { EraSelector } from "@/components/era-selector"
@@ -8,12 +8,11 @@ import { CharacterForm } from "@/components/character-form"
 import { CharacterViewer } from "@/components/character-viewer"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Spinner } from "@/components/ui/spinner" // Asegúrate de tener un componente spinner o usa un div con texto
 import type { Character, CharacterEra } from "@/lib/character-types"
 import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorageMode, type StorageMode } from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
-import { initGoogleDrive, signInToGoogle, signOutFromGoogle } from "@/lib/google-drive"
-import { Plus, Users, Skull, Cloud, HardDrive, LogOut } from "lucide-react"
+import { initGoogleDrive, signInToGoogle } from "@/lib/google-drive"
+import { Plus, Users, Skull, Cloud, HardDrive, AlertCircle, RefreshCw } from "lucide-react"
 
 type View = "list" | "create" | "edit" | "view"
 
@@ -22,55 +21,86 @@ export default function HomePage() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [currentCharacter, setCurrentCharacter] = useState<Character | null>(null)
   
-  // Nuevos estados para Cloud
   const [loading, setLoading] = useState(true)
   const [storageMode, setStorageModeState] = useState<StorageMode>("local")
   const [isGoogleReady, setIsGoogleReady] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [needsLogin, setNeedsLogin] = useState(false)
 
+  // 1. Inicialización de la API de Google
   useEffect(() => {
-    // 1. Inicializar Drive API
     initGoogleDrive((success) => {
-        setIsGoogleReady(success);
-    });
-
-    // 2. Cargar preferencia de almacenamiento
-    const mode = getStorageMode();
-    setStorageModeState(mode);
-    
-    // 3. Cargar personajes iniciales
-    loadCharacters();
+        setIsGoogleReady(success)
+    })
+    setStorageModeState(getStorageMode())
   }, [])
 
-  const loadCharacters = async () => {
+  // 2. Función segura de carga
+  const loadCharacters = useCallback(async () => {
     setLoading(true)
+    setNeedsLogin(false)
     try {
         const chars = await getCharacters()
         setCharacters(chars)
+    } catch (error) {
+        console.error("Error cargando personajes:", error)
     } finally {
         setLoading(false)
     }
-  }
+  }, [])
 
+  // 3. Lógica principal: Cuando Google está listo, decidir qué hacer
+  useEffect(() => {
+      const initializeSession = async () => {
+          if (!isGoogleReady) return;
+
+          const currentMode = getStorageMode();
+          
+          if (currentMode === 'cloud') {
+              // CORRECCIÓN: No intentamos login automático aquí.
+              // El navegador bloquearía el popup y daría error.
+              // En su lugar, pedimos al usuario que reconecte manualmente.
+              setNeedsLogin(true);
+              setLoading(false);
+          } else {
+              // Si es local, cargamos directamente
+              loadCharacters();
+          }
+      };
+
+      initializeSession();
+  }, [isGoogleReady, loadCharacters]) 
+
+  // Manejador del Switch (Aquí SÍ podemos llamar a login porque es un clic del usuario)
   const handleToggleStorage = async (checked: boolean) => {
+      setLoading(true);
       if (checked) {
           // Cambiar a Cloud
-          if (!isGoogleReady) return alert("Google API no está lista aún.");
+          if (!isGoogleReady) {
+              alert("Google API no está lista aún.");
+              setLoading(false);
+              return; 
+          }
           try {
-            await signInToGoogle();
+            await signInToGoogle(); // Esto abrirá el popup (permitido por ser evento click)
             setStorageMode("cloud");
             setStorageModeState("cloud");
-            // Opcional: obtener email del usuario para mostrarlo
-            // const token = gapi.client.getToken(); ...
-            loadCharacters();
+            setNeedsLogin(false);
+            await loadCharacters();
           } catch (e) {
-              console.error("Login fallido", e);
+              console.error("Login fallido o cancelado", e);
+              // Si cancelan el login, volvemos a local visualmente
+              setStorageMode("local");
+              setStorageModeState("local");
+          } finally {
+              setLoading(false);
           }
       } else {
           // Cambiar a Local
           setStorageMode("local");
           setStorageModeState("local");
-          loadCharacters();
+          setNeedsLogin(false);
+          await loadCharacters();
+          setLoading(false);
       }
   }
 
@@ -111,17 +141,26 @@ export default function HomePage() {
   const handleBack = () => {
     setView("list")
     setCurrentCharacter(null)
-    loadCharacters() // Recargar para asegurar sincronización
+    loadCharacters()
   }
 
   const handleSaveCallback = async () => {
-      // Esta función se pasa al form para que recargue después de guardar
-      await loadCharacters();
+      await loadCharacters()
+  }
+
+  // Este botón ahora es crucial: permite recuperar la sesión tras recargar
+  const handleManualLogin = async () => {
+      try {
+          await signInToGoogle();
+          setNeedsLogin(false);
+          loadCharacters();
+      } catch(e) {
+          console.error("Error en login manual:", e);
+      }
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -133,7 +172,6 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-4">
-             {/* Storage Toggle */}
              {view === "list" && (
                  <div className="flex items-center gap-2 border p-2 rounded-lg bg-background/50">
                     {storageMode === 'local' ? <HardDrive className="h-4 w-4" /> : <Cloud className="h-4 w-4 text-blue-500" />}
@@ -162,11 +200,23 @@ export default function HomePage() {
         {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                <p className="text-muted-foreground">Cargando investigadores...</p>
+                <p className="text-muted-foreground">Conectando...</p>
+            </div>
+        ) : needsLogin && storageMode === 'cloud' ? (
+            // Pantalla de Login Requerido
+            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-card/50">
+                <Cloud className="h-16 w-16 text-blue-500 mb-4" />
+                <h2 className="text-xl font-bold text-foreground mb-2">Conectar con Google Drive</h2>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                    Para ver y guardar tus personajes en la nube, necesitamos reconectar con tu cuenta de Google.
+                </p>
+                <Button onClick={handleManualLogin} size="lg" className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Sincronizar ahora
+                </Button>
             </div>
         ) : (
             <>
-                {/* Lista de personajes */}
                 {view === "list" && (
                 <div className="space-y-6">
                     {characters.length === 0 ? (
@@ -175,7 +225,7 @@ export default function HomePage() {
                         <h2 className="text-xl font-bold text-foreground mb-2">No hay personajes</h2>
                         <p className="text-muted-foreground mb-6">
                             {storageMode === 'cloud' 
-                                ? "No hay personajes en tu Google Drive." 
+                                ? "No se encontraron personajes en tu Drive." 
                                 : "Crea tu primer investigador para comenzar tu aventura"}
                         </p>
                         <Button onClick={() => setView("create")}>
@@ -204,8 +254,7 @@ export default function HomePage() {
                     )}
                 </div>
                 )}
-
-                {/* Selector de era */}
+                
                 {view === "create" && (
                 <div className="space-y-6">
                     <div className="text-center">
@@ -221,10 +270,7 @@ export default function HomePage() {
                 </div>
                 )}
 
-                {/* Formulario de edición */}
                 {view === "edit" && currentCharacter && (
-                // NOTA: Asegúrate de que CharacterForm use await saveCharacter() internamente
-                // o pásale una función onSave que maneje la recarga
                 <CharacterForm 
                     character={currentCharacter} 
                     onBack={handleBack} 
@@ -232,15 +278,12 @@ export default function HomePage() {
                 />
                 )}
 
-                {/* Vista del personaje */}
                 {view === "view" && currentCharacter && (
                 <CharacterViewer character={currentCharacter} onBack={handleBack} onEdit={() => setView("edit")} />
                 )}
             </>
         )}
       </main>
-
-      {/* Footer */}
       <footer className="border-t bg-card mt-auto">
         <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
           Call of Cthulhu es una marca registrada de Chaosium Inc.

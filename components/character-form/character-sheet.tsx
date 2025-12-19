@@ -39,7 +39,7 @@ const CHAR_LABELS: Record<string, string> = {
   MOV: "MOV",
 }
 
-// 2. TRACKER ESTILO GRID CON LÓGICA DE LÍMITE
+// 2. TRACKER ESTILO GRID (DISEÑO SOLICITADO + LÓGICA DE LÍMITE)
 function SheetTracker({
   max = 0,
   current,
@@ -53,7 +53,7 @@ function SheetTracker({
 }) {
   // Si no hay límite definido (o es 0), mostramos el aviso
   if (!max || max <= 0) {
-      return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded dark:border-stone-800">Introduce un valor inicial para ver el marcador</div>;
+      return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">Introduce un valor inicial para ver el marcador</div>;
   }
 
   // Calculamos cuántas filas de 10 necesitamos
@@ -562,7 +562,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               </Button>
         </div>
         
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-x-8 gap-y-2 pr-1">
+        <div className="columns-1 md:columns-2 lg:columns-3  gap-x-8 gap-y-2 pr-1">
            {filteredSkills.map((skill, i) => (
              <div key={i} className="break-inside-avoid">
                 {renderSkillRow(skill, i)}

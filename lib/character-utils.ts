@@ -63,10 +63,30 @@ export const createDefaultWeapon = (): Weapon => ({
 })
 
 export const createNewCharacter = (era: CharacterEra): Character => {
-  const skills = getBaseSkillsForEra(era)
   const defaultPow = 50
   const defaultCon = 50
   const defaultSiz = 50
+  const defaultEdu = 50
+  const defaultDex = 50
+  
+  // Obtenemos las habilidades base
+  const skills = getBaseSkillsForEra(era)
+
+  // Aplicamos valores dinámicos a las habilidades especiales
+  skills.forEach(skill => {
+    // Para Lengua Propia: Si es un slot de campo, asignamos EDU
+    if (skill.name === "Lengua propia" && skill.isFieldSlot) {
+      skill.baseValue = defaultEdu
+      skill.value = defaultEdu
+    }
+    // Para Esquivar: Asignamos DES / 2
+    else if (skill.name === "Esquivar") {
+      const halfDex = Math.floor(defaultDex / 2)
+      skill.baseValue = halfDex
+      skill.value = halfDex
+    }
+  })
+
   const initialMagic = calculateMagicPoints(defaultPow)
   const initialHP = calculateHitPoints(defaultCon, defaultSiz)
 
@@ -83,11 +103,11 @@ export const createNewCharacter = (era: CharacterEra): Character => {
     birthplace: "",
     characteristics: {
       STR: createCharacteristicValue(50),
-      DEX: createCharacteristicValue(50),
+      DEX: createCharacteristicValue(defaultDex),
       POW: createCharacteristicValue(defaultPow),
       CON: createCharacteristicValue(defaultCon),
       APP: createCharacteristicValue(50),
-      EDU: createCharacteristicValue(50),
+      EDU: createCharacteristicValue(defaultEdu),
       SIZ: createCharacteristicValue(defaultSiz),
       INT: createCharacteristicValue(50),
       MOV: 8,
@@ -103,7 +123,7 @@ export const createNewCharacter = (era: CharacterEra): Character => {
       current: defaultPow,
       max: 99,
       starting: defaultPow,
-      limit: defaultPow, // Se inicializa igual al POD
+      limit: defaultPow,
       temporaryInsanity: false,
       indefiniteInsanity: false,
     },
@@ -118,7 +138,7 @@ export const createNewCharacter = (era: CharacterEra): Character => {
     },
     damageBonus: "0",
     build: 0,
-    dodge: 25,
+    dodge: Math.floor(defaultDex / 2),
     skills,
     weapons: [
       {

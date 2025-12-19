@@ -50,7 +50,7 @@ const skills1920sAndModern: SkillDefinition[] = [
   { name: "Intimidar", baseValue: 15 },
   { name: "Juego de manos", baseValue: 10 },
   { name: "Lanzar", baseValue: 20 },
-  { name: "Lengua propia", baseValue: "special" },
+  { name: "Lengua propia", baseValue: "special", isFieldHeader: true, fieldSlots: 1 },
   { name: "Otras lenguas", baseValue: 1, isFieldHeader: true, fieldSlots: 3 },
   { name: "Mecánica", baseValue: 10 },
   { name: "Medicina", baseValue: 1 },
@@ -107,7 +107,7 @@ const skillsDarkAges: SkillDefinition[] = [
   { name: "Juego de manos", baseValue: 25 },
   { name: "Lanzar", baseValue: 25 },
   { name: "Leer/Escribir", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Lengua propia", baseValue: "special" },
+  { name: "Lengua propia", baseValue: "special", isFieldHeader: true, fieldSlots: 1 },
   { name: "Otras lenguas", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
   { name: "Medicina", baseValue: 1 },
   { name: "Mitos de Cthulhu", baseValue: 0 },
@@ -170,12 +170,17 @@ export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
         }
       }
       for (let i = 0; i < (def.fieldSlots || 0); i++) {
+        const isSpecial = def.baseValue === "special"
+        const initialValue = typeof def.baseValue === "number" ? def.baseValue : 1
+        
         skills.push({
           name: def.name,
-          baseValue: typeof def.baseValue === "number" ? def.baseValue : 1,
-          value: typeof def.baseValue === "number" ? def.baseValue : 1,
+          baseValue: initialValue,
+          value: initialValue,
           isOccupational: false,
           isFieldSlot: true,
+          isCustom: true,
+          isSpecialCalc: isSpecial,
           customName: "",
         })
       }
@@ -188,6 +193,18 @@ export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
         isSpecialCalc: def.baseValue === "special",
       })
     }
+  }
+
+  // Añadir 6 habilidades personalizadas vacías
+  for (let i = 0; i < 6; i++) {
+    skills.push({
+      name: "Habilidad personalizada",
+      baseValue: 0,
+      value: 0,
+      isOccupational: false,
+      isCustom: true,
+      customName: "",
+    })
   }
 
   return skills

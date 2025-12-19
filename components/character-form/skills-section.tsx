@@ -66,12 +66,17 @@ export function SkillsSection({ character, onChange }: SkillsSectionProps) {
       setIsCustomMode(false);
       const preset = PRESET_OCCUPATIONS.find(p => p.name === value);
       if (preset) {
+        // CORRECCIÓN: Convertimos los objetos complejos a strings simples para el estado del personaje
+        const flattenedSkills = preset.skills.map(s => {
+            if (typeof s === 'string') return s;
+            return s.name; // Si es objeto, nos quedamos con el nombre base
+        });
+
         onChange({
           ...character,
           occupation: preset.name,
           occupationFormula: preset.formula,
-          // Mapeamos los nombres de skills del preset a las skills reales
-          occupationalSkills: preset.skills
+          occupationalSkills: flattenedSkills
         });
         
         // Resetear stat opcional

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cthulhu-builder-v2'; // Cambia v1 a v2 para forzar actualización
-const REPO_NAME = '/cthulhu-7e-character-creator'; // Tu nombre de repo
+const CACHE_NAME = 'cthulhu-builder-v3'; // Subimos versión por si acaso
+const REPO_NAME = '/Cthulhu-7e-character-creator';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -12,7 +12,6 @@ self.addEventListener('install', (event) => {
     })
   );
 });
-
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(

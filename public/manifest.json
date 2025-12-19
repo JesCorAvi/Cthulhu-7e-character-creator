@@ -1,7 +1,7 @@
 {
   "name": "CthulhuBuilder",
   "short_name": "CthulhuBuilder",
-  "start_url": "/cthulhu-7e-character-creator/",
+  "start_url": "/Cthulhu-7e-character-creator/",
   "display": "standalone",
   "background_color": "#051109",
   "theme_color": "#1a472a",
@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/cthulhu-7e-character-creator/icons/icon-192.png",
+      "src": "/Cthulhu-7e-character-creator/icons/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "/cthulhu-7e-character-creator/icons/icon-512.png",
+      "src": "/Cthulhu-7e-character-creator/icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"

@@ -1,31 +1,28 @@
 import type React from "react"
-import type { Metadata, Viewport } from "next" // [NUEVO] Importamos Viewport
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Script from "next/script"
-import { PwaRegister } from "@/components/pwa-register" // [NUEVO] Importamos nuestro componente
+import { PwaRegister } from "@/components/pwa-register"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
-// [NUEVO] Configuración del Viewport (theme-color ahora va aquí en Next.js 14+)
 export const viewport: Viewport = {
   themeColor: "#1a472a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, // Hace que se sienta más como una app nativa
+  userScalable: false,
 }
 
 export const metadata: Metadata = {
   title: "CthulhuBuilder",
   description: "Crea y gestiona tus fichas de investigador para Call of Cthulhu 7ª Edición",
   generator: "v0.app",
-  // [NUEVO] Enlace al manifest
-  manifest: "/cthulhu-7e-character-creator/manifest.json",
-  // [NUEVO] Configuración específica para Apple (iOS)
+  manifest: "/Cthulhu-7e-character-creator/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -33,11 +30,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
-      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/Cthulhu-7e-character-creator/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/Cthulhu-7e-character-creator/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/Cthulhu-7e-character-creator/icon.svg", type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png", // Asegúrate de que este archivo exista en public
+    apple: "/Cthulhu-7e-character-creator/apple-icon.png",
   },
 }
 
@@ -57,7 +54,6 @@ export default function RootLayout({
           >
           {children}
           <Analytics />
-          {/* [NUEVO] Componente que registra el Service Worker */}
           <PwaRegister />
         </ThemeProvider>
         

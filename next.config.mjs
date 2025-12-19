@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // <--- ESTA LÍNEA ES LA SOLUCIÓN
+  output: 'export',
+  basePath: '/Cthulhu-7e-character-creator', // IMPORTANTE: Coincide con tu repo
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true, // Esto es necesario para 'export' (ya lo tenías, perfecto)
+    unoptimized: true,
   },
 }
 

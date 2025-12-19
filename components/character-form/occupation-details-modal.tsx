@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertCircle, CheckCircle2, Plus, Trash2 } from "lucide-react"
+import { AlertCircle, Plus, Trash2, Settings2, Calculator } from "lucide-react"
 import { Character, CharacteristicValue } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS } from "@/lib/occupations-data"
 import { calculateSpentPoints } from "@/lib/occupation-utils"
@@ -29,18 +29,34 @@ const SKILL_GROUPS = {
   "Otras": ["Conducir automóvil", "Cerrajería", "Sigilo", "Ocultarse"]
 }
 
+const STAT_OPTIONS = [
+    { value: "STR", label: "FUE (STR)" },
+    { value: "DEX", label: "DES (DEX)" },
+    { value: "POW", label: "POD (POW)" },
+    { value: "APP", label: "APA (APP)" },
+    { value: "EDU", label: "EDU (EDU)" },
+    { value: "INT", label: "INT (INT)" },
+    { value: "SIZ", label: "TAM (SIZ)" },
+    { value: "CON", label: "CON (CON)" },
+];
+
 export function OccupationDetailsModal({ isOpen, onClose, character, onChange }: OccupationDetailsModalProps) {
   const currentOccupation = PRESET_OCCUPATIONS.find(occ => occ.name === character.occupation);
+  const isCustomOccupation = character.occupation === "Otra";
   
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null);
   const [addedElectiveSkills, setAddedElectiveSkills] = useState<string[]>([]);
   const [skillToAdd, setSkillToAdd] = useState<string>("");
+
+  const [customStat1, setCustomStat1] = useState<string>("EDU");
+  const [customStat2, setCustomStat2] = useState<string>("DEX");
 
   const getCharacteristicVal = (key: string): number => {
     const mapToKey: Record<string, string> = { 
         "FUE": "STR", "DES": "DEX", "POD": "POW", "APA": "APP", "TAM": "SIZ", "INT": "INT" 
     };
     const realKey = mapToKey[key] || key;
+    // @ts-ignore
     const stat = character.characteristics[realKey as keyof typeof character.characteristics];
     
     if (typeof stat === 'object' && stat !== null && 'value' in stat) {
@@ -52,8 +68,17 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     return 0;
   };
 
+  useEffect(() => {
+    if (isCustomOccupation) {
+        const newFormula = `${customStat1}*2 + ${customStat2}*2`;
+        if (character.occupationFormula !== newFormula) {
+             onChange({ occupationFormula: newFormula });
+        }
+    }
+  }, [customStat1, customStat2, isCustomOccupation, character.occupationFormula, onChange]);
+
   const formulaAnalysis = useMemo(() => {
-    if (!character.occupationFormula) return { type: "simple", options: [] as string[], label: "" };
+    if (isCustomOccupation || !character.occupationFormula) return { type: "simple", options: [] as string[], label: "" };
     
     const f = character.occupationFormula.toUpperCase();
     const hasChoice = f.includes(" O ") || f.includes(" OR ") || f.includes("||") || f.includes("/");
@@ -61,17 +86,14 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     if (hasChoice) {
        const hasStr = f.includes("STR") || f.includes("FUE");
        const hasDex = f.includes("DEX") || f.includes("DES");
-       if (hasStr && hasDex) {
-          return { type: "choice", options: ["STR", "DEX"], label: "Elige característica para el cálculo:" };
-       }
+       if (hasStr && hasDex) return { type: "choice", options: ["STR", "DEX"], label: "Elige característica:" };
+       
        const hasApp = f.includes("APP") || f.includes("APA");
        const hasPow = f.includes("POW") || f.includes("POD");
-       if (hasApp && hasPow) {
-          return { type: "choice", options: ["APP", "POW"], label: "Elige característica para el cálculo:" };
-       }
+       if (hasApp && hasPow) return { type: "choice", options: ["APP", "POW"], label: "Elige característica:" };
     }
     return { type: "simple", options: [] as string[], label: "" };
-  }, [character.occupationFormula]);
+  }, [character.occupationFormula, isCustomOccupation]);
 
   useEffect(() => {
     if (formulaAnalysis.type === "choice" && formulaAnalysis.options.length > 0 && !selectedAttribute) {
@@ -80,8 +102,11 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   }, [formulaAnalysis, selectedAttribute]);
 
   const totalPoints = useMemo(() => {
+    if (isCustomOccupation) {
+        return getCharacteristicVal(customStat1) * 2 + getCharacteristicVal(customStat2) * 2;
+    }
+
     if (!character.occupationFormula) return 0;
-    
     const edu = getCharacteristicVal("EDU");
     const formula = character.occupationFormula.toUpperCase();
     let total = 0;
@@ -94,8 +119,8 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       total += edu * 2;
       if (formulaAnalysis.type === "choice" && selectedAttribute) {
          total += getCharacteristicVal(selectedAttribute) * 2;
-      } else if (formulaAnalysis.type === "simple") {
-         ["STR", "DEX", "POW", "APP", "SIZ", "INT", "FUE", "DES", "POD", "APA", "TAM"].forEach(stat => {
+      } else {
+         ["STR", "DEX", "POW", "APP", "SIZ", "INT", "FUE", "DES", "POD", "APA"].forEach(stat => {
             if (stat !== "EDU" && formula.includes(stat)) {
                 total += getCharacteristicVal(stat) * 2;
             }
@@ -103,7 +128,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       }
     }
     return total > 0 ? total : edu * 4;
-  }, [character.characteristics, character.occupationFormula, selectedAttribute, formulaAnalysis]);
+  }, [character.characteristics, character.occupationFormula, selectedAttribute, formulaAnalysis, isCustomOccupation, customStat1, customStat2]);
 
   const { occupationalSpent } = calculateSpentPoints(character);
   const remainingPoints = totalPoints - occupationalSpent;
@@ -128,7 +153,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       }
       return skill;
     });
-
     onChange({ skills: newSkills });
   };
 
@@ -152,6 +176,13 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
      ...addedElectiveSkills
   ];
 
+  const rawAvailableSkills = character.skills.filter(s => 
+     !relevantSkillNames.includes(s.name) && 
+     !Object.values(SKILL_GROUPS).flat().includes(s.name)
+  );
+  
+  const uniqueAvailableSkillNames = Array.from(new Set(rawAvailableSkills.map(s => s.name))).sort();
+
   const displayedSkills = character.skills.filter(skill => 
     relevantSkillNames.includes(skill.name) || 
     (skill.occupationalPoints && skill.occupationalPoints > 0)
@@ -159,7 +190,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between pr-8">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
@@ -174,155 +205,171 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           </DialogDescription>
         </DialogHeader>
 
-        {formulaAnalysis.type === "choice" && (
-           <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-100 dark:border-blue-900 mb-2">
-              <Label className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-3 block flex items-center gap-2">
-                 <AlertCircle className="w-4 h-4"/>
-                 {formulaAnalysis.label}
-              </Label>
-              <RadioGroup 
-                 value={selectedAttribute || ""} 
-                 onValueChange={setSelectedAttribute}
-                 className="flex flex-wrap gap-4"
-              >
-                 {formulaAnalysis.options.map(opt => {
-                    const labelMap: Record<string, string> = { 
-                        "STR": "FUE", "DEX": "DES", "APP": "APA", "POW": "POD",
-                        "FUE": "FUE", "DES": "DES", "APA": "APA", "POD": "POD"
-                    };
-                    const displayLabel = labelMap[opt] || opt;
-                    const val = getCharacteristicVal(opt);
-                    const isSelected = selectedAttribute === opt;
+        {/* CONTENEDOR CON SCROLL FIJO DE 60VH */}
+        <ScrollArea className="h-[60vh] pr-4 -mr-4">
+           <div className="space-y-4 pr-4">
+                {isCustomOccupation && (
+                    <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-100 dark:border-amber-900 space-y-4">
+                        <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold border-b border-amber-200 dark:border-amber-800 pb-2">
+                            <Settings2 className="w-4 h-4" />
+                            Configuración de "Otra" Ocupación
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground uppercase font-bold flex items-center gap-1">
+                                    <Calculator className="w-3 h-3"/> Fórmula de Puntos
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Select value={customStat1} onValueChange={setCustomStat1}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STAT_OPTIONS.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <span className="font-bold text-muted-foreground">x2</span>
+                                    <span className="font-bold text-lg">+</span>
+                                    <Select value={customStat2} onValueChange={setCustomStat2}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STAT_OPTIONS.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <span className="font-bold text-muted-foreground">x2</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">
+                                    Elige las 2 características que definen esta profesión.
+                                </p>
+                            </div>
 
-                    return (
-                       <div key={opt} className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-all ${isSelected ? "bg-white dark:bg-stone-800 border-blue-500 ring-1 ring-blue-500 shadow-sm" : "bg-white/50 dark:bg-stone-900/50 border-transparent hover:bg-white"}`}>
-                          <RadioGroupItem value={opt} id={`opt-${opt}`} />
-                          <Label htmlFor={`opt-${opt}`} className="cursor-pointer font-mono font-bold text-lg flex flex-col items-center leading-none gap-1">
-                             <span>{displayLabel}</span>
-                             <span className="text-xs font-normal text-muted-foreground">({val})</span>
-                          </Label>
-                       </div>
-                    )
-                 })}
-              </RadioGroup>
-           </div>
-        )}
-
-        <div className="bg-stone-100 dark:bg-stone-900 p-4 rounded-lg space-y-2 border border-stone-200 dark:border-stone-800">
-          <div className="flex justify-between text-sm font-medium">
-            <span>Puntos Gastados: <span className="text-foreground font-bold">{occupationalSpent}</span> / {totalPoints}</span>
-            <span className={isOverLimit ? "text-destructive font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
-              {remainingPoints} disponibles
-            </span>
-          </div>
-          <Progress 
-            value={totalPoints > 0 ? (occupationalSpent / totalPoints) * 100 : 0} 
-            className={isOverLimit ? "[&>div]:bg-destructive h-2.5" : "h-2.5 [&>div]:bg-primary"} 
-          />
-          <div className="flex justify-end h-4">
-             {isOverLimit && <span className="text-xs text-destructive flex items-center gap-1 font-bold"><AlertCircle className="w-3 h-3"/> Límite excedido</span>}
-             {remainingPoints === 0 && !isOverLimit && totalPoints > 0 && <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold"><CheckCircle2 className="w-3 h-3"/> Completado</span>}
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1 -mr-4 pr-4 border rounded-md p-2 mt-2 bg-stone-50/50 dark:bg-stone-950/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {displayedSkills.map((skill, index) => {
-               const uniqueKey = `${skill.name}-${index}`;
-               const isElective = addedElectiveSkills.includes(skill.name);
-
-               return (
-                <div key={uniqueKey} className="flex items-center gap-3 p-4 rounded-md border bg-card hover:bg-accent/5 transition-colors group relative min-h-[80px]">
-                  
-                  {isElective && (
-                     <button 
-                        onClick={() => handleRemoveElective(skill.name)}
-                        className="absolute top-1 right-1 text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                        title="Quitar de la lista de ocupación"
-                     >
-                        <Trash2 className="h-4 w-4" />
-                     </button>
-                  )}
-
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="mb-1.5 pr-2">
-                       <Label className="font-bold text-sm leading-tight block whitespace-normal" title={skill.name}>
-                          {skill.name}
-                          {isElective && <Badge variant="secondary" className="ml-2 text-[10px] h-4 px-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-100 align-middle">Electiva</Badge>}
-                       </Label>
+                            <div className="flex flex-col justify-center items-center md:items-end">
+                                <Label className="text-xs text-muted-foreground uppercase font-bold mb-1">Habilidades Elegidas</Label>
+                                <div className="flex items-baseline gap-1">
+                                    <span className={`text-3xl font-bold ${displayedSkills.length > 7 ? "text-destructive" : "text-primary"}`}>
+                                        {displayedSkills.length}
+                                    </span>
+                                    <span className="text-sm font-bold text-muted-foreground">/ 7</span>
+                                </div>
+                                {displayedSkills.length > 7 && (
+                                    <span className="text-[10px] text-destructive font-bold animate-pulse">
+                                        Recomendado: máx 7
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">Base: {skill.baseValue}%</span>
-                      <span>Total: <span className="font-bold text-foreground text-sm">{skill.value}%</span></span>
-                    </div>
-                  </div>
+                )}
 
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-2 bg-background p-1 rounded border shadow-sm">
-                        <span className="text-[10px] font-semibold text-muted-foreground px-1">PTS</span>
-                        <Input 
-                        type="number"
-                        min={0}
-                        className="h-9 w-16 text-right px-2 focus-visible:ring-1 font-bold text-lg"
-                        value={skill.occupationalPoints || 0}
-                        onChange={(e) => handleSkillPointChange(skill.name, e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        />
-                    </div>
-                  </div>
+                {!isCustomOccupation && formulaAnalysis.type === "choice" && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-100 dark:border-blue-900 mb-2">
+                    <Label className="text-sm font-bold text-blue-900 dark:text-blue-300 mb-3 block flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4"/>
+                        {formulaAnalysis.label}
+                    </Label>
+                    <RadioGroup value={selectedAttribute || ""} onValueChange={setSelectedAttribute} className="flex flex-wrap gap-4">
+                        {formulaAnalysis.options.map(opt => {
+                            const labelMap: Record<string, string> = { "STR": "FUE", "DEX": "DES", "APP": "APA", "POW": "POD" };
+                            return (
+                            <div key={opt} className={`flex items-center space-x-2 px-4 py-2 rounded-md border transition-all ${selectedAttribute === opt ? "bg-white border-blue-500 ring-1 ring-blue-500" : "bg-white/50 border-transparent hover:bg-white"}`}>
+                                <RadioGroupItem value={opt} id={`opt-${opt}`} />
+                                <Label htmlFor={`opt-${opt}`} className="cursor-pointer font-bold">{labelMap[opt] || opt} ({getCharacteristicVal(opt)})</Label>
+                            </div>
+                            )
+                        })}
+                    </RadioGroup>
                 </div>
-              );
-            })}
-          </div>
+                )}
+
+                <div className="bg-stone-100 dark:bg-stone-900 p-4 rounded-lg space-y-2 border border-stone-200 dark:border-stone-800">
+                    <div className="flex justify-between text-sm font-medium">
+                        <span>Puntos Gastados: <span className="text-foreground font-bold">{occupationalSpent}</span> / {totalPoints}</span>
+                        <span className={isOverLimit ? "text-destructive font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+                        {remainingPoints} disponibles
+                        </span>
+                    </div>
+                    <Progress value={totalPoints > 0 ? (occupationalSpent / totalPoints) * 100 : 0} className={isOverLimit ? "[&>div]:bg-destructive h-2.5" : "h-2.5 [&>div]:bg-primary"} />
+                </div>
+
+                <div className="border rounded-md p-2 bg-stone-50/50 dark:bg-stone-950/30 min-h-[150px]">
+                    {displayedSkills.length === 0 && isCustomOccupation ? (
+                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
+                            <Plus className="w-10 h-10 opacity-20" />
+                            <p className="text-sm">Añade habilidades usando el selector inferior</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {displayedSkills.map((skill, index) => {
+                                const isElective = addedElectiveSkills.includes(skill.name) || (isCustomOccupation && !currentOccupation.skills.includes(skill.name));
+                                const uniqueKey = `${skill.name}-${index}`; 
+                                
+                                return (
+                                    <div key={uniqueKey} className="flex items-center gap-3 p-4 rounded-md border bg-card relative group">
+                                        {isElective && (
+                                            <button onClick={() => handleRemoveElective(skill.name)} className="absolute top-1 right-1 text-stone-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                        <div className="flex-1">
+                                            <Label className="font-bold text-sm block">{skill.name}</Label>
+                                            <span className="text-xs text-muted-foreground">Base: {skill.baseValue}% | Total: <span className="text-foreground font-bold">{skill.value}%</span></span>
+                                        </div>
+                                        <div className="flex items-center bg-background border rounded px-2">
+                                            <span className="text-[10px] text-muted-foreground mr-1">PTS</span>
+                                            <Input 
+                                                type="number" 
+                                                className="h-8 w-14 text-right border-0 p-0 focus-visible:ring-0 font-bold" 
+                                                value={skill.occupationalPoints || 0}
+                                                onChange={(e) => handleSkillPointChange(skill.name, e.target.value)}
+                                                onFocus={(e) => e.target.select()}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                <div className="pt-2 border-t space-y-3 pb-2">
+                    <Label className="text-sm font-bold flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-blue-500" />
+                        {isCustomOccupation ? "Añadir Habilidades de Ocupación" : "Añadir Habilidades Electivas"}
+                    </Label>
+                    <div className="flex gap-2">
+                        <Select value={skillToAdd} onValueChange={setSkillToAdd}>
+                            <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Selecciona habilidad..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(SKILL_GROUPS).map(([group, skills]) => (
+                                <div key={group}>
+                                    <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground bg-stone-100 dark:bg-stone-800">{group}</div>
+                                    {skills.map(skillName => (
+                                        <SelectItem key={skillName} value={skillName} disabled={relevantSkillNames.includes(skillName)}>{skillName}</SelectItem>
+                                    ))}
+                                </div>
+                                ))}
+                                <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground bg-stone-100 dark:bg-stone-800">Otras de tu ficha</div>
+                                {uniqueAvailableSkillNames.slice(0, 30).map(name => (
+                                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={handleAddElective} disabled={!skillToAdd}>Añadir</Button>
+                    </div>
+                </div>
+           </div>
         </ScrollArea>
 
-        <div className="mt-4 pt-4 border-t space-y-3">
-           <Label className="text-sm font-bold flex items-center gap-2">
-              <Plus className="w-4 h-4 text-blue-500" />
-              Añadir Habilidades Electivas
-           </Label>
-           <div className="flex gap-2">
-              <Select value={skillToAdd} onValueChange={setSkillToAdd}>
-                 <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecciona una habilidad para añadir..." />
-                 </SelectTrigger>
-                 <SelectContent>
-                    {Object.entries(SKILL_GROUPS).map(([group, skills]) => (
-                       <div key={group}>
-                          <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground bg-stone-100 dark:bg-stone-800">
-                             {group}
-                          </div>
-                          {skills.map(skillName => (
-                             <SelectItem key={skillName} value={skillName} disabled={relevantSkillNames.includes(skillName)}>
-                                {skillName}
-                             </SelectItem>
-                          ))}
-                       </div>
-                    ))}
-                    <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground bg-stone-100 dark:bg-stone-800">
-                       Otras de tu ficha
-                    </div>
-                    {character.skills
-                       .filter(s => !relevantSkillNames.includes(s.name) && !Object.values(SKILL_GROUPS).flat().includes(s.name))
-                       .slice(0, 15)
-                       .map(s => (
-                          <SelectItem key={s.name} value={s.name}>
-                             {s.name}
-                          </SelectItem>
-                       ))
-                    }
-                 </SelectContent>
-              </Select>
-              <Button onClick={handleAddElective} disabled={!skillToAdd}>
-                 Añadir
-              </Button>
-           </div>
-           <p className="text-[10px] text-muted-foreground">
-              Utiliza esto para añadir habilidades opcionales (ej. "Una interpersonal", "Dos cualesquiera", etc.) a tu lista de puntos de ocupación.
-           </p>
-        </div>
-
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 pt-2 border-t">
           <Button onClick={onClose}>Listo</Button>
         </DialogFooter>
       </DialogContent>

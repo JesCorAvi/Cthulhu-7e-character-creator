@@ -70,11 +70,15 @@ export function BasicInfo({ character, onChange }: BasicInfoProps) {
         />
       </div>
 
-      {/* --- SECCIÓN DE OCUPACIÓN ACTUALIZADA --- */}
+      {/* --- SECCIÓN DE OCUPACIÓN ACTUALIZADA Y CORREGIDA --- */}
       <div className="space-y-2">
         <Label htmlFor="occupation">Ocupación</Label>
         <Select 
-          value={PRESET_OCCUPATIONS.some(p => p.name === character.occupation) ? character.occupation : "custom"} 
+          value={
+            PRESET_OCCUPATIONS.some(p => p.name === character.occupation) 
+              ? character.occupation 
+              : (character.occupation ? "custom" : "") // Si está vacío, devuelve "" para mostrar el placeholder
+          } 
           onValueChange={handleOccupationChange}
         >
           <SelectTrigger id="occupation">
@@ -92,8 +96,9 @@ export function BasicInfo({ character, onChange }: BasicInfoProps) {
           </SelectContent>
         </Select>
         
-        {/* Si es personalizada, permitimos escribir el nombre manualmente */}
-        {(!PRESET_OCCUPATIONS.some(p => p.name === character.occupation) || character.occupation === "Personalizada") && (
+        {/* Si es personalizada (y no está vacía), permitimos escribir el nombre manualmente */}
+        {character.occupation !== "" && 
+         (!PRESET_OCCUPATIONS.some(p => p.name === character.occupation) || character.occupation === "Personalizada") && (
            <Input 
              className="mt-2"
              placeholder="Escribe el nombre de la profesión..."

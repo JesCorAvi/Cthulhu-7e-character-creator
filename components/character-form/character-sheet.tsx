@@ -4,7 +4,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { Character, CharacteristicValue, Skill, Weapon } from "@/lib/character-types"
+import { PRESET_OCCUPATIONS } from "@/lib/occupations-data"
 import {
   createCharacteristicValue,
   calculateDamageBonus,
@@ -39,7 +47,7 @@ const CHAR_LABELS: Record<string, string> = {
   MOV: "MOV",
 }
 
-// 2. TRACKER ESTILO GRID (DISEÑO SOLICITADO + LÓGICA DE LÍMITE)
+// 2. TRACKER ESTILO GRID
 function SheetTracker({
   max = 0,
   current,
@@ -51,12 +59,10 @@ function SheetTracker({
   onChange: (value: number) => void
   className?: string
 }) {
-  // Si no hay límite definido (o es 0), mostramos el aviso
   if (!max || max <= 0) {
       return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">Introduce un valor inicial para ver el marcador</div>;
   }
 
-  // Calculamos cuántas filas de 10 necesitamos
   const rowCount = Math.ceil(max / 10);
   const rows = Array.from({ length: rowCount }, (_, i) => ({
       start: i * 10 + 1,
@@ -66,24 +72,20 @@ function SheetTracker({
   return (
     <div className={cn("flex flex-col gap-1 select-none w-full", className)}>
       {rows.map((row, rIdx) => {
-        // Generamos siempre 10 números por fila para mantener la alineación (flex-1)
         const numbers = Array.from({ length: 10 }, (_, i) => row.start + i);
-        
         return (
           <div key={rIdx} className="flex justify-between gap-1">
             {numbers.map((num) => {
-              // Si el número supera el límite, renderizamos un hueco invisible para mantener la estructura
               if (num > max) {
                   return <div key={num} className="flex-1 aspect-square" />;
               }
-
               return (
                 <div
                   key={num}
                   onClick={() => onChange(num)}
                   className={cn(
                     "cursor-pointer flex-1 aspect-square flex items-center justify-center rounded-sm transition-all border border-stone-200 dark:border-stone-800",
-                    "text-[10px] md:text-xs font-medium", // Estilo de texto solicitado
+                    "text-[10px] md:text-xs font-medium",
                     current === num
                       ? "bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900 font-bold scale-110 shadow-sm ring-1 ring-stone-400 z-10"
                       : "bg-stone-50 dark:bg-stone-900/50 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-400"
@@ -109,7 +111,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     setMounted(true)
   }, [])
 
-  // Buscar valor de Mitos de Cthulhu para calcular Cordura Máxima
   const cthulhuSkill = character.skills.find(s => s.name === "Mitos de Cthulhu");
   const cthulhuValue = cthulhuSkill ? cthulhuSkill.value : 0;
   const maxSanityCalc = 99 - cthulhuValue;
@@ -118,12 +119,35 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     onChange({ ...character, [field]: value })
   }
 
+  // Lógica para cambiar Ocupación (Select)
+  const handleOccupationChange = (value: string) => {
+    if (value === "custom") {
+      onChange({
+        ...character,
+        occupation: "Personalizada",
+        occupationLabel: "Nueva Profesión",
+        occupationFormula: "EDU*4",
+        occupationalSkills: [] 
+      })
+    } else {
+      const preset = PRESET_OCCUPATIONS.find((p) => p.name === value)
+      if (preset) {
+        onChange({
+          ...character,
+          occupation: preset.name,
+          occupationLabel: preset.name,
+          occupationFormula: preset.formula,
+          occupationalSkills: preset.skills,
+        })
+      }
+    }
+  }
+
   const handleCharChange = (key: keyof typeof character.characteristics, value: number) => {
     if (key === "MOV") return
     const newChar = createCharacteristicValue(value)
     const newCharacteristics = { ...character.characteristics, [key]: newChar }
     
-    // Recálculos derivados
     const str = newCharacteristics.STR.value
     const dex = newCharacteristics.DEX.value
     const siz = newCharacteristics.SIZ.value
@@ -135,11 +159,10 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const magic = calculateMagicPoints(pow)
     const mov = calculateMovement(dex, str, siz, character.age)
 
-    // Lógica especial: Si cambia POD, actualiza Cordura
     let newSanity = { ...character.sanity };
     if (key === "POW") {
-        newSanity.starting = pow; // Cordura Inicial = POD
-        newSanity.limit = pow;    // El tracker muestra hasta POD por defecto
+        newSanity.starting = pow;
+        newSanity.limit = pow;
         if (newSanity.current === character.characteristics.POW.value || newSanity.current === 0) {
             newSanity.current = pow;
         }
@@ -302,7 +325,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             <span className="border-t border-stone-300 dark:border-stone-700 pt-[1px]">{fifth}</span>
          </div>
 
-         {/* AHORA PERMITIMOS BORRAR SI ES CUSTOM O SI ES UNA SUB-HABILIDAD ESTÁNDAR (Como Arma corta) */}
          {(skill.isCustom || skill.isFieldSlot || isHardcodedSubSkill) && (
             <button 
                onClick={() => removeSkill(actualIndex)} 
@@ -346,10 +368,43 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                     <Label className="text-[9px] uppercase font-bold text-stone-500">Nombre del Investigador</Label>
                     <Input value={character.name} onChange={(e) => handleBasicChange("name", e.target.value)} className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 font-serif text-xl bg-transparent font-bold"/>
                 </div>
+                
+                {/* --- SECCIÓN DE OCUPACIÓN CORREGIDA --- */}
                 <div className="col-span-2 space-y-1">
                     <Label className="text-[9px] uppercase font-bold text-stone-500">Ocupación</Label>
-                    <Input value={character.occupation} onChange={(e) => handleBasicChange("occupation", e.target.value)} className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 bg-transparent"/>
+                    <div className="relative">
+                        <Select 
+                          value={PRESET_OCCUPATIONS.some(p => p.name === character.occupation) ? character.occupation : (character.occupation ? "custom" : "")} 
+                          onValueChange={handleOccupationChange}
+                        >
+                          <SelectTrigger className="w-full h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus:ring-0 bg-transparent text-left font-serif text-base font-medium p-0">
+                            <SelectValue placeholder="Selecciona..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PRESET_OCCUPATIONS.map((occ) => (
+                              <SelectItem key={occ.name} value={occ.name}>
+                                {occ.name}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="custom" className="font-semibold text-primary">
+                              Personalizada / Otra...
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* Input manual si es "custom" */}
+                        {character.occupation !== "" && 
+                         (!PRESET_OCCUPATIONS.some(p => p.name === character.occupation) || character.occupation === "Personalizada") && (
+                           <Input 
+                             value={character.occupation === "Personalizada" ? "" : character.occupation} 
+                             onChange={(e) => handleBasicChange("occupation", e.target.value)} 
+                             className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 bg-transparent mt-1 placeholder:italic"
+                             placeholder="Escribe el nombre de la profesión..."
+                           />
+                        )}
+                    </div>
                 </div>
+                
                 <div className="space-y-1">
                     <Label className="text-[9px] uppercase font-bold text-stone-500">Edad</Label>
                     <Input type="number" value={character.age} onChange={(e) => handleBasicChange("age", e.target.value)} className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"/>

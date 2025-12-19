@@ -1,17 +1,19 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
-import type { Character, Skill } from "@/lib/character-types"
-import { PRESET_OCCUPATIONS, OCCUPATION_FORMULAS, OccupationFormula } from "@/lib/occupations-data"
+import { Badge } from "@/components/ui/badge"
+import { Settings2, Search, Briefcase, User, Info } from "lucide-react"
+
+import type { Character } from "@/lib/character-types"
+import { PRESET_OCCUPATIONS, OccupationFormula } from "@/lib/occupations-data"
 import { calculateOccupationalPoints, calculatePersonalInterestPoints } from "@/lib/occupation-utils"
-import { Plus, Search, Briefcase, User, Info } from "lucide-react"
+import { OccupationDetailsModal } from "./occupation-details-modal"
 
 interface SkillsSectionProps {
   character: Character
@@ -20,27 +22,26 @@ interface SkillsSectionProps {
 
 export function SkillsSection({ character, onChange }: SkillsSectionProps) {
   const [search, setSearch] = useState("")
-  const [isCustomMode, setIsCustomMode] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   
-  // Estado local para selección de característica opcional (STR vs DEX)
-  const [optionalStat, setOptionalStat] = useState<"STR"|"DEX"|"APP"|"POW" | undefined>(undefined)
+  // Detectamos si es profesión personalizada
+  const isCustomMode = character.occupation === "Otra";
 
   // 1. Cálculos de Puntos Totales
   const personalTotal = useMemo(() => calculatePersonalInterestPoints(character), [character.characteristics]);
   
   const occupationTotal = useMemo(() => {
     const formula = (character.occupationFormula as OccupationFormula) || "EDU*4";
-    // Determinar automáticamente el stat opcional si no está seleccionado
-    let effectiveStat = optionalStat;
-    if (!effectiveStat) {
-       if (formula.includes("STR") && formula.includes("DEX")) {
-          effectiveStat = character.characteristics.STR.value > character.characteristics.DEX.value ? "STR" : "DEX";
-       }
+    let effectiveStat: "STR"|"DEX"|"APP"|"POW" | undefined = undefined;
+    
+    if (formula.includes("STR") && formula.includes("DEX")) {
+        effectiveStat = character.characteristics.STR.value > character.characteristics.DEX.value ? "STR" : "DEX";
     }
+    
     return calculateOccupationalPoints(character, formula, effectiveStat);
-  }, [character, optionalStat]);
+  }, [character, character.occupationFormula]);
 
-  // 2. Cálculo de Puntos Gastados (Iteramos las habilidades)
+  // 2. Cálculo de Puntos Gastados
   const { occSpent, perSpent } = useMemo(() => {
     let o = 0;
     let p = 0;
@@ -54,87 +55,78 @@ export function SkillsSection({ character, onChange }: SkillsSectionProps) {
   // Manejo de cambio de profesión
   const handleOccupationChange = (value: string) => {
     if (value === "custom") {
-      setIsCustomMode(true);
+      const resetSkills = character.skills.map(s => ({
+        ...s, isOccupational: false, occupationalPoints: 0
+      }));
+      
       onChange({
         ...character,
-        occupation: "Personalizada",
+        occupation: "Otra",
         occupationLabel: "Nueva Profesión",
         occupationFormula: "EDU*4",
-        occupationalSkills: []
+        skills: resetSkills
       });
+      setIsModalOpen(true);
     } else {
-      setIsCustomMode(false);
       const preset = PRESET_OCCUPATIONS.find(p => p.name === value);
       if (preset) {
-        // CORRECCIÓN: Convertimos los objetos complejos a strings simples para el estado del personaje
-        const flattenedSkills = preset.skills.map(s => {
-            if (typeof s === 'string') return s;
-            return s.name; // Si es objeto, nos quedamos con el nombre base
+        const resetSkills = character.skills.map(s => ({
+            ...s, 
+            isOccupational: false, 
+            occupationalPoints: 0
+        }));
+
+        const fixedSkillNames = preset.skills.filter(s => typeof s === 'string') as string[];
+
+        const newSkills = resetSkills.map(s => {
+            if (fixedSkillNames.includes(s.name)) {
+                return { ...s, isOccupational: true };
+            }
+            return s;
         });
 
         onChange({
           ...character,
           occupation: preset.name,
           occupationFormula: preset.formula,
-          occupationalSkills: flattenedSkills
+          skills: newSkills
         });
-        
-        // Resetear stat opcional
-        if (preset.formula.includes("or")) setOptionalStat(undefined);
       }
     }
   };
 
-  // Función para asignar puntos (maneja la lógica de qué pool usar)
-  const handlePointAssignment = (index: number, newValue: number, type: 'occupation' | 'personal') => {
-    const skill = character.skills[index];
-    const currentTotal = skill.value;
+  const handlePointAssignment = (skillName: string, newValue: number, type: 'occupation' | 'personal') => {
+    const skillIndex = character.skills.findIndex(s => s.name === skillName);
+    if (skillIndex === -1) return;
+    
+    const skill = character.skills[skillIndex];
     const base = skill.baseValue;
     const currentOcc = skill.occupationalPoints || 0;
     const currentPers = skill.personalPoints || 0;
     
-    // El nuevo valor total
-    let diff = newValue - currentTotal;
+    let diff = newValue - skill.value;
     
-    // No permitir bajar del base
     if (newValue < base) return;
 
     const newSkills = [...character.skills];
     
     if (type === 'occupation') {
-      // Verificar si hay puntos disponibles en el pool de ocupación
-      if (diff > 0 && occSpent + diff > occupationTotal) return; // Cap alcanzado
-      newSkills[index] = { 
+      if (diff > 0 && occSpent + diff > occupationTotal) return; 
+      newSkills[skillIndex] = { 
         ...skill, 
         occupationalPoints: Math.max(0, currentOcc + diff),
-        value: newValue 
+        value: newValue,
+        isOccupational: true
       };
     } else {
-       // Verificar si hay puntos disponibles en el pool personal
-      if (diff > 0 && perSpent + diff > personalTotal) return; // Cap alcanzado
-      newSkills[index] = { 
+      if (diff > 0 && perSpent + diff > personalTotal) return;
+      newSkills[skillIndex] = { 
         ...skill, 
         personalPoints: Math.max(0, currentPers + diff),
         value: newValue 
       };
     }
     onChange({ ...character, skills: newSkills });
-  };
-
-  // Toggle para marcar una habilidad como ocupacional (solo Custom mode)
-  const toggleOccupationalSkill = (skillName: string) => {
-    const current = character.occupationalSkills || [];
-    const exists = current.includes(skillName);
-    let newOccList;
-    
-    if (exists) {
-      newOccList = current.filter(s => s !== skillName);
-    } else {
-      if (current.length >= 8) return; // Máximo 8 habilidades
-      newOccList = [...current, skillName];
-    }
-
-    onChange({ ...character, occupationalSkills: newOccList });
   };
 
   const filteredSkills = character.skills.filter(
@@ -145,99 +137,86 @@ export function SkillsSection({ character, onChange }: SkillsSectionProps) {
 
   return (
     <div className="space-y-6">
-      {/* --- HEADER: SELECTOR DE PROFESIÓN --- */}
-      <Card className="bg-muted/30">
+      
+      <OccupationDetailsModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        character={character}
+        onChange={(updates) => onChange({ ...character, ...updates })}
+      />
+
+      <Card className="bg-slate-50 dark:bg-slate-900 border-dashed border-slate-200 dark:border-slate-800">
         <CardContent className="pt-6 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 space-y-2">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 space-y-2 w-full">
               <Label>Profesión</Label>
-              <Select 
-                value={isCustomMode ? "custom" : character.occupation} 
-                onValueChange={handleOccupationChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una profesión" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRESET_OCCUPATIONS.map((occ) => (
-                    <SelectItem key={occ.name} value={occ.name}>{occ.name}</SelectItem>
-                  ))}
-                  <SelectItem value="custom" className="font-semibold text-primary">Creating personalizada...</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Configuración extra para Custom o Fórmulas con Opción */}
-            {isCustomMode && (
-               <div className="flex-1 space-y-2">
-                 <Label>Fórmula de Puntos</Label>
-                 <Select 
-                   value={character.occupationFormula} 
-                   onValueChange={(val) => onChange({...character, occupationFormula: val})}
-                 >
-                   <SelectTrigger>
-                     <SelectValue />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {OCCUPATION_FORMULAS.map(f => (
-                       <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-            )}
-            
-            {/* Selector de característica opcional (si la fórmula lo requiere) */}
-            {character.occupationFormula?.includes("or") && (
-              <div className="w-32 space-y-2">
-                <Label>Bono</Label>
+              <div className="flex gap-2">
                 <Select 
-                    value={optionalStat} 
-                    onValueChange={(val: any) => setOptionalStat(val)}
+                    value={isCustomMode ? "custom" : character.occupation} 
+                    onValueChange={handleOccupationChange}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Elegir" />
-                  </SelectTrigger>
-                  <SelectContent>
-                     {character.occupationFormula.includes("STR") && <SelectItem value="STR">FUE</SelectItem>}
-                     {character.occupationFormula.includes("DEX") && <SelectItem value="DEX">DES</SelectItem>}
-                     {character.occupationFormula.includes("APP") && <SelectItem value="APP">APA</SelectItem>}
-                     {character.occupationFormula.includes("POW") && <SelectItem value="POD">POD</SelectItem>}
-                  </SelectContent>
+                    <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecciona una profesión" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {PRESET_OCCUPATIONS.filter(o => o.name !== "Otra").map((occ) => (
+                        <SelectItem key={occ.name} value={occ.name}>{occ.name}</SelectItem>
+                    ))}
+                    <SelectItem value="custom" className="font-semibold text-amber-600 dark:text-amber-500 border-t dark:border-slate-800 mt-1">
+                        🛠️ Personalizada / Otra
+                    </SelectItem>
+                    </SelectContent>
                 </Select>
+
+                <Button 
+                    variant={isCustomMode ? "default" : "outline"}
+                    onClick={() => setIsModalOpen(true)}
+                    className="shrink-0 gap-2"
+                >
+                    <Settings2 className="w-4 h-4" />
+                    {isCustomMode ? "Configurar" : "Elegir Habilidades"}
+                </Button>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* --- CONTADORES DE PUNTOS --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {/* Ocupación */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white dark:bg-black/40 p-2 rounded border dark:border-slate-800">
+             <InfoIcon className="w-3 h-3"/>
+             <span>Fórmula: <b>{character.occupationFormula}</b></span>
+             {isCustomMode && (
+                <span className="ml-auto text-amber-600 dark:text-amber-500 font-bold">Modo Personalizado</span>
+             )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-500">
-                  <Briefcase className="w-4 h-4" /> Puntos de Ocupación
+                <span className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-500">
+                  <Briefcase className="w-4 h-4" /> Ocupación ({occupationTotal})
                 </span>
-                <span>{occSpent} / {occupationTotal}</span>
+                <span className={occSpent > occupationTotal ? "text-red-500 dark:text-red-400 font-bold" : ""}>
+                    {occSpent} gastados
+                </span>
               </div>
-              <Progress value={(occSpent / occupationTotal) * 100} className="h-2 bg-amber-100 dark:bg-amber-950" indicatorClassName="bg-amber-600" />
+              <Progress value={Math.min(100, (occSpent / occupationTotal) * 100)} className={`h-2 bg-amber-100 dark:bg-amber-950 ${occSpent > occupationTotal ? "[&>div]:bg-red-500" : "[&>div]:bg-amber-600"}`} />
             </div>
             
-            {/* Interés Personal */}
             <div className="space-y-2">
                <div className="flex justify-between text-sm">
-                <span className="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-500">
-                  <User className="w-4 h-4" /> Interés Personal
+                <span className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
+                  <User className="w-4 h-4" /> Interés Personal ({personalTotal})
                 </span>
-                <span>{perSpent} / {personalTotal}</span>
+                <span className={perSpent > personalTotal ? "text-red-500 dark:text-red-400 font-bold" : ""}>
+                    {perSpent} gastados
+                </span>
               </div>
-              <Progress value={(perSpent / personalTotal) * 100} className="h-2 bg-blue-100 dark:bg-blue-950" indicatorClassName="bg-blue-600" />
+              <Progress value={Math.min(100, (perSpent / personalTotal) * 100)} className={`h-2 bg-blue-100 dark:bg-blue-950 ${perSpent > personalTotal ? "[&>div]:bg-red-500" : "[&>div]:bg-blue-600"}`} />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* --- BUSCADOR --- */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -247,83 +226,78 @@ export function SkillsSection({ character, onChange }: SkillsSectionProps) {
             className="pl-9"
           />
         </div>
+        <Badge variant="outline" className="hidden md:flex h-9 px-3">
+            Total Habilidades: {character.skills.length}
+        </Badge>
       </div>
 
-      {/* --- GRID DE HABILIDADES --- */}
-      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 max-h-[600px] overflow-y-auto pr-2">
-        {filteredSkills.map((skill, index) => {
-          const actualIndex = character.skills.findIndex((s) => s === skill)
-          // Determinar si es habilidad ocupacional (por nombre o customName)
-          const skillIdent = skill.customName || skill.name;
-          const isOccupational = character.occupationalSkills?.some(s => skillIdent.includes(s));
+      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-h-[600px] overflow-y-auto pr-2 pb-20">
+        {filteredSkills.map((skill) => {
+          const isOccupational = skill.isOccupational;
           
           return (
             <div
-              key={`${skill.name}-${actualIndex}`}
-              className={`p-3 rounded-lg border transition-colors ${
+              key={skill.name}
+              className={`p-3 rounded-lg border transition-all ${
                 isOccupational 
-                  ? "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800" 
-                  : "bg-card border-border"
+                  ? "bg-amber-50/50 border-amber-200 shadow-sm dark:bg-amber-950/20 dark:border-amber-900/50" 
+                  : "bg-card border-border opacity-90 hover:opacity-100 dark:bg-slate-900/50"
               }`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                   {/* Checkbox para seleccionar como Ocupacional (Solo Custom Mode) */}
-                   {isCustomMode && (
-                     <Checkbox 
-                       checked={isOccupational}
-                       onCheckedChange={() => toggleOccupationalSkill(skillIdent)}
-                       className="data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                     />
-                   )}
-                   
-                   <div className="flex flex-col truncate">
-                      <Label className={`truncate cursor-pointer font-medium ${isOccupational ? "text-amber-800 dark:text-amber-400" : ""}`}>
-                        {skill.customName || skill.name}
-                      </Label>
-                      <span className="text-xs text-muted-foreground">Base: {skill.baseValue}%</span>
-                   </div>
+              <div className="flex items-start justify-between mb-2 gap-2">
+                <div className="flex flex-col overflow-hidden">
+                    <div className="flex items-center gap-1">
+                        {isOccupational && <Briefcase className="w-3 h-3 text-amber-600 dark:text-amber-500 shrink-0"/>}
+                        <Label className={`truncate font-bold text-sm ${isOccupational ? "text-amber-900 dark:text-amber-400" : ""}`} title={skill.name}>
+                            {skill.customName || skill.name}
+                        </Label>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">Base: {skill.baseValue}%</span>
                 </div>
                 
-                {/* Valor Total */}
-                <div className="text-lg font-bold w-12 text-center">
+                <div className={`text-xl font-black w-12 text-center rounded ${skill.value >= 70 ? "text-green-600 dark:text-green-500" : ""}`}>
                   {skill.value}
                 </div>
               </div>
 
-              {/* Inputs para asignar puntos */}
               <div className="grid grid-cols-2 gap-2 mt-2">
-                 {/* Input Ocupación */}
                  <div className="relative">
                     <Input
                       type="number"
-                      disabled={!isOccupational} // Solo editable si es de profesión
-                      value={skill.occupationalPoints || 0}
+                      disabled={!isOccupational} 
+                      value={skill.occupationalPoints || ""}
+                      placeholder={isOccupational ? "0" : "-"}
                       onChange={(e) => {
-                         const added = parseInt(e.target.value) || 0;
-                         // Calculamos el valor final sumando base + personal + NUEVO ocupacional
-                         const newVal = skill.baseValue + (skill.personalPoints || 0) + added;
-                         handlePointAssignment(actualIndex, newVal, 'occupation');
+                         const val = parseInt(e.target.value) || 0;
+                         const newVal = skill.baseValue + (skill.personalPoints || 0) + val;
+                         handlePointAssignment(skill.name, newVal, 'occupation');
                       }}
-                      className={`h-7 text-xs pr-1 text-right ${!isOccupational ? "opacity-30" : "border-amber-200 focus-visible:ring-amber-500"}`}
+                      onFocus={(e) => e.target.select()}
+                      className={`h-8 text-xs pr-1 text-right font-mono ${
+                          !isOccupational 
+                          ? "opacity-20 bg-transparent border-transparent shadow-none pointer-events-none" 
+                          : "border-amber-200 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-900 focus-visible:ring-amber-500 text-amber-900 dark:text-amber-200 font-bold"
+                      }`}
                     />
-                    <span className="absolute left-1 top-1.5 text-[10px] text-muted-foreground pointer-events-none">Ocu</span>
+                    {isOccupational && (
+                        <span className="absolute left-1.5 top-2 text-[9px] text-amber-600/50 dark:text-amber-500/50 pointer-events-none font-bold uppercase">Ocu</span>
+                    )}
                  </div>
 
-                 {/* Input Personal */}
                  <div className="relative">
                     <Input
                       type="number"
-                      value={skill.personalPoints || 0}
+                      value={skill.personalPoints || ""}
+                      placeholder="0"
                       onChange={(e) => {
-                         const added = parseInt(e.target.value) || 0;
-                         // Calculamos el valor final sumando base + ocupacional + NUEVO personal
-                         const newVal = skill.baseValue + (skill.occupationalPoints || 0) + added;
-                         handlePointAssignment(actualIndex, newVal, 'personal');
+                         const val = parseInt(e.target.value) || 0;
+                         const newVal = skill.baseValue + (skill.occupationalPoints || 0) + val;
+                         handlePointAssignment(skill.name, newVal, 'personal');
                       }}
-                      className="h-7 text-xs pr-1 text-right border-blue-200 focus-visible:ring-blue-500"
+                      onFocus={(e) => e.target.select()}
+                      className="h-8 text-xs pr-1 text-right font-mono border-blue-100 dark:border-blue-900 focus-visible:ring-blue-500 bg-blue-50/20 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200"
                     />
-                    <span className="absolute left-1 top-1.5 text-[10px] text-muted-foreground pointer-events-none">Per</span>
+                    <span className="absolute left-1.5 top-2 text-[9px] text-blue-400 dark:text-blue-500/70 pointer-events-none font-bold uppercase">Per</span>
                  </div>
               </div>
             </div>
@@ -332,4 +306,25 @@ export function SkillsSection({ character, onChange }: SkillsSectionProps) {
       </div>
     </div>
   )
+}
+
+function InfoIcon(props: any) {
+    return (
+      <svg
+        {...props}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
+      </svg>
+    )
 }

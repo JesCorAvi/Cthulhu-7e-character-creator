@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import Script from "next/script" // IMPORTANTE: Importar Script
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -48,6 +49,9 @@ export default function RootLayout({
           {children}
           <Analytics />
         </ThemeProvider>
+        {/* Scripts necesarios para Google Auth y Drive API */}
+        <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
+        <Script src="https://apis.google.com/js/api.js" strategy="beforeInteractive" />
       </body>
     </html>
   )

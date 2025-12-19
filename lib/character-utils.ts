@@ -103,6 +103,7 @@ export const createNewCharacter = (era: CharacterEra): Character => {
       current: defaultPow,
       max: 99,
       starting: defaultPow,
+      limit: defaultPow, // Se inicializa igual al POD
       temporaryInsanity: false,
       indefiniteInsanity: false,
     },
@@ -113,6 +114,7 @@ export const createNewCharacter = (era: CharacterEra): Character => {
     luck: {
       current: 50,
       max: 99,
+      limit: 0,
     },
     damageBonus: "0",
     build: 0,

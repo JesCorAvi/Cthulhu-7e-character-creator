@@ -75,6 +75,7 @@ export interface Character {
     current: number
     max: number
     starting: number
+    limit?: number
     temporaryInsanity: boolean
     indefiniteInsanity: boolean
   }
@@ -87,6 +88,7 @@ export interface Character {
   luck: {
     current: number
     max: number
+    limit?: number
   }
 
   // Combate

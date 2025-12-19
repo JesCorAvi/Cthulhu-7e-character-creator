@@ -39,9 +39,9 @@ const CHAR_LABELS: Record<string, string> = {
   MOV: "MOV",
 }
 
-// 2. TRACKER REDISEÑADO (NÚMEROS GRANDES Y PULSABLES)
+// 2. TRACKER ESTILO GRID (DISEÑO SOLICITADO + LÓGICA DE LÍMITE)
 function SheetTracker({
-  max = 99,
+  max = 0,
   current,
   onChange,
   className,
@@ -51,47 +51,48 @@ function SheetTracker({
   onChange: (value: number) => void
   className?: string
 }) {
-  // Dividimos en filas de 10 para que sean casillas grandes
-  const rows = [
-    { start: 1, end: 10 },
-    { start: 11, end: 20 },
-    { start: 21, end: 30 },
-    { start: 31, end: 40 },
-    { start: 41, end: 50 },
-    // Si necesitas más filas (ej. cordura hasta 99), el componente crece
-    { start: 51, end: 60 },
-    { start: 61, end: 70 },
-    { start: 71, end: 80 },
-    { start: 81, end: 90 },
-    { start: 91, end: 99 },
-  ]
+  // Si no hay límite definido (o es 0), mostramos el aviso
+  if (!max || max <= 0) {
+      return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">Introduce un valor inicial para ver el marcador</div>;
+  }
 
-  // Filtramos filas que excedan mucho el maximo para no llenar la pantalla innecesariamente, 
-  // pero para Cordura/Suerte siempre mostramos todo.
-  const relevantRows = max > 50 ? rows : rows.slice(0, 5); 
+  // Calculamos cuántas filas de 10 necesitamos
+  const rowCount = Math.ceil(max / 10);
+  const rows = Array.from({ length: rowCount }, (_, i) => ({
+      start: i * 10 + 1,
+      end: (i + 1) * 10
+  }));
 
   return (
     <div className={cn("flex flex-col gap-1 select-none w-full", className)}>
-      {relevantRows.map((row, rIdx) => {
-        const numbers = Array.from({ length: row.end - row.start + 1 }, (_, i) => row.start + i)
+      {rows.map((row, rIdx) => {
+        // Generamos siempre 10 números por fila para mantener la alineación (flex-1)
+        const numbers = Array.from({ length: 10 }, (_, i) => row.start + i);
+        
         return (
           <div key={rIdx} className="flex justify-between gap-1">
-            {numbers.map((num) => (
-              <div
-                key={num}
-                onClick={() => onChange(num)}
-                className={cn(
-                  "cursor-pointer flex-1 aspect-square flex items-center justify-center rounded-sm transition-all border border-stone-200 dark:border-stone-800",
-                  "text-[10px] md:text-xs font-medium", // Texto más grande
-                  current === num
-                    ? "bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900 font-bold scale-110 shadow-sm ring-1 ring-stone-400 z-10"
-                    : "bg-stone-50 dark:bg-stone-900/50 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-400",
-                  num > (max || 99) && "opacity-20 pointer-events-none"
-                )}
-              >
-                {num}
-              </div>
-            ))}
+            {numbers.map((num) => {
+              // Si el número supera el límite, renderizamos un hueco invisible para mantener la estructura
+              if (num > max) {
+                  return <div key={num} className="flex-1 aspect-square" />;
+              }
+
+              return (
+                <div
+                  key={num}
+                  onClick={() => onChange(num)}
+                  className={cn(
+                    "cursor-pointer flex-1 aspect-square flex items-center justify-center rounded-sm transition-all border border-stone-200 dark:border-stone-800",
+                    "text-[10px] md:text-xs font-medium", // Estilo de texto solicitado
+                    current === num
+                      ? "bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900 font-bold scale-110 shadow-sm ring-1 ring-stone-400 z-10"
+                      : "bg-stone-50 dark:bg-stone-900/50 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-400"
+                  )}
+                >
+                  {num}
+                </div>
+              );
+            })}
           </div>
         )
       })}
@@ -107,6 +108,11 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Buscar valor de Mitos de Cthulhu para calcular Cordura Máxima
+  const cthulhuSkill = character.skills.find(s => s.name === "Mitos de Cthulhu");
+  const cthulhuValue = cthulhuSkill ? cthulhuSkill.value : 0;
+  const maxSanityCalc = 99 - cthulhuValue;
 
   const handleBasicChange = (field: keyof Character, value: string | number) => {
     onChange({ ...character, [field]: value })
@@ -129,6 +135,16 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const magic = calculateMagicPoints(pow)
     const mov = calculateMovement(dex, str, siz, character.age)
 
+    // Lógica especial: Si cambia POD, actualiza Cordura
+    let newSanity = { ...character.sanity };
+    if (key === "POW") {
+        newSanity.starting = pow; // Cordura Inicial = POD
+        newSanity.limit = pow;    // El tracker muestra hasta POD por defecto
+        if (newSanity.current === character.characteristics.POW.value || newSanity.current === 0) {
+            newSanity.current = pow;
+        }
+    }
+
     const updatedSkills = character.skills.map((skill) => {
       if (skill.name === "Esquivar" && !skill.isFieldSlot) {
         return { ...skill, baseValue: Math.floor(dex / 2), value: Math.floor(dex / 2) }
@@ -143,7 +159,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
       ...character,
       characteristics: { ...newCharacteristics, MOV: mov },
       hitPoints: { ...character.hitPoints, max: hp, current: Math.min(character.hitPoints.current, hp) },
-      sanity: { ...character.sanity, starting: pow, current: character.sanity.current === character.sanity.starting ? pow : character.sanity.current },
+      sanity: newSanity,
       magicPoints: { ...character.magicPoints, max: magic, current: Math.min(character.magicPoints.current, magic) },
       damageBonus: calculateDamageBonus(str, siz),
       build: calculateBuild(str, siz),
@@ -153,7 +169,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   }
 
   // --- Lógica de Habilidades ---
-
   const updateSkill = (index: number, updates: Partial<Skill>) => {
     const newSkills = [...character.skills]
     newSkills[index] = { ...newSkills[index], ...updates }
@@ -178,7 +193,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     ) {
       insertIndex++
     }
-    
     const newSkills = [...character.skills]
     newSkills.splice(insertIndex, 0, newSlot)
     onChange({ ...character, skills: newSkills })
@@ -212,7 +226,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     return skill.name.toLowerCase().includes(term) || (skill.customName && skill.customName.toLowerCase().includes(term))
   })
 
-  // Renderizado de Fila de Habilidad
   const renderSkillRow = (skill: Skill, idx: number) => {
     const actualIndex = character.skills.indexOf(skill)
     const half = Math.floor(skill.value / 2)
@@ -237,8 +250,12 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
        )
     }
 
-    const isSlot = skill.isFieldSlot
-    const displayName = skill.customName || skill.name
+    const isHardcodedSubSkill = skill.name.includes(":");
+    const isSlot = skill.isFieldSlot || isHardcodedSubSkill;
+    let displayName = skill.customName || skill.name;
+    if (isHardcodedSubSkill) {
+        displayName = skill.name.split(":")[1].trim();
+    }
     
     return (
       <div 
@@ -259,12 +276,12 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
          />
          
          <div className="flex-1 min-w-0 font-serif flex items-center">
-            {skill.isCustom || isSlot ? (
+            {skill.isCustom || skill.isFieldSlot ? (
                <Input 
                  value={skill.customName} 
                  onChange={(e) => updateSkill(actualIndex, { customName: e.target.value })}
                  className="h-5 p-1 text-[11px] border-none bg-transparent w-full focus-visible:ring-0 font-serif placeholder:text-stone-400 italic"
-                 placeholder={isSlot ? `Especialidad` : "Nombre..."}
+                 placeholder={isSlot ? `................................` : "Nombre..."}
                />
             ) : (
                <span className={cn("text-[11px] truncate", skill.isOccupational && "font-bold text-stone-900 dark:text-stone-100")}>
@@ -285,10 +302,12 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             <span className="border-t border-stone-300 dark:border-stone-700 pt-[1px]">{fifth}</span>
          </div>
 
-         {(skill.isCustom || isSlot) && (
+         {/* AHORA PERMITIMOS BORRAR SI ES CUSTOM O SI ES UNA SUB-HABILIDAD ESTÁNDAR (Como Arma corta) */}
+         {(skill.isCustom || skill.isFieldSlot || isHardcodedSubSkill) && (
             <button 
                onClick={() => removeSkill(actualIndex)} 
                className="text-stone-300 hover:text-red-500 transition-colors px-0.5 opacity-0 group-hover:opacity-100"
+               title="Eliminar habilidad"
             >
                <Trash2 className="h-3 w-3"/>
             </button>
@@ -300,20 +319,19 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   return (
     <div className="w-full max-w-[1100px] mx-auto bg-[#fdfaf5] dark:bg-stone-950 text-stone-900 dark:text-stone-200 font-sans p-4 md:p-8 shadow-2xl border border-stone-300 dark:border-stone-800 min-h-screen relative transition-colors duration-300">
       
-      {/* 3. BOTÓN MODO OSCURO (Visible y Fijo) */}
       {mounted && (
         <Button
             variant="outline"
             size="icon"
-            className="fixed top-4 right-4 z-50 rounded-full shadow-lg bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700"
+            className="fixed top-4 right-4 z-50 rounded-full shadow-lg bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
-            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-orange-500" />
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
         </Button>
       )}
 
-      {/* CABECERA */}
+      {/* CABECERA (DATOS PERSONALES) */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row gap-6 mb-6">
             <div className="lg:w-1/4 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-stone-300 dark:border-stone-800 pb-4 lg:pb-0 lg:pr-4">
@@ -351,7 +369,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             </div>
         </div>
 
-        {/* TIRA DE CARACTERÍSTICAS (Orden Corregido y Mitad/Quinto más grandes) */}
+        {/* TIRA DE CARACTERÍSTICAS */}
         <div className="bg-stone-200/50 dark:bg-stone-900/50 p-3 rounded border border-stone-300 dark:border-stone-700">
             <div className="flex flex-wrap justify-between gap-2 md:gap-4">
                 {CHAR_ORDER.map((key) => {
@@ -365,7 +383,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                                 onChange={(e) => handleCharChange(key as any, parseInt(e.target.value))}
                                 className="h-10 w-full text-center text-2xl font-black border-stone-200 dark:border-stone-700 bg-transparent p-0 focus-visible:ring-1"
                             />
-                            {/* 4. TAMAÑO AUMENTADO DE VALORES DERIVADOS (Mitad/Quinto) */}
                             <div className="flex w-full justify-between px-1 mt-1 text-[10px] text-stone-500 font-mono font-bold">
                                 <span title="Mitad">{char.half}</span>
                                 <span title="Quinto">{char.fifth}</span>
@@ -373,7 +390,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                         </div>
                     )
                 })}
-                {/* MOV Separado */}
                 <div className="flex-1 min-w-[70px] flex flex-col items-center bg-stone-100 dark:bg-stone-900 p-1.5 rounded border border-stone-200 dark:border-stone-800">
                      <span className="text-[10px] font-black text-stone-500 mb-1">MOV</span>
                      <div className="h-10 w-full flex items-center justify-center text-2xl font-black">{character.characteristics.MOV}</div>
@@ -383,7 +399,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         </div>
       </div>
 
-      {/* ESTADÍSTICAS DERIVADAS (Bloques Grandes) */}
+      {/* ESTADÍSTICAS DERIVADAS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         
         {/* PUNTOS DE VIDA */}
@@ -427,22 +443,26 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
            <Label className="font-serif font-bold text-sm uppercase block mb-2">Cordura (SAN)</Label>
            <div className="flex gap-2 mb-3 items-end">
+              
               <div className="flex-1">
                  <Input 
                    type="number" 
-                   value={character.sanity.current} 
-                   onChange={(e) => onChange({...character, sanity: {...character.sanity, current: parseInt(e.target.value)}})}
-                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
+                   value={character.sanity.limit || ""} 
+                   onChange={(e) => onChange({...character, sanity: {...character.sanity, limit: parseInt(e.target.value) || 0}})}
+                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300"
+                   placeholder="0"
                  />
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Inicial (POD)</Label>
               </div>
+
               <div className="w-14">
-                 <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-stone-200 rounded mb-1">
-                    {character.sanity.starting}
+                 <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-stone-200 rounded mb-1 bg-stone-50 dark:bg-stone-900">
+                    {maxSanityCalc}
                  </div>
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center">Inic.</Label>
+                 <Label className="text-[8px] uppercase text-stone-400 block text-center">Máx</Label>
               </div>
            </div>
+           
            <div className="flex justify-between gap-1 mb-3">
                 <div className="flex items-center gap-1">
                   <Checkbox className="h-4 w-4" id="ti" checked={character.sanity.temporaryInsanity} onCheckedChange={(c) => onChange({...character, sanity: {...character.sanity, temporaryInsanity: !!c}})} />
@@ -453,11 +473,17 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                   <Label htmlFor="ii" className="text-[10px] cursor-pointer">Indef.</Label>
                 </div>
            </div>
+           
            <SheetTracker 
              current={character.sanity.current} 
-             max={99}
+             max={character.sanity.limit || 0} 
              onChange={(v) => onChange({...character, sanity: {...character.sanity, current: v}})}
            />
+           {character.sanity.limit ? (
+               <div className="text-[9px] text-center text-stone-400 mt-1">
+                  Actual: {character.sanity.current}
+               </div>
+           ) : null}
         </div>
 
         {/* SUERTE */}
@@ -467,18 +493,24 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                <div className="w-2/3">
                  <Input 
                    type="number" 
-                   value={character.luck.current} 
-                   onChange={(e) => onChange({...character, luck: {...character.luck, current: parseInt(e.target.value)}})}
-                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
+                   value={character.luck.limit || ""} 
+                   placeholder="Valor Inicial"
+                   onChange={(e) => onChange({...character, luck: {...character.luck, limit: parseInt(e.target.value) || 0}})}
+                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300 text-stone-900 dark:text-stone-100"
                  />
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Valor Inicial</Label>
               </div>
            </div>
             <SheetTracker 
              current={character.luck.current} 
-             max={99}
+             max={character.luck.limit || 0} 
              onChange={(v) => onChange({...character, luck: {...character.luck, current: v}})}
            />
+           {character.luck.limit ? (
+              <div className="text-[9px] text-center text-stone-400 mt-1">
+                  Actual: {character.luck.current}
+              </div>
+           ) : null}
         </div>
 
         {/* PUNTOS DE MAGIA */}
@@ -513,7 +545,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 flex-1">Habilidades del Investigador</h3>
       </div>
 
-      {/* SECCIÓN 3: HABILIDADES */}
+      {/* HABILIDADES */}
       <div className="mb-8">
         <div className="flex justify-end items-center mb-4 gap-2">
            <div className="relative">
@@ -539,7 +571,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         </div>
       </div>
 
-      {/* SECCIÓN 4: COMBATE */}
+      {/* COMBATE */}
       <div className="mt-8">
          <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 mb-4">Combate</h3>
          
@@ -580,7 +612,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                   {character.weapons.map((w, i) => (
                      <tr key={i} className="hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors">
                         <td className="p-1"><Input value={w.name} onChange={e => updateWeapon(i, {name: e.target.value})} className="h-8 text-sm border-none bg-transparent font-bold"/></td>
-                        {/* 4. AUMENTO DE TEXTO EN TABLA ARMAS */}
                         <td className="p-1"><Input type="number" value={w.normal} onChange={e => updateWeapon(i, {normal: parseInt(e.target.value)||0})} className="h-8 text-center text-sm border-none bg-transparent font-medium"/></td>
                         <td className="p-1"><Input type="number" value={w.difficult} onChange={e => updateWeapon(i, {difficult: parseInt(e.target.value)||0})} className="h-8 text-center text-sm border-none bg-transparent text-stone-600"/></td>
                         <td className="p-1"><Input type="number" value={w.extreme} onChange={e => updateWeapon(i, {extreme: parseInt(e.target.value)||0})} className="h-8 text-center text-sm border-none bg-transparent text-stone-400"/></td>

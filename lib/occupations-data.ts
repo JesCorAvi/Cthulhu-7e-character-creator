@@ -2,10 +2,19 @@
 
 export type OccupationFormula = string;
 
+export type FieldRequirement = { 
+  type: "field"; 
+  field: string; 
+  options?: string[]; 
+  count: number; 
+  label?: string 
+};
+
 export type SkillRequirement = 
   | string 
-  | { type: "choice"; options: string[]; count: number; label: string } 
-  | { type: "any"; count: number; label?: string };
+  | { type: "choice"; options: (string | FieldRequirement)[]; count: number; label: string } 
+  | { type: "any"; count: number; label?: string }
+  | FieldRequirement;
 
 export interface OccupationDefinition {
   name: string;
@@ -43,10 +52,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Actor",
     formula: "EDU*2 + APP*2", 
     skills: [
-      "Arte/Artesanía: Actuar", 
-      "Disfrazarse", 
-      "Escuchar", 
-      "Psicología", 
+      { type: "field", field: "Arte/Artesanía", options: ["Actuar"], count: 1 },
+      "Disfrazarse", "Escuchar", "Psicología", 
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 2, label: "Interpersonales" }, 
       { type: "any", count: 1 }
     ],
@@ -56,13 +63,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Agente Federal",
     formula: "EDU*4",
     skills: [
-      { type: "choice", options: ["Armas de fuego: Arma corta", "Armas de fuego: Fusil/Escopeta"], count: 1, label: "Armas de fuego" },
-      "Conducir automóvil", 
-      "Combatir: Pelea", 
-      "Derecho", 
-      "Descubrir", 
-      "Persuasión", 
-      "Sigilo",
+      { type: "field", field: "Armas de fuego", options: ["Arma corta", "Fusil/Escopeta"], count: 1 },
+      "Conducir automóvil", "Combatir: Pelea", "Derecho", "Descubrir", "Persuasión", "Sigilo",
       { type: "any", count: 1, label: "Especialidad personal" }
     ],
     creditRating: [20, 40]
@@ -71,7 +73,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Alienista",
     formula: "EDU*4",
     skills: [
-      "Ciencia: Biología", "Ciencia: Química", "Derecho", "Escuchar", "Medicina", "Otras lenguas", "Psicoanálisis", "Psicología"
+      { type: "field", field: "Ciencia", options: ["Biología", "Química"], count: 2, label: "Ciencias especializadas" },
+      "Derecho", "Escuchar", "Medicina", "Otras lenguas", "Psicoanálisis", "Psicología"
     ],
     creditRating: [10, 60]
   },
@@ -79,9 +82,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Anticuario",
     formula: "EDU*4",
     skills: [
-      "Tasación", "Arte/Artesanía", "Historia", "Buscar libros", "Otras lenguas", "Descubrir",
-      { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal" }, 
-      { type: "any", count: 1 }
+      "Tasación", { type: "field", field: "Arte/Artesanía", count: 1 }, "Historia", "Buscar libros", "Otras lenguas", "Descubrir",
+      { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal" }, { type: "any", count: 1 }
     ],
     creditRating: [30, 70]
   },
@@ -90,7 +92,15 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*4",
     skills: [
       "Arqueología", "Buscar libros", "Descubrir", "Historia", "Mecánica", "Otras lenguas", "Tasación",
-      { type: "choice", options: ["Ciencia", "Orientarse"], count: 1, label: "Ciencia u Orientarse" }
+      { 
+        type: "choice", 
+        count: 1, 
+        label: "Ciencia u Orientarse",
+        options: [
+          { type: "field", field: "Ciencia", count: 1 }, 
+          "Orientarse"
+        ] 
+      }
     ],
     creditRating: [10, 40]
   },
@@ -98,7 +108,9 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Cirujano Forense",
     formula: "EDU*4",
     skills: [
-      "Buscar libros", "Ciencia: Biología", "Ciencia: Farmacia", "Ciencia: Medicina forense", "Descubrir", "Medicina", "Otras lenguas", "Persuasión"
+      "Buscar libros", 
+      { type: "field", field: "Ciencia", options: ["Biología", "Farmacia", "Medicina forense"], count: 3 },
+      "Descubrir", "Medicina", "Otras lenguas", "Persuasión"
     ],
     creditRating: [40, 60]
   },
@@ -106,7 +118,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Detective Privado",
     formula: "EDU*2 + DEX*2",
     skills: [
-      "Arte/Artesanía: Fotografía", "Buscar libros", "Derecho", "Descubrir", "Disfrazarse", "Psicología", 
+      { type: "field", field: "Arte/Artesanía", options: ["Fotografía"], count: 1 },
+      "Buscar libros", "Derecho", "Descubrir", "Disfrazarse", "Psicología", 
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal" }, 
       { type: "any", count: 1 }
     ],
@@ -115,14 +128,17 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Médico",
     formula: "EDU*4",
-    skills: ["Ciencia: Biología", "Ciencia: Farmacia", "Medicina", "Otras lenguas", "Primeros auxilios", "Psicología", { type: "any", count: 2 }],
+    skills: [
+        { type: "field", field: "Ciencia", options: ["Biología", "Farmacia"], count: 2 },
+        "Medicina", "Otras lenguas", "Primeros auxilios", "Psicología", { type: "any", count: 2 }
+    ],
     creditRating: [30, 80]
   },
   {
     name: "Oficial de Policía",
     formula: "EDU*2 + STR*2",
     skills: [
-      { type: "choice", options: ["Armas de fuego: Arma corta", "Armas de fuego: Fusil/Escopeta"], count: 1, label: "Armas de fuego" },
+      { type: "field", field: "Armas de fuego", options: ["Arma corta", "Fusil/Escopeta"], count: 1 },
       "Combatir: Pelea", "Derecho", "Descubrir", "Primeros auxilios", "Psicología", 
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal" }, 
       { type: "choice", options: ["Conducir automóvil", "Equitación"], count: 1, label: "Conducir o Equitación" }
@@ -133,7 +149,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     name: "Periodista",
     formula: "EDU*4",
     skills: [
-      "Arte/Artesanía: Fotografía", "Buscar libros", "Historia", "Lengua propia", "Psicología", 
+      { type: "field", field: "Arte/Artesanía", options: ["Fotografía"], count: 1 },
+      "Buscar libros", "Historia", "Lengua propia", "Psicología", 
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal" }, 
       { type: "any", count: 2 }
     ],

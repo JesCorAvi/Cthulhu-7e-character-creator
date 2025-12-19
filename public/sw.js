@@ -1,10 +1,14 @@
-const CACHE_NAME = 'cthulhu-builder-v1';
+const CACHE_NAME = 'cthulhu-builder-v2'; // Cambia v1 a v2 para forzar actualización
+const REPO_NAME = '/cthulhu-7e-character-creator'; // Tu nombre de repo
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Cacheamos lo mínimo vital
-      return cache.addAll(['/', '/manifest.json', '/icons/icon-192.png']);
+      return cache.addAll([
+        `${REPO_NAME}/`,
+        `${REPO_NAME}/manifest.json`,
+        `${REPO_NAME}/icons/icon-192.png`
+      ]);
     })
   );
 });

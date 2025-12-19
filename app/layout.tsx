@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description: "Crea y gestiona tus fichas de investigador para Call of Cthulhu 7ª Edición",
   generator: "v0.app",
   // [NUEVO] Enlace al manifest
-  manifest: "/manifest.json", 
+  manifest: "/cthulhu-7e-character-creator/manifest.json",
   // [NUEVO] Configuración específica para Apple (iOS)
   appleWebApp: {
     capable: true,

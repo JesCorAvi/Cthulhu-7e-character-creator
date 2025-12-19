@@ -1,17 +1,16 @@
-"use client" // Importante: esto indica que es código de cliente
-
+"use client"
 import { useEffect } from "react"
 
 export function PwaRegister() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      // Registramos el SW que está en public/sw.js
+      // AÑADIR EL NOMBRE DEL REPO AQUÍ
       navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => console.log("Service Worker registrado con scope:", reg.scope))
-        .catch((err) => console.error("Error al registrar Service Worker:", err))
+        .register("/cthulhu-7e-character-creator/sw.js") 
+        .then((reg) => console.log("SW registrado:", reg.scope))
+        .catch((err) => console.error("Error SW:", err))
     }
   }, [])
 
-  return null // Este componente no renderiza nada visual
+  return null
 }

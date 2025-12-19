@@ -275,7 +275,8 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           {slotsFilled < req.count && (
             <div className="flex gap-2 items-center mt-2">
               <Select value="" onValueChange={(val) => {
-                  if (val === "Ciencia" || val === "Arte/Artesanía" || val === "Otras lenguas") {
+                  // Añade "Armas de fuego" y "Combatir" a esta lista
+                  if (["Ciencia", "Arte/Artesanía", "Otras lenguas", "Armas de fuego", "Combatir", "Lengua propia", "Pilotar","Supervivencia"].includes(val)) {
                     setSpecializationInput(val);
                   } else {
                     updateSkillPoints(val, 10);

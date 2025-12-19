@@ -53,48 +53,82 @@ export function SkillsSection({ character, onChange }: SkillsSectionProps) {
   }, [character.skills]);
 
   // Manejo de cambio de profesión
-  const handleOccupationChange = (value: string) => {
-    if (value === "custom") {
+const handleOccupationChange = (value: string) => {
+  if (value === "custom") {
+    // ... (mantener tu lógica de reset para custom)
+    const resetSkills = character.skills.map(s => ({
+      ...s, isOccupational: false, occupationalPoints: 0
+    }));
+    
+    onChange({
+      ...character,
+      occupation: "Otra",
+      occupationLabel: "Nueva Profesión",
+      occupationFormula: "EDU*4",
+      skills: resetSkills
+    });
+    setIsModalOpen(true);
+  } else {
+    const preset = PRESET_OCCUPATIONS.find(p => p.name === value);
+    if (preset) {
+      // 1. Resetear todas las habilidades
       const resetSkills = character.skills.map(s => ({
-        ...s, isOccupational: false, occupationalPoints: 0
+          ...s, 
+          isOccupational: false, 
+          occupationalPoints: 0
       }));
+
+      // 2. Extraer requerimientos
+      const fixedSkillNames = preset.skills.filter(s => typeof s === 'string') as string[];
       
+      const choiceCategories = preset.skills
+        .filter(s => typeof s !== 'string' && s.type === 'choice')
+        .flatMap(s => (s as any).options as string[]);
+
+      // 3. Mapeo profundo de habilidades
+      const newSkills = resetSkills.map(s => {
+          // A. Coincidencia exacta (ej: "Psicología")
+          if (fixedSkillNames.includes(s.name)) {
+              return { ...s, isOccupational: true };
+          }
+          
+          // B. Coincidencia por categoría o sub-habilidad (ej: "Ciencia: Biología" o el slot de "Ciencia")
+          // Buscamos si el nombre de la habilidad contiene alguna de las opciones (Ciencia, Arte, etc.)
+          const isChoice = choiceCategories.some(cat => 
+            s.name === cat || s.name.startsWith(`${cat}:`)
+          );
+
+          if (isChoice) {
+              return { ...s, isOccupational: true };
+          }
+
+          // C. IMPORTANTE: Si la profesión pide una categoría (ej: "Ciencia"), 
+          // debemos marcar también los "Field Slots" (campos vacíos) para que puedas escribir en ellos.
+          const isFieldSlotForChoice = choiceCategories.some(cat => 
+            s.isFieldSlot && s.name === cat
+          );
+
+          if (isFieldSlotForChoice) {
+            return { ...s, isOccupational: true };
+          }
+
+          return s;
+      });
+
       onChange({
         ...character,
-        occupation: "Otra",
-        occupationLabel: "Nueva Profesión",
-        occupationFormula: "EDU*4",
-        skills: resetSkills
+        occupation: preset.name,
+        occupationFormula: preset.formula,
+        skills: newSkills
       });
-      setIsModalOpen(true);
-    } else {
-      const preset = PRESET_OCCUPATIONS.find(p => p.name === value);
-      if (preset) {
-        const resetSkills = character.skills.map(s => ({
-            ...s, 
-            isOccupational: false, 
-            occupationalPoints: 0
-        }));
-
-        const fixedSkillNames = preset.skills.filter(s => typeof s === 'string') as string[];
-
-        const newSkills = resetSkills.map(s => {
-            if (fixedSkillNames.includes(s.name)) {
-                return { ...s, isOccupational: true };
-            }
-            return s;
-        });
-
-        onChange({
-          ...character,
-          occupation: preset.name,
-          occupationFormula: preset.formula,
-          skills: newSkills
-        });
+      
+      // Abrir modal si hay elecciones para que el usuario defina la especialidad
+      if (preset.skills.some(s => typeof s !== 'string')) {
+        setIsModalOpen(true);
       }
     }
-  };
-
+  }
+};
   const handlePointAssignment = (skillName: string, newValue: number, type: 'occupation' | 'personal') => {
     const skillIndex = character.skills.findIndex(s => s.name === skillName);
     if (skillIndex === -1) return;

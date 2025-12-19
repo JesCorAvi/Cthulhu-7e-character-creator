@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import type React from "react"
+
+import { useState, useMemo, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -13,6 +15,141 @@ import { Trash2, Settings2, Plus, X } from "lucide-react"
 import type { Character, CharacteristicValue } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS, type SkillRequirement, type FieldRequirement } from "@/lib/occupations-data"
 import { calculateSpentPoints } from "@/lib/occupation-utils"
+
+function PointsInput({
+  value = 0,
+  onChange,
+  className,
+  placeholder,
+}: {
+  value?: number
+  onChange: (val: number) => void
+  className?: string
+  placeholder?: string
+}) {
+  const [localValue, setLocalValue] = useState(String(value))
+
+  useEffect(() => {
+    setLocalValue(String(value))
+  }, [value])
+
+  const handleBlur = () => {
+    const parsed = Number.parseInt(localValue) || 0
+    if (parsed !== value) {
+      onChange(parsed)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const parsed = Number.parseInt(localValue) || 0
+      onChange(parsed)
+      ;(e.target as HTMLInputElement).blur()
+    }
+  }
+
+  return (
+    <Input
+      type="number"
+      className={className}
+      value={localValue}
+      placeholder={placeholder}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      onFocus={(e) => e.target.select()}
+    />
+  )
+}
+
+function TextInput({
+  value,
+  onChange,
+  className,
+  placeholder,
+  autoFocus,
+  onKeyDown,
+}: {
+  value: string
+  onChange: (val: string) => void
+  className?: string
+  placeholder?: string
+  autoFocus?: boolean
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+}) {
+  const [localValue, setLocalValue] = useState(value)
+
+  useEffect(() => {
+    setLocalValue(value)
+  }, [value])
+
+  const handleBlur = () => {
+    if (localValue !== value) {
+      onChange(localValue)
+    }
+  }
+
+  return (
+    <Input
+      type="text"
+      className={className}
+      value={localValue}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onChange(localValue)
+        }
+        onKeyDown?.(e)
+      }}
+    />
+  )
+}
+
+function BaseValueInput({
+  value,
+  onChange,
+  className,
+  placeholder,
+  onKeyDown,
+}: {
+  value: string
+  onChange: (val: string) => void
+  className?: string
+  placeholder?: string
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+}) {
+  const [localValue, setLocalValue] = useState(value)
+
+  useEffect(() => {
+    setLocalValue(value)
+  }, [value])
+
+  const handleBlur = () => {
+    if (localValue !== value) {
+      onChange(localValue)
+    }
+  }
+
+  return (
+    <Input
+      type="number"
+      className={className}
+      value={localValue}
+      placeholder={placeholder}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onChange(localValue)
+        }
+        onKeyDown?.(e)
+      }}
+    />
+  )
+}
 
 const COMMON_SKILLS = [
   "Antropología",
@@ -82,6 +219,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null)
   const [activeFieldKey, setActiveFieldKey] = useState<string | null>(null)
   const [tempSpecValue, setTempSpecValue] = useState("")
+  const [tempBaseValue, setTempBaseValue] = useState("")
   const [customStat1, setCustomStat1] = useState<string>("EDU")
   const [customStat2, setCustomStat2] = useState<string>("DEX")
 
@@ -129,75 +267,63 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
   if (!currentOccupation && !isCustomOccupation) return null
 
-  const updateSkillPoints = (name: string, pts: number) => {
-    console.log("[v0] updateSkillPoints called:", { name, pts })
-
+  const updateSkillPoints = (name: string, pts: number, customBaseValue?: number) => {
     const newSkills = [...character.skills]
-
     const isFieldSpecialization = name.includes(": ")
 
     if (isFieldSpecialization) {
       const [fieldName, specName] = name.split(": ")
-      console.log("[v0] Field specialization detected:", { fieldName, specName })
 
-      // First, check if this exact specialization already exists
       const existingSpecIndex = newSkills.findIndex(
         (s) => s.name === name || (s.name === fieldName && s.customName === specName),
       )
 
       if (existingSpecIndex >= 0) {
-        // Update existing specialization
-        console.log("[v0] Updating existing specialization at index:", existingSpecIndex)
         const skill = newSkills[existingSpecIndex]
         if (pts === 0) {
-          // Reset the slot back to empty if it was a field slot
           if (skill.isFieldSlot) {
             newSkills[existingSpecIndex] = {
               ...skill,
-              name: fieldName,
               customName: "",
               occupationalPoints: 0,
-              value: skill.baseValue + (skill.personalPoints || 0),
               isOccupational: false,
+              value: skill.baseValue,
             }
           } else {
-            // Remove if it was a fully custom skill added to the end
             newSkills.splice(existingSpecIndex, 1)
           }
         } else {
+          const baseVal = customBaseValue !== undefined ? customBaseValue : skill.baseValue
           newSkills[existingSpecIndex] = {
             ...skill,
+            baseValue: baseVal,
             occupationalPoints: pts,
-            value: skill.baseValue + pts + (skill.personalPoints || 0),
+            value: baseVal + pts + (skill.personalPoints || 0),
             isOccupational: true,
           }
         }
       } else if (pts > 0) {
-        // Look for an empty field slot to fill
         const emptySlotIndex = newSkills.findIndex(
           (s) => s.isFieldSlot && s.name === fieldName && (!s.customName || s.customName === ""),
         )
 
         if (emptySlotIndex >= 0) {
-          // Fill the empty slot with this specialization
-          console.log("[v0] Filling empty slot at index:", emptySlotIndex, "with:", specName)
           const slot = newSkills[emptySlotIndex]
+          const baseVal = customBaseValue !== undefined ? customBaseValue : slot.baseValue
           newSkills[emptySlotIndex] = {
             ...slot,
-            name: fieldName, // Keep the field name for filtering
-            customName: specName, // Set the specialization name
+            customName: specName,
+            baseValue: baseVal,
             occupationalPoints: pts,
-            value: slot.baseValue + pts + (slot.personalPoints || 0),
+            value: baseVal + pts,
             isOccupational: true,
           }
         } else {
-          // No empty slots available, create a new skill at the end
-          console.log("[v0] No empty slots, creating new skill:", name)
+          const baseVal = customBaseValue !== undefined ? customBaseValue : 0
           newSkills.push({
             name: name,
-            customName: specName,
-            baseValue: 1,
-            value: 1 + pts,
+            baseValue: baseVal,
+            value: baseVal + pts,
             occupationalPoints: pts,
             personalPoints: 0,
             isOccupational: true,
@@ -206,29 +332,20 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
         }
       }
     } else {
-      // Regular skill (not a field specialization)
       const existingIndex = newSkills.findIndex((s) => s.name === name)
-
       if (existingIndex >= 0) {
-        console.log("[v0] Updating existing skill at index:", existingIndex)
         const skill = newSkills[existingIndex]
-        if (pts === 0) {
-          newSkills[existingIndex] = {
-            ...skill,
-            occupationalPoints: 0,
-            value: skill.baseValue + (skill.personalPoints || 0),
-            isOccupational: false,
-          }
+        if (pts === 0 && skill.isCustom) {
+          newSkills.splice(existingIndex, 1)
         } else {
           newSkills[existingIndex] = {
             ...skill,
             occupationalPoints: pts,
             value: skill.baseValue + pts + (skill.personalPoints || 0),
-            isOccupational: true,
+            isOccupational: pts > 0,
           }
         }
       } else if (pts > 0) {
-        console.log("[v0] Creating new skill:", name)
         newSkills.push({
           name: name,
           baseValue: 0,
@@ -241,7 +358,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       }
     }
 
-    console.log("[v0] Final skills array length:", newSkills.length)
     onChange({ skills: newSkills })
   }
 
@@ -253,20 +369,19 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     const added = character.skills.filter(
       (s) =>
         s.isOccupational &&
-        // Match field slots that have been filled
-        ((s.name === req.field && s.customName && s.customName !== "") ||
-          // Match skills added with full "Field: Spec" name format
-          s.name.startsWith(`${req.field}: `)),
+        ((s.name === req.field && s.customName && s.customName !== "") || s.name.startsWith(`${req.field}: `)),
     )
     const isAdding = activeFieldKey === uniqueId
+    const needsBaseValue = req.requiresBaseValue || false
 
     const handleAdd = () => {
       const specName = tempSpecValue.trim()
       if (specName) {
         const fullName = `${req.field}: ${specName}`
-        console.log("[v0] FieldSelector handleAdd:", { field: req.field, specName, fullName })
-        updateSkillPoints(fullName, 10)
+        const baseVal = needsBaseValue ? Number.parseInt(tempBaseValue) || 0 : undefined
+        updateSkillPoints(fullName, 10, baseVal)
         setTempSpecValue("")
+        setTempBaseValue("")
         setActiveFieldKey(null)
       }
     }
@@ -309,12 +424,13 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
-              <span className="flex-1 text-xs truncate">{getDisplayName(s)}</span>
-              <Input
+              <span className="flex-1 text-xs truncate">
+                {getDisplayName(s)} <span className="text-muted-foreground">({s.baseValue}%)</span>
+              </span>
+              <PointsInput
                 className="w-14 h-6 text-right text-xs"
                 value={s.occupationalPoints}
-                onChange={(e) => updateSkillPoints(getSkillKey(s), Number.parseInt(e.target.value) || 0)}
-                onFocus={(e) => e.target.select()}
+                onChange={(val) => updateSkillPoints(getSkillKey(s), val)}
               />
             </div>
           ))}
@@ -327,6 +443,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
               onClick={() => {
                 setActiveFieldKey(uniqueId)
                 setTempSpecValue("")
+                setTempBaseValue("")
               }}
             >
               <Plus className="w-3 h-3 mr-1" /> Definir {req.field}
@@ -334,29 +451,65 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           )}
 
           {isAdding && (
-            <div className="flex gap-1 animate-in fade-in zoom-in-95 duration-200">
-              <Input
-                autoFocus
-                placeholder="Ej: Biología, Escopeta..."
-                className="h-8 text-xs flex-1"
-                value={tempSpecValue}
-                onChange={(e) => setTempSpecValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              />
-              <Button size="sm" className="h-8 px-2" onClick={handleAdd}>
-                Ok
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2"
-                onClick={() => {
-                  setActiveFieldKey(null)
-                  setTempSpecValue("")
-                }}
-              >
-                <X className="w-3 h-3" />
-              </Button>
+            <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex gap-1">
+                <TextInput
+                  autoFocus
+                  placeholder={needsBaseValue ? "Ej: Pelea, Espada..." : "Ej: Biología, Fotografía..."}
+                  className="h-8 text-xs flex-1"
+                  value={tempSpecValue}
+                  onChange={setTempSpecValue}
+                  onKeyDown={(e) => e.key === "Enter" && !needsBaseValue && handleAdd()}
+                />
+                {!needsBaseValue && (
+                  <>
+                    <Button size="sm" className="h-8 px-2" onClick={handleAdd}>
+                      Ok
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2"
+                      onClick={() => {
+                        setActiveFieldKey(null)
+                        setTempSpecValue("")
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </>
+                )}
+              </div>
+              {needsBaseValue && (
+                <div className="flex gap-1 items-center">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Valor base (%):</span>
+                  <BaseValueInput
+                    placeholder="Ej: 25"
+                    className="h-8 text-xs w-20"
+                    value={tempBaseValue}
+                    onChange={setTempBaseValue}
+                    onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                  />
+                  <Button size="sm" className="h-8 px-2" onClick={handleAdd}>
+                    Ok
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      setActiveFieldKey(null)
+                      setTempSpecValue("")
+                      setTempBaseValue("")
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+              {needsBaseValue && (
+                <p className="text-xs text-muted-foreground">El valor base no se resta de tus puntos de ocupación.</p>
+              )}
             </div>
           )}
         </div>
@@ -370,13 +523,11 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       return (
         <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900 border rounded mb-2">
           <div className="flex-1 font-medium text-sm">{req}</div>
-          <Input
-            type="number"
+          <PointsInput
             className="w-20 text-right h-9"
-            value={skill?.occupationalPoints || ""}
+            value={skill?.occupationalPoints || 0}
             placeholder="0"
-            onChange={(e) => updateSkillPoints(req, Number.parseInt(e.target.value) || 0)}
-            onFocus={(e) => e.target.select()}
+            onChange={(val) => updateSkillPoints(req, val)}
           />
         </div>
       )
@@ -420,10 +571,10 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                     />
                     <span className="text-sm flex-1">{opt}</span>
                     {isSelected && (
-                      <Input
+                      <PointsInput
                         className="w-16 h-7 text-right"
-                        value={skill?.occupationalPoints}
-                        onChange={(e) => updateSkillPoints(opt, Number.parseInt(e.target.value) || 0)}
+                        value={skill?.occupationalPoints || 0}
+                        onChange={(val) => updateSkillPoints(opt, val)}
                       />
                     )}
                   </div>
@@ -447,7 +598,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
     if (req.type === "any") {
       const baseSkillNames = (currentOccupation?.skills.filter((r) => typeof r === "string") as string[]) || []
-      // Habilidades que no son fijas de la profesión ni pertenecen a un campo ya definido arriba
       const added = character.skills.filter(
         (s) =>
           s.isOccupational &&
@@ -465,7 +615,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             </span>
           </div>
 
-          {/* Primero mostramos los campos dinámicos que se hayan añadido vía "any" */}
           {FIELDS.map((f) => {
             const fieldSkills = character.skills.filter(
               (s) =>
@@ -487,16 +636,16 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-red-400"
+                      className="h-8 w-8 text-red-400"
                       onClick={() => updateSkillPoints(s.name, 0)}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                     </Button>
-                    <span className="flex-1 text-xs truncate">{s.name}</span>
-                    <Input
-                      className="w-14 h-6 text-right text-xs"
+                    <span className="flex-1 text-sm">{s.name}</span>
+                    <PointsInput
+                      className="w-20 text-right h-8"
                       value={s.occupationalPoints}
-                      onChange={(e) => updateSkillPoints(s.name, Number.parseInt(e.target.value) || 0)}
+                      onChange={(val) => updateSkillPoints(s.name, val)}
                     />
                   </div>
                 ))}
@@ -504,7 +653,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             )
           })}
 
-          {/* Habilidades comunes añadidas */}
           {added.map((s) => (
             <div key={s.name} className="flex items-center gap-2 mb-2 bg-white/50 dark:bg-black/20 p-1 rounded border">
               <Button
@@ -516,10 +664,10 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 <Trash2 className="w-4 h-4" />
               </Button>
               <span className="flex-1 text-sm">{s.name}</span>
-              <Input
+              <PointsInput
                 className="w-20 text-right h-8"
                 value={s.occupationalPoints}
-                onChange={(e) => updateSkillPoints(s.name, Number.parseInt(e.target.value) || 0)}
+                onChange={(val) => updateSkillPoints(s.name, val)}
               />
             </div>
           ))}
@@ -557,12 +705,12 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
               <Badge variant="outline" className="h-8">
                 {activeFieldKey.split("-")[1]}:
               </Badge>
-              <Input
+              <TextInput
                 autoFocus
                 placeholder="Escribe la especialidad..."
                 className="h-8 text-xs flex-1"
                 value={tempSpecValue}
-                onChange={(e) => setTempSpecValue(e.target.value)}
+                onChange={setTempSpecValue}
                 onKeyDown={(e) =>
                   e.key === "Enter" &&
                   tempSpecValue &&

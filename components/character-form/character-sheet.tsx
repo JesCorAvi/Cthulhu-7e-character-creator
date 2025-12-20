@@ -4,13 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Character, CharacteristicValue, Skill, Weapon } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS } from "@/lib/occupations-data"
 import {
@@ -22,11 +16,12 @@ import {
   calculateMagicPoints,
   createDefaultWeapon,
 } from "@/lib/character-utils"
-import { Plus, Trash2, Search, Shield, Sun, Moon, Settings2 } from "lucide-react"
+import { Plus, Trash2, Search, Shield, Sun, Moon, Settings2, Dices } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import { OccupationDetailsModal } from "./occupation-details-modal"
+import { DiceRoller } from "@/components/dice-roller"
 
 interface CharacterSheetProps {
   character: Character
@@ -61,24 +56,28 @@ function SheetTracker({
   className?: string
 }) {
   if (!max || max <= 0) {
-      return <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">Introduce un valor inicial para ver el marcador</div>;
+    return (
+      <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">
+        Introduce un valor inicial para ver el marcador
+      </div>
+    )
   }
 
-  const rowCount = Math.ceil(max / 10);
+  const rowCount = Math.ceil(max / 10)
   const rows = Array.from({ length: rowCount }, (_, i) => ({
-      start: i * 10 + 1,
-      end: (i + 1) * 10
-  }));
+    start: i * 10 + 1,
+    end: (i + 1) * 10,
+  }))
 
   return (
     <div className={cn("flex flex-col gap-1 select-none w-full", className)}>
       {rows.map((row, rIdx) => {
-        const numbers = Array.from({ length: 10 }, (_, i) => row.start + i);
+        const numbers = Array.from({ length: 10 }, (_, i) => row.start + i)
         return (
           <div key={rIdx} className="flex justify-between gap-1">
             {numbers.map((num) => {
               if (num > max) {
-                  return <div key={num} className="flex-1 aspect-square" />;
+                return <div key={num} className="flex-1 aspect-square" />
               }
               return (
                 <div
@@ -89,12 +88,12 @@ function SheetTracker({
                     "text-[10px] md:text-xs font-medium",
                     current === num
                       ? "bg-stone-900 text-stone-50 dark:bg-stone-100 dark:text-stone-900 font-bold scale-110 shadow-sm ring-1 ring-stone-400 z-10"
-                      : "bg-stone-50 dark:bg-stone-900/50 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-400"
+                      : "bg-stone-50 dark:bg-stone-900/50 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-400",
                   )}
                 >
                   {num}
                 </div>
-              );
+              )
             })}
           </div>
         )
@@ -108,14 +107,24 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [isOccupationModalOpen, setIsOccupationModalOpen] = useState(false)
+  const [showDiceRoller, setShowDiceRoller] = useState(false)
+  const [hasRolledCharacteristics, setHasRolledCharacteristics] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Check if any characteristic has a non-default value (not 50)
+    const hasNonDefaultValues = Object.keys(character.characteristics).some((key) => {
+      if (key === "MOV") return false
+      const char = character.characteristics[key as keyof typeof character.characteristics] as CharacteristicValue
+      // Consider rolled if value is not the default 50
+      return char && char.value !== 50
+    })
+    setHasRolledCharacteristics(hasNonDefaultValues)
+  }, [character.characteristics])
 
-  const cthulhuSkill = character.skills.find(s => s.name === "Mitos de Cthulhu");
-  const cthulhuValue = cthulhuSkill ? cthulhuSkill.value : 0;
-  const maxSanityCalc = 99 - cthulhuValue;
+  const cthulhuSkill = character.skills.find((s) => s.name === "Mitos de Cthulhu")
+  const cthulhuValue = cthulhuSkill ? cthulhuSkill.value : 0
+  const maxSanityCalc = 99 - cthulhuValue
 
   const handleBasicChange = (field: keyof Character, value: string | number) => {
     onChange({ ...character, [field]: value })
@@ -134,7 +143,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         occupation: "Personalizada",
         occupationLabel: "Nueva Profesión",
         occupationFormula: "EDU*4",
-        occupationalSkills: [] 
+        occupationalSkills: [],
       })
     } else {
       const preset = PRESET_OCCUPATIONS.find((p) => p.name === value)
@@ -154,25 +163,28 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     if (key === "MOV") return
     const newChar = createCharacteristicValue(value)
     const newCharacteristics = { ...character.characteristics, [key]: newChar }
-    
-    const str = newCharacteristics.STR.value
-    const dex = newCharacteristics.DEX.value
-    const siz = newCharacteristics.SIZ.value
-    const con = newCharacteristics.CON.value
-    const pow = newCharacteristics.POW.value
-    const edu = newCharacteristics.EDU.value
+
+    const str = (newCharacteristics.STR as CharacteristicValue).value
+    const dex = (newCharacteristics.DEX as CharacteristicValue).value
+    const siz = (newCharacteristics.SIZ as CharacteristicValue).value
+    const con = (newCharacteristics.CON as CharacteristicValue).value
+    const pow = (newCharacteristics.POW as CharacteristicValue).value
+    const edu = (newCharacteristics.EDU as CharacteristicValue).value
 
     const hp = calculateHitPoints(con, siz)
     const magic = calculateMagicPoints(pow)
     const mov = calculateMovement(dex, str, siz, character.age)
 
-    let newSanity = { ...character.sanity };
+    const newSanity = { ...character.sanity }
     if (key === "POW") {
-        newSanity.starting = pow;
-        newSanity.limit = pow;
-        if (newSanity.current === character.characteristics.POW.value || newSanity.current === 0) {
-            newSanity.current = pow;
-        }
+      newSanity.starting = pow
+      newSanity.limit = pow
+      if (
+        newSanity.current === (character.characteristics.POW as CharacteristicValue).value ||
+        newSanity.current === 0
+      ) {
+        newSanity.current = pow
+      }
     }
 
     const updatedSkills = character.skills.map((skill) => {
@@ -196,6 +208,70 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
       dodge: Math.floor(dex / 2),
       skills: updatedSkills,
     })
+  }
+
+  const handleDiceRollComplete = (results: Record<string, number>) => {
+    const newCharacteristics = { ...character.characteristics }
+
+    // Apply all rolled values
+    Object.entries(results).forEach(([key, value]) => {
+      if (key === "LUCK") {
+        onChange({
+          ...character,
+          luck: {
+            ...character.luck,
+            max: value,
+            current: value,
+          },
+        })
+      } else if (key !== "MOV") {
+        ;(newCharacteristics as any)[key] = createCharacteristicValue(value)
+      }
+    })
+
+    // Recalculate derived values
+    const str = (newCharacteristics.STR as CharacteristicValue).value
+    const dex = (newCharacteristics.DEX as CharacteristicValue).value
+    const siz = (newCharacteristics.SIZ as CharacteristicValue).value
+    const con = (newCharacteristics.CON as CharacteristicValue).value
+    const pow = (newCharacteristics.POW as CharacteristicValue).value
+    const edu = (newCharacteristics.EDU as CharacteristicValue).value
+
+    const hp = calculateHitPoints(con, siz)
+    const magic = calculateMagicPoints(pow)
+    const mov = calculateMovement(dex, str, siz, character.age)
+
+    const newSanity = {
+      ...character.sanity,
+      starting: pow,
+      current: pow,
+      limit: pow,
+    }
+
+    const updatedSkills = character.skills.map((skill) => {
+      if (skill.name === "Esquivar" && !skill.isFieldSlot) {
+        return { ...skill, baseValue: Math.floor(dex / 2), value: Math.floor(dex / 2) }
+      }
+      if (skill.name === "Lengua propia" && !skill.isFieldSlot) {
+        return { ...skill, baseValue: edu, value: edu }
+      }
+      return skill
+    })
+
+    onChange({
+      ...character,
+      characteristics: { ...newCharacteristics, MOV: mov },
+      hitPoints: { ...character.hitPoints, max: hp, current: hp },
+      sanity: newSanity,
+      magicPoints: { ...character.magicPoints, max: magic, current: magic },
+      damageBonus: calculateDamageBonus(str, siz),
+      build: calculateBuild(str, siz),
+      dodge: Math.floor(dex / 2),
+      skills: updatedSkills,
+    })
+
+    setShowDiceRoller(false)
+    setHasRolledCharacteristics(true)
   }
 
   // --- Lógica de Habilidades ---
@@ -229,7 +305,13 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   }
 
   const addCustomSkill = () => {
-    onChange({ ...character, skills: [...character.skills, { name: "", baseValue: 1, value: 1, isOccupational: false, isCustom: true, customName: "" }] })
+    onChange({
+      ...character,
+      skills: [
+        ...character.skills,
+        { name: "", baseValue: 1, value: 1, isOccupational: false, isCustom: true, customName: "" },
+      ],
+    })
   }
 
   const removeSkill = (index: number) => {
@@ -253,11 +335,13 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const filteredSkills = character.skills.filter((skill) => {
     if (!skillSearch) return true
     const term = skillSearch.toLowerCase()
-    return skill.name.toLowerCase().includes(term) || (skill.customName && skill.customName.toLowerCase().includes(term))
+    return (
+      skill.name.toLowerCase().includes(term) || (skill.customName && skill.customName.toLowerCase().includes(term))
+    )
   })
 
   // Determinar si mostrar el botón de gestión
-  const showOccupationButton = character.occupation && character.occupation !== "Personalizada";
+  const showOccupationButton = character.occupation && character.occupation !== "Personalizada"
 
   const renderSkillRow = (skill: Skill, idx: number) => {
     const actualIndex = character.skills.indexOf(skill)
@@ -265,459 +349,630 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const fifth = Math.floor(skill.value / 5)
 
     if (skill.isFieldHeader) {
-       return (
-         <div key={`header-${idx}`} className="flex items-center justify-between py-1 mt-3 mb-1 border-b border-stone-300 dark:border-stone-700">
-            <span className="font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
-               {skill.name} {skill.baseValue > 0 ? `(${skill.baseValue}%)` : ""}
-            </span>
-            <Button 
-               variant="ghost" 
-               size="icon" 
-               className="h-5 w-5 hover:bg-stone-200 dark:hover:bg-stone-800" 
-               onClick={() => addFieldSlot(actualIndex)}
-               title={`Añadir especialidad a ${skill.name}`}
-            >
-               <Plus className="h-3 w-3" />
-            </Button>
-         </div>
-       )
+      return (
+        <div
+          key={`header-${idx}`}
+          className="flex items-center justify-between py-1 mt-3 mb-1 border-b border-stone-300 dark:border-stone-700"
+        >
+          <span className="font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
+            {skill.name} {skill.baseValue > 0 ? `(${skill.baseValue}%)` : ""}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 hover:bg-stone-200 dark:hover:bg-stone-800"
+            onClick={() => addFieldSlot(actualIndex)}
+            title={`Añadir especialidad a ${skill.name}`}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+      )
     }
 
-    const isHardcodedSubSkill = skill.name.includes(":");
-    const isSlot = skill.isFieldSlot || isHardcodedSubSkill;
-    let displayName = skill.customName || skill.name;
+    const isHardcodedSubSkill = skill.name.includes(":")
+    const isSlot = skill.isFieldSlot || isHardcodedSubSkill
+    let displayName = skill.customName || skill.name
     if (isHardcodedSubSkill) {
-        displayName = skill.name.split(":")[1].trim();
+      displayName = skill.name.split(":")[1].trim()
     }
-    
+
     return (
-      <div 
-         key={idx} 
-         className={cn(
-            "flex items-center gap-1 text-[10px] py-1 px-1 hover:bg-stone-100 dark:hover:bg-stone-800/50 rounded-sm relative group",
-            isSlot ? "ml-4 pl-3" : ""
-         )}
+      <div
+        key={idx}
+        className={cn(
+          "flex items-center gap-1 text-[10px] py-1 px-1 hover:bg-stone-100 dark:hover:bg-stone-800/50 rounded-sm relative group",
+          isSlot ? "ml-4 pl-3" : "",
+        )}
       >
-         {isSlot && (
-            <div className="absolute left-0 top-0 bottom-1/2 w-3 border-l border-b border-stone-300 dark:border-stone-600 rounded-bl-sm -translate-y-[2px]" />
-         )}
+        {isSlot && (
+          <div className="absolute left-0 top-0 bottom-1/2 w-3 border-l border-b border-stone-300 dark:border-stone-600 rounded-bl-sm -translate-y-[2px]" />
+        )}
 
-         <Checkbox 
-           className="h-3.5 w-3.5 rounded-sm border-stone-400 data-[state=checked]:bg-stone-800 data-[state=checked]:text-stone-50"
-           checked={skill.isOccupational}
-           onCheckedChange={(c) => updateSkill(actualIndex, { isOccupational: !!c })}
-         />
-         
-         <div className="flex-1 min-w-0 font-serif flex items-center">
-            {skill.isCustom || skill.isFieldSlot ? (
-               <Input 
-                 value={skill.customName} 
-                 onChange={(e) => updateSkill(actualIndex, { customName: e.target.value })}
-                 className="h-5 p-1 text-[11px] border-none bg-transparent w-full focus-visible:ring-0 font-serif placeholder:text-stone-400 italic"
-                 placeholder={isSlot ? `Especialidad` : "Nombre..."}
-               />
-            ) : (
-               <span className={cn("text-[11px] truncate", skill.isOccupational && "font-bold text-stone-900 dark:text-stone-100")}>
-                  {displayName} <span className="text-stone-400 text-[9px]">({skill.baseValue}%)</span>
-               </span>
-            )}
-         </div>
+        <Checkbox
+          className="h-3.5 w-3.5 rounded-sm border-stone-400 data-[state=checked]:bg-stone-800 data-[state=checked]:text-stone-50"
+          checked={skill.isOccupational}
+          onCheckedChange={(c) => updateSkill(actualIndex, { isOccupational: !!c })}
+        />
 
-         <Input 
-            type="number" 
-            value={skill.value}
-            onChange={(e) => updateSkill(actualIndex, { value: parseInt(e.target.value) || 0 })}
-            className="h-6 w-9 text-center text-[11px] p-0 border border-stone-300 dark:border-stone-700 rounded-sm font-bold bg-white dark:bg-stone-900"
-         />
-         
-         <div className="flex flex-col text-[9px] leading-none text-stone-500 w-6 text-center font-mono gap-[2px]">
-            <span>{half}</span>
-            <span className="border-t border-stone-300 dark:border-stone-700 pt-[1px]">{fifth}</span>
-         </div>
-
-         {(skill.isCustom || skill.isFieldSlot || isHardcodedSubSkill) && (
-            <button 
-               onClick={() => removeSkill(actualIndex)} 
-               className="text-stone-300 hover:text-red-500 transition-colors px-0.5 opacity-0 group-hover:opacity-100"
-               title="Eliminar habilidad"
+        <div className="flex-1 min-w-0 font-serif flex items-center">
+          {skill.isCustom || skill.isFieldSlot ? (
+            <Input
+              value={skill.customName}
+              onChange={(e) => updateSkill(actualIndex, { customName: e.target.value })}
+              className="h-5 p-1 text-[11px] border-none bg-transparent w-full focus-visible:ring-0 font-serif placeholder:text-stone-400 italic"
+              placeholder={isSlot ? `Especialidad` : "Nombre..."}
+            />
+          ) : (
+            <span
+              className={cn(
+                "text-[11px] truncate",
+                skill.isOccupational && "font-bold text-stone-900 dark:text-stone-100",
+              )}
             >
-               <Trash2 className="h-3 w-3"/>
-            </button>
-         )}
+              {displayName} <span className="text-stone-400 text-[9px]">({skill.baseValue}%)</span>
+            </span>
+          )}
+        </div>
+
+        <Input
+          type="number"
+          value={skill.value}
+          onChange={(e) => updateSkill(actualIndex, { value: Number.parseInt(e.target.value) || 0 })}
+          className="h-6 w-9 text-center text-[11px] p-0 border border-stone-300 dark:border-stone-700 rounded-sm font-bold bg-white dark:bg-stone-900"
+        />
+
+        <div className="flex flex-col text-[9px] leading-none text-stone-500 w-6 text-center font-mono gap-[2px]">
+          <span>{half}</span>
+          <span className="border-t border-stone-300 dark:border-stone-700 pt-[1px]">{fifth}</span>
+        </div>
+
+        {(skill.isCustom || skill.isFieldSlot || isHardcodedSubSkill) && (
+          <button
+            onClick={() => removeSkill(actualIndex)}
+            className="text-stone-300 hover:text-red-500 transition-colors px-0.5 opacity-0 group-hover:opacity-100"
+            title="Eliminar habilidad"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        )}
       </div>
     )
   }
 
   return (
     <div className="w-full max-w-[1100px] mx-auto bg-[#fdfaf5] dark:bg-stone-950 text-stone-900 dark:text-stone-200 font-sans p-4 md:p-8 shadow-2xl border border-stone-300 dark:border-stone-800 min-h-screen relative transition-colors duration-300">
-      
+      {showDiceRoller && <DiceRoller onComplete={handleDiceRollComplete} onCancel={() => setShowDiceRoller(false)} />}
+
       {mounted && (
         <Button
-            variant="outline"
-            size="icon"
-            className="fixed top-4 right-4 z-50 rounded-full shadow-lg bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          variant="outline"
+          size="icon"
+          className="fixed top-4 right-4 z-50 rounded-full shadow-lg bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
-            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
-            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
+          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
+          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
         </Button>
       )}
 
       {/* CABECERA (DATOS PERSONALES) */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row gap-6 mb-6">
-            <div className="lg:w-1/4 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-stone-300 dark:border-stone-800 pb-4 lg:pb-0 lg:pr-4">
-                <h1 className="text-3xl lg:text-4xl font-serif font-black text-center leading-none tracking-tighter text-stone-900 dark:text-stone-100">
-                LA LLAMADA DE<br/><span className="text-4xl lg:text-5xl">CTHULHU</span>
-                </h1>
-                <span className="text-xs tracking-[0.5em] text-stone-500 mt-2 font-bold">7ª EDICIÓN</span>
-            </div>
-            
-            <div className="lg:w-3/4 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-                <div className="col-span-2 space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-stone-500">Nombre del Investigador</Label>
-                    <Input value={character.name} onChange={(e) => handleBasicChange("name", e.target.value)} className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 font-serif text-xl bg-transparent font-bold"/>
-                </div>
-                
-                {/* --- SECCIÓN DE OCUPACIÓN --- */}
-                <div className="col-span-2 space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-stone-500">Ocupación</Label>
-                    <div className="relative">
-                        <Select 
-                          value={PRESET_OCCUPATIONS.some(p => p.name === character.occupation) ? character.occupation : (character.occupation ? "custom" : "")} 
-                          onValueChange={handleOccupationChange}
-                        >
-                          <SelectTrigger className="w-full h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus:ring-0 bg-transparent text-left font-serif text-base font-medium p-0">
-                            <SelectValue placeholder="Selecciona..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PRESET_OCCUPATIONS.map((occ) => (
-                              <SelectItem key={occ.name} value={occ.name}>
-                                {occ.name}
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="custom" className="font-semibold text-primary">
-                              Personalizada / Otra...
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        {/* Input manual si es "custom" */}
-                        {character.occupation !== "" && 
-                         (!PRESET_OCCUPATIONS.some(p => p.name === character.occupation) || character.occupation === "Personalizada") && (
-                           <Input 
-                             value={character.occupation === "Personalizada" ? "" : character.occupation} 
-                             onChange={(e) => handleBasicChange("occupation", e.target.value)} 
-                             className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 bg-transparent mt-1 placeholder:italic"
-                             placeholder="Escribe el nombre de la profesión..."
-                           />
-                        )}
+          <div className="lg:w-1/4 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-stone-300 dark:border-stone-800 pb-4 lg:pb-0 lg:pr-4">
+            <h1 className="text-3xl lg:text-4xl font-serif font-black text-center leading-none tracking-tighter text-stone-900 dark:text-stone-100">
+              LA LLAMADA DE
+              <br />
+              <span className="text-4xl lg:text-5xl">CTHULHU</span>
+            </h1>
+            <span className="text-xs tracking-[0.5em] text-stone-500 mt-2 font-bold">7ª EDICIÓN</span>
+          </div>
 
-                        {showOccupationButton && (
-                            <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="w-full mt-1 h-7 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900"
-                                onClick={() => setIsOccupationModalOpen(true)}
-                            >
-                                <Settings2 className="mr-1 h-3 w-3" />
-                                Gestionar Habilidades
-                            </Button>
-                        )}
-                    </div>
-                </div>
-                
-                <div className="space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-stone-500">Edad</Label>
-                    <Input type="number" value={character.age} onChange={(e) => handleBasicChange("age", e.target.value)} className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"/>
-                </div>
-                <div className="space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-stone-500">Género</Label>
-                    <Input value={character.gender} onChange={(e) => handleBasicChange("gender", e.target.value)} className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"/>
-                </div>
-                <div className="col-span-2 space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-stone-500">Residencia</Label>
-                    <Input value={character.residence} onChange={(e) => handleBasicChange("residence", e.target.value)} className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"/>
-                </div>
-                <div className="col-span-2 space-y-1">
-                    <Label className="text-[9px] uppercase font-bold text-stone-500">Lugar de Nacimiento</Label>
-                    <Input value={character.birthplace} onChange={(e) => handleBasicChange("birthplace", e.target.value)} className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"/>
-                </div>
+          <div className="lg:w-3/4 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+            <div className="col-span-2 space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-stone-500">Nombre del Investigador</Label>
+              <Input
+                value={character.name}
+                onChange={(e) => handleBasicChange("name", e.target.value)}
+                className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 font-serif text-xl bg-transparent font-bold"
+              />
             </div>
+
+            {/* --- SECCIÓN DE OCUPACIÓN --- */}
+            <div className="col-span-2 space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-stone-500">Ocupación</Label>
+              <div className="relative">
+                <Select
+                  value={
+                    PRESET_OCCUPATIONS.some((p) => p.name === character.occupation)
+                      ? character.occupation
+                      : character.occupation
+                        ? "custom"
+                        : ""
+                  }
+                  onValueChange={handleOccupationChange}
+                >
+                  <SelectTrigger className="w-full h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus:ring-0 bg-transparent text-left font-serif text-base font-medium p-0">
+                    <SelectValue placeholder="Selecciona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRESET_OCCUPATIONS.map((occ) => (
+                      <SelectItem key={occ.name} value={occ.name}>
+                        {occ.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom" className="font-semibold text-primary">
+                      Personalizada / Otra...
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Input manual si es "custom" */}
+                {character.occupation !== "" &&
+                  (!PRESET_OCCUPATIONS.some((p) => p.name === character.occupation) ||
+                    character.occupation === "Personalizada") && (
+                    <Input
+                      value={character.occupation === "Personalizada" ? "" : character.occupation}
+                      onChange={(e) => handleBasicChange("occupation", e.target.value)}
+                      className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 bg-transparent mt-1 placeholder:italic"
+                      placeholder="Escribe el nombre de la profesión..."
+                    />
+                  )}
+
+                {showOccupationButton && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-1 h-7 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900"
+                    onClick={() => setIsOccupationModalOpen(true)}
+                  >
+                    <Settings2 className="mr-1 h-3 w-3" />
+                    Gestionar Habilidades
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-stone-500">Edad</Label>
+              <Input
+                type="number"
+                value={character.age}
+                onChange={(e) => handleBasicChange("age", e.target.value)}
+                className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-stone-500">Género</Label>
+              <Input
+                value={character.gender}
+                onChange={(e) => handleBasicChange("gender", e.target.value)}
+                className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"
+              />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-stone-500">Residencia</Label>
+              <Input
+                value={character.residence}
+                onChange={(e) => handleBasicChange("residence", e.target.value)}
+                className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"
+              />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-stone-500">Lugar de Nacimiento</Label>
+              <Input
+                value={character.birthplace}
+                onChange={(e) => handleBasicChange("birthplace", e.target.value)}
+                className="h-7 border-x-0 border-t-0 border-b border-stone-300 rounded-none px-0 bg-transparent"
+              />
+            </div>
+          </div>
         </div>
+
+        {!hasRolledCharacteristics && (
+          <div className="mb-4 p-4 bg-primary/10 border border-primary/30 rounded-lg">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="text-center md:text-left">
+                <h3 className="font-bold text-foreground mb-1">Tiradas Automáticas de Características</h3>
+                <p className="text-sm text-muted-foreground">
+                  Genera todas las características automáticamente según las reglas de Cthulhu 7e
+                </p>
+              </div>
+              <Button onClick={() => setShowDiceRoller(true)} className="gap-2 whitespace-nowrap">
+                <Dices className="h-4 w-4" />
+                Tirar Dados
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* TIRA DE CARACTERÍSTICAS */}
         <div className="bg-stone-200/50 dark:bg-stone-900/50 p-3 rounded border border-stone-300 dark:border-stone-700">
-            <div className="flex flex-wrap justify-between gap-2 md:gap-4">
-                {CHAR_ORDER.map((key) => {
-                    const char = character.characteristics[key as keyof typeof character.characteristics] as CharacteristicValue;
-                    return (
-                        <div key={key} className="flex-1 min-w-[70px] flex flex-col items-center bg-white dark:bg-stone-950 p-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-800">
-                            <span className="text-[10px] font-black text-stone-500 mb-1">{CHAR_LABELS[key]}</span>
-                            <Input 
-                                type="number"
-                                value={char.value}
-                                onChange={(e) => handleCharChange(key as any, parseInt(e.target.value))}
-                                className="h-10 w-full text-center text-2xl font-black border-stone-200 dark:border-stone-700 bg-transparent p-0 focus-visible:ring-1"
-                            />
-                            <div className="flex w-full justify-between px-1 mt-1 text-[10px] text-stone-500 font-mono font-bold">
-                                <span title="Mitad">{char.half}</span>
-                                <span title="Quinto">{char.fifth}</span>
-                            </div>
-                        </div>
-                    )
-                })}
-                <div className="flex-1 min-w-[70px] flex flex-col items-center bg-stone-100 dark:bg-stone-900 p-1.5 rounded border border-stone-200 dark:border-stone-800">
-                     <span className="text-[10px] font-black text-stone-500 mb-1">MOV</span>
-                     <div className="h-10 w-full flex items-center justify-center text-2xl font-black">{character.characteristics.MOV}</div>
-                     <div className="mt-1 text-[10px] opacity-0">.</div>
+          <div className="flex flex-wrap justify-between gap-2 md:gap-4">
+            {CHAR_ORDER.map((key) => {
+              const char = character.characteristics[
+                key as keyof typeof character.characteristics
+              ] as CharacteristicValue
+              return (
+                <div
+                  key={key}
+                  className="flex-1 min-w-[70px] flex flex-col items-center bg-white dark:bg-stone-950 p-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-800"
+                >
+                  <span className="text-[10px] font-black text-stone-500 mb-1">{CHAR_LABELS[key]}</span>
+                  <Input
+                    type="number"
+                    value={char.value}
+                    onChange={(e) => handleCharChange(key as any, Number.parseInt(e.target.value))}
+                    className="h-10 w-full text-center text-2xl font-black border-stone-200 dark:border-stone-700 bg-transparent p-0 focus-visible:ring-1"
+                  />
+                  <div className="flex w-full justify-between px-1 mt-1 text-[10px] text-stone-500 font-mono font-bold">
+                    <span title="Mitad">{char.half}</span>
+                    <span title="Quinto">{char.fifth}</span>
+                  </div>
                 </div>
+              )
+            })}
+            <div className="flex-1 min-w-[70px] flex flex-col items-center bg-stone-100 dark:bg-stone-900 p-1.5 rounded border border-stone-200 dark:border-stone-800">
+              <span className="text-[10px] font-black text-stone-500 mb-1">MOV</span>
+              <div className="h-10 w-full flex items-center justify-center text-2xl font-black">
+                {character.characteristics.MOV}
+              </div>
+              <div className="mt-1 text-[10px] opacity-0">.</div>
             </div>
+          </div>
         </div>
       </div>
 
       {/* ESTADÍSTICAS DERIVADAS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        
         {/* PUNTOS DE VIDA */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-           <Label className="font-serif font-bold text-sm uppercase block mb-2">Puntos de Vida</Label>
-           <div className="flex gap-2 mb-3 items-end">
-              <div className="flex-1">
-                 <Input 
-                   type="number" 
-                   value={character.hitPoints.current} 
-                   onChange={(e) => onChange({...character, hitPoints: {...character.hitPoints, current: parseInt(e.target.value)}})}
-                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
-                 />
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">Puntos de Vida</Label>
+          <div className="flex gap-2 mb-3 items-end">
+            <div className="flex-1">
+              <Input
+                type="number"
+                value={character.hitPoints.current}
+                onChange={(e) =>
+                  onChange({
+                    ...character,
+                    hitPoints: { ...character.hitPoints, current: Number.parseInt(e.target.value) },
+                  })
+                }
+                className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
+              />
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+            </div>
+            <div className="w-14">
+              <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-dashed border-stone-300 rounded bg-stone-100 dark:bg-stone-950">
+                {character.hitPoints.max}
               </div>
-              <div className="w-14">
-                 <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-dashed border-stone-300 rounded bg-stone-100 dark:bg-stone-950">
-                    {character.hitPoints.max}
-                 </div>
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Máx</Label>
-              </div>
-           </div>
-           <div className="flex justify-between gap-1 mb-3">
-               <div className="flex items-center gap-1">
-                  <Checkbox className="h-4 w-4" id="mw" checked={character.hitPoints.majorWound} onCheckedChange={(c) => onChange({...character, hitPoints: {...character.hitPoints, majorWound: !!c}})} />
-                  <Label htmlFor="mw" className="text-[10px] cursor-pointer">Grave</Label>
-               </div>
-               <div className="flex items-center gap-1">
-                  <Checkbox className="h-4 w-4" id="dy" checked={character.hitPoints.dying} onCheckedChange={(c) => onChange({...character, hitPoints: {...character.hitPoints, dying: !!c}})} />
-                  <Label htmlFor="dy" className="text-[10px] cursor-pointer">Moribundo</Label>
-               </div>
-           </div>
-           <SheetTracker 
-             current={character.hitPoints.current} 
-             max={character.hitPoints.max}
-             onChange={(v) => onChange({...character, hitPoints: {...character.hitPoints, current: v}})}
-           />
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Máx</Label>
+            </div>
+          </div>
+          <div className="flex justify-between gap-1 mb-3">
+            <div className="flex items-center gap-1">
+              <Checkbox
+                className="h-4 w-4"
+                id="mw"
+                checked={character.hitPoints.majorWound}
+                onCheckedChange={(c) =>
+                  onChange({ ...character, hitPoints: { ...character.hitPoints, majorWound: !!c } })
+                }
+              />
+              <Label htmlFor="mw" className="text-[10px] cursor-pointer">
+                Grave
+              </Label>
+            </div>
+            <div className="flex items-center gap-1">
+              <Checkbox
+                className="h-4 w-4"
+                id="dy"
+                checked={character.hitPoints.dying}
+                onCheckedChange={(c) => onChange({ ...character, hitPoints: { ...character.hitPoints, dying: !!c } })}
+              />
+              <Label htmlFor="dy" className="text-[10px] cursor-pointer">
+                Moribundo
+              </Label>
+            </div>
+          </div>
+          <SheetTracker
+            current={character.hitPoints.current}
+            max={character.hitPoints.max}
+            onChange={(v) => onChange({ ...character, hitPoints: { ...character.hitPoints, current: v } })}
+          />
         </div>
 
         {/* CORDURA */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-           <Label className="font-serif font-bold text-sm uppercase block mb-2">Cordura (SAN)</Label>
-           <div className="flex gap-2 mb-3 items-end">
-              
-              <div className="flex-1">
-                 <Input 
-                   type="number" 
-                   value={character.sanity.limit || ""} 
-                   onChange={(e) => onChange({...character, sanity: {...character.sanity, limit: parseInt(e.target.value) || 0}})}
-                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300"
-                   placeholder="0"
-                 />
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Inicial (POD)</Label>
-              </div>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">Cordura (SAN)</Label>
+          <div className="flex gap-2 mb-3 items-end">
+            <div className="flex-1">
+              <Input
+                type="number"
+                value={character.sanity.limit || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...character,
+                    sanity: { ...character.sanity, limit: Number.parseInt(e.target.value) || 0 },
+                  })
+                }
+                className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300"
+                placeholder="0"
+              />
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Inicial (POD)</Label>
+            </div>
 
-              <div className="w-14">
-                 <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-stone-200 rounded mb-1 bg-stone-50 dark:bg-stone-900">
-                    {maxSanityCalc}
-                 </div>
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center">Máx</Label>
+            <div className="w-14">
+              <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-stone-200 rounded mb-1 bg-stone-50 dark:bg-stone-900">
+                {maxSanityCalc}
               </div>
-           </div>
-           
-           <div className="flex justify-between gap-1 mb-3">
-                <div className="flex items-center gap-1">
-                  <Checkbox className="h-4 w-4" id="ti" checked={character.sanity.temporaryInsanity} onCheckedChange={(c) => onChange({...character, sanity: {...character.sanity, temporaryInsanity: !!c}})} />
-                  <Label htmlFor="ti" className="text-[10px] cursor-pointer">Temp.</Label>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Checkbox className="h-4 w-4" id="ii" checked={character.sanity.indefiniteInsanity} onCheckedChange={(c) => onChange({...character, sanity: {...character.sanity, indefiniteInsanity: !!c}})} />
-                  <Label htmlFor="ii" className="text-[10px] cursor-pointer">Indef.</Label>
-                </div>
-           </div>
-           
-           <SheetTracker 
-             current={character.sanity.current} 
-             max={character.sanity.limit || 0} 
-             onChange={(v) => onChange({...character, sanity: {...character.sanity, current: v}})}
-           />
-           {character.sanity.limit ? (
-               <div className="text-[9px] text-center text-stone-400 mt-1">
-                  Actual: {character.sanity.current}
-               </div>
-           ) : null}
+              <Label className="text-[8px] uppercase text-stone-400 block text-center">Máx</Label>
+            </div>
+          </div>
+
+          <div className="flex justify-between gap-1 mb-3">
+            <div className="flex items-center gap-1">
+              <Checkbox
+                className="h-4 w-4"
+                id="ti"
+                checked={character.sanity.temporaryInsanity}
+                onCheckedChange={(c) =>
+                  onChange({ ...character, sanity: { ...character.sanity, temporaryInsanity: !!c } })
+                }
+              />
+              <Label htmlFor="ti" className="text-[10px] cursor-pointer">
+                Temp.
+              </Label>
+            </div>
+            <div className="flex items-center gap-1">
+              <Checkbox
+                className="h-4 w-4"
+                id="ii"
+                checked={character.sanity.indefiniteInsanity}
+                onCheckedChange={(c) =>
+                  onChange({ ...character, sanity: { ...character.sanity, indefiniteInsanity: !!c } })
+                }
+              />
+              <Label htmlFor="ii" className="text-[10px] cursor-pointer">
+                Indef.
+              </Label>
+            </div>
+          </div>
+
+          <SheetTracker
+            current={character.sanity.current}
+            max={character.sanity.limit || 0}
+            onChange={(v) => onChange({ ...character, sanity: { ...character.sanity, current: v } })}
+          />
+          {character.sanity.limit ? (
+            <div className="text-[9px] text-center text-stone-400 mt-1">Actual: {character.sanity.current}</div>
+          ) : null}
         </div>
 
         {/* SUERTE */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-           <Label className="font-serif font-bold text-sm uppercase block mb-2">Suerte</Label>
-           <div className="flex gap-2 mb-6 items-end justify-center">
-               <div className="w-2/3">
-                 <Input 
-                   type="number" 
-                   value={character.luck.limit || ""} 
-                   placeholder="Valor Inicial"
-                   onChange={(e) => onChange({...character, luck: {...character.luck, limit: parseInt(e.target.value) || 0}})}
-                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300 text-stone-900 dark:text-stone-100"
-                 />
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Valor Inicial</Label>
-              </div>
-           </div>
-            <SheetTracker 
-             current={character.luck.current} 
-             max={character.luck.limit || 0} 
-             onChange={(v) => onChange({...character, luck: {...character.luck, current: v}})}
-           />
-           {character.luck.limit ? (
-              <div className="text-[9px] text-center text-stone-400 mt-1">
-                  Actual: {character.luck.current}
-              </div>
-           ) : null}
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">Suerte</Label>
+          <div className="flex gap-2 mb-6 items-end justify-center">
+            <div className="w-2/3">
+              <Input
+                type="number"
+                value={character.luck.limit || ""}
+                placeholder="Valor Inicial"
+                onChange={(e) =>
+                  onChange({ ...character, luck: { ...character.luck, limit: Number.parseInt(e.target.value) || 0 } })
+                }
+                className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300 text-stone-900 dark:text-stone-100"
+              />
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Valor Inicial</Label>
+            </div>
+          </div>
+          <SheetTracker
+            current={character.luck.current}
+            max={character.luck.limit || 0}
+            onChange={(v) => onChange({ ...character, luck: { ...character.luck, current: v } })}
+          />
+          {character.luck.limit ? (
+            <div className="text-[9px] text-center text-stone-400 mt-1">Actual: {character.luck.current}</div>
+          ) : null}
         </div>
 
         {/* PUNTOS DE MAGIA */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-           <Label className="font-serif font-bold text-sm uppercase block mb-2">Puntos de Magia</Label>
-           <div className="flex gap-2 mb-6 items-end">
-               <div className="flex-1">
-                 <Input 
-                   type="number" 
-                   value={character.magicPoints.current} 
-                   onChange={(e) => onChange({...character, magicPoints: {...character.magicPoints, current: parseInt(e.target.value)}})}
-                   className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
-                 />
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">Puntos de Magia</Label>
+          <div className="flex gap-2 mb-6 items-end">
+            <div className="flex-1">
+              <Input
+                type="number"
+                value={character.magicPoints.current}
+                onChange={(e) =>
+                  onChange({
+                    ...character,
+                    magicPoints: { ...character.magicPoints, current: Number.parseInt(e.target.value) },
+                  })
+                }
+                className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
+              />
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+            </div>
+            <div className="w-14">
+              <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-dashed border-stone-300 rounded bg-stone-100 dark:bg-stone-950">
+                {character.magicPoints.max}
               </div>
-              <div className="w-14">
-                 <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-dashed border-stone-300 rounded bg-stone-100 dark:bg-stone-950">
-                    {character.magicPoints.max}
-                 </div>
-                 <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Máx</Label>
-              </div>
-           </div>
-            <SheetTracker 
-             current={character.magicPoints.current} 
-             max={character.magicPoints.max}
-             onChange={(v) => onChange({...character, magicPoints: {...character.magicPoints, current: v}})}
-           />
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Máx</Label>
+            </div>
+          </div>
+          <SheetTracker
+            current={character.magicPoints.current}
+            max={character.magicPoints.max}
+            onChange={(v) => onChange({ ...character, magicPoints: { ...character.magicPoints, current: v } })}
+          />
         </div>
       </div>
 
       <div className="flex justify-between items-center mb-2">
-        <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 flex-1">Habilidades del Investigador</h3>
+        <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 flex-1">
+          Habilidades del Investigador
+        </h3>
       </div>
 
       {/* HABILIDADES */}
       <div className="mb-8">
         <div className="flex justify-end items-center mb-4 gap-2">
-           <div className="relative">
-                 <Search className="absolute left-2 top-1.5 h-3 w-3 text-stone-400"/>
-                 <Input 
-                    placeholder="Filtrar..." 
-                    value={skillSearch} 
-                    onChange={e=>setSkillSearch(e.target.value)} 
-                    className="h-7 w-32 pl-7 text-[10px] bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700" 
-                 />
-              </div>
-              <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={addCustomSkill}>
-                  <Plus className="h-3 w-3 mr-1"/> Añadir
-              </Button>
+          <div className="relative">
+            <Search className="absolute left-2 top-1.5 h-3 w-3 text-stone-400" />
+            <Input
+              placeholder="Filtrar..."
+              value={skillSearch}
+              onChange={(e) => setSkillSearch(e.target.value)}
+              className="h-7 w-32 pl-7 text-[10px] bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700"
+            />
+          </div>
+          <Button size="sm" variant="outline" className="h-7 text-[10px] bg-transparent" onClick={addCustomSkill}>
+            <Plus className="h-3 w-3 mr-1" /> Añadir
+          </Button>
         </div>
-        
-        <div className="columns-1 md:columns-2 lg:columns-3  gap-x-8 gap-y-2 pr-1">
-           {filteredSkills.map((skill, i) => (
-             <div key={i} className="break-inside-avoid">
-                {renderSkillRow(skill, i)}
-             </div>
-           ))}
+
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-x-8 gap-y-2 pr-1">
+          {filteredSkills.map((skill, i) => (
+            <div key={i} className="break-inside-avoid">
+              {renderSkillRow(skill, i)}
+            </div>
+          ))}
         </div>
       </div>
 
       {/* COMBATE */}
       <div className="mt-8">
-         <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 mb-4">Combate</h3>
-         
-         <div className="flex gap-4 md:gap-12 mb-6 bg-stone-100 dark:bg-stone-900 p-4 rounded border border-stone-200 dark:border-stone-800">
-             <div className="text-center">
-                <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Bonif. Daño</Label>
-                <span className="font-black text-xl font-serif">{character.damageBonus}</span>
-             </div>
-             <div className="text-center border-l border-stone-300 pl-4 md:pl-12">
-                <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Corpulencia</Label>
-                <span className="font-black text-xl font-serif">{character.build}</span>
-             </div>
-             <div className="text-center border-l border-stone-300 pl-4 md:pl-12">
-                <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Esquivar</Label>
-                <span className="font-black text-xl font-serif">{character.dodge}</span>
-             </div>
-             <div className="flex-1"></div>
-             <Shield className="h-10 w-10 text-stone-200"/>
-         </div>
+        <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 mb-4">Combate</h3>
 
-         <div className="w-full overflow-x-auto">
-            <table className="w-full text-xs text-left">
-               <thead>
-                  <tr className="bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
-                     <th className="p-2 font-bold rounded-tl">Arma</th>
-                     <th className="p-2 text-center font-bold w-16">Regular</th>
-                     <th className="p-2 text-center font-bold w-16">Difícil</th>
-                     <th className="p-2 text-center font-bold w-16">Extremo</th>
-                     <th className="p-2 font-bold w-20">Daño</th>
-                     <th className="p-2 font-bold w-16">Alcance</th>
-                     <th className="p-2 text-center font-bold w-10">Atq</th>
-                     <th className="p-2 font-bold w-12">Mun.</th>
-                     <th className="p-2 font-bold w-12 rounded-tr">Avería</th>
-                     <th className="p-2 w-8"></th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
-                  {character.weapons.map((w, i) => (
-                     <tr key={i} className="hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors">
-                        <td className="p-1"><Input value={w.name} onChange={e => updateWeapon(i, {name: e.target.value})} className="h-8 text-sm border-none bg-transparent font-bold"/></td>
-                        <td className="p-1"><Input type="number" value={w.normal} onChange={e => updateWeapon(i, {normal: parseInt(e.target.value)||0})} className="h-8 text-center text-sm border-none bg-transparent font-medium"/></td>
-                        <td className="p-1"><Input type="number" value={w.difficult} onChange={e => updateWeapon(i, {difficult: parseInt(e.target.value)||0})} className="h-8 text-center text-sm border-none bg-transparent text-stone-600"/></td>
-                        <td className="p-1"><Input type="number" value={w.extreme} onChange={e => updateWeapon(i, {extreme: parseInt(e.target.value)||0})} className="h-8 text-center text-sm border-none bg-transparent text-stone-400"/></td>
-                        <td className="p-1"><Input value={w.damage} onChange={e => updateWeapon(i, {damage: e.target.value})} className="h-8 text-sm border-none bg-transparent"/></td>
-                        <td className="p-1"><Input value={w.range} onChange={e => updateWeapon(i, {range: e.target.value})} className="h-8 text-sm border-none bg-transparent"/></td>
-                        <td className="p-1"><Input type="number" value={w.attacks} onChange={e => updateWeapon(i, {attacks: parseInt(e.target.value)||1})} className="h-8 text-center text-sm border-none bg-transparent"/></td>
-                        <td className="p-1"><Input value={w.ammo} onChange={e => updateWeapon(i, {ammo: e.target.value})} className="h-8 text-sm border-none bg-transparent"/></td>
-                        <td className="p-1"><Input value={w.malfunction} onChange={e => updateWeapon(i, {malfunction: e.target.value})} className="h-8 text-sm border-none bg-transparent"/></td>
-                        <td className="p-1 text-center">
-                           <button onClick={() => removeWeapon(i)} className="text-stone-300 hover:text-red-500 transition-colors p-1">
-                              <Trash2 className="h-4 w-4"/>
-                           </button>
-                        </td>
-                     </tr>
-                  ))}
-               </tbody>
-            </table>
-            <Button 
-               variant="ghost" 
-               className="w-full mt-2 text-xs border border-dashed border-stone-300 text-stone-500 hover:text-stone-900" 
-               onClick={addWeapon}
-            >
-               <Plus className="h-3.5 w-3.5 mr-2"/> Añadir Arma
-            </Button>
-         </div>
+        <div className="flex gap-4 md:gap-12 mb-6 bg-stone-100 dark:bg-stone-900 p-4 rounded border border-stone-200 dark:border-stone-800">
+          <div className="text-center">
+            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Bonif. Daño</Label>
+            <span className="font-black text-xl font-serif">{character.damageBonus}</span>
+          </div>
+          <div className="text-center border-l border-stone-300 pl-4 md:pl-12">
+            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Corpulencia</Label>
+            <span className="font-black text-xl font-serif">{character.build}</span>
+          </div>
+          <div className="text-center border-l border-stone-300 pl-4 md:pl-12">
+            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Esquivar</Label>
+            <span className="font-black text-xl font-serif">{character.dodge}</span>
+          </div>
+          <div className="flex-1"></div>
+          <Shield className="h-10 w-10 text-stone-200" />
+        </div>
+
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
+                <th className="p-2 font-bold rounded-tl">Arma</th>
+                <th className="p-2 text-center font-bold w-16">Regular</th>
+                <th className="p-2 text-center font-bold w-16">Difícil</th>
+                <th className="p-2 text-center font-bold w-16">Extremo</th>
+                <th className="p-2 font-bold w-20">Daño</th>
+                <th className="p-2 font-bold w-16">Alcance</th>
+                <th className="p-2 text-center font-bold w-10">Atq</th>
+                <th className="p-2 font-bold w-12">Mun.</th>
+                <th className="p-2 font-bold w-12 rounded-tr">Avería</th>
+                <th className="p-2 w-8"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
+              {character.weapons.map((w, i) => (
+                <tr key={i} className="hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors">
+                  <td className="p-1">
+                    <Input
+                      value={w.name}
+                      onChange={(e) => updateWeapon(i, { name: e.target.value })}
+                      className="h-8 text-sm border-none bg-transparent font-bold"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      type="number"
+                      value={w.normal}
+                      onChange={(e) => updateWeapon(i, { normal: Number.parseInt(e.target.value) || 0 })}
+                      className="h-8 text-center text-sm border-none bg-transparent font-medium"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      type="number"
+                      value={w.difficult}
+                      onChange={(e) => updateWeapon(i, { difficult: Number.parseInt(e.target.value) || 0 })}
+                      className="h-8 text-center text-sm border-none bg-transparent text-stone-600"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      type="number"
+                      value={w.extreme}
+                      onChange={(e) => updateWeapon(i, { extreme: Number.parseInt(e.target.value) || 0 })}
+                      className="h-8 text-center text-sm border-none bg-transparent text-stone-400"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      value={w.damage}
+                      onChange={(e) => updateWeapon(i, { damage: e.target.value })}
+                      className="h-8 text-sm border-none bg-transparent"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      value={w.range}
+                      onChange={(e) => updateWeapon(i, { range: e.target.value })}
+                      className="h-8 text-sm border-none bg-transparent"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      type="number"
+                      value={w.attacks}
+                      onChange={(e) => updateWeapon(i, { attacks: Number.parseInt(e.target.value) || 1 })}
+                      className="h-8 text-center text-sm border-none bg-transparent"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      value={w.ammo}
+                      onChange={(e) => updateWeapon(i, { ammo: e.target.value })}
+                      className="h-8 text-sm border-none bg-transparent"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <Input
+                      value={w.malfunction}
+                      onChange={(e) => updateWeapon(i, { malfunction: e.target.value })}
+                      className="h-8 text-sm border-none bg-transparent"
+                    />
+                  </td>
+                  <td className="p-1 text-center">
+                    <button
+                      onClick={() => removeWeapon(i)}
+                      className="text-stone-300 hover:text-red-500 transition-colors p-1"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Button
+            variant="ghost"
+            className="w-full mt-2 text-xs border border-dashed border-stone-300 text-stone-500 hover:text-stone-900"
+            onClick={addWeapon}
+          >
+            <Plus className="h-3.5 w-3.5 mr-2" /> Añadir Arma
+          </Button>
+        </div>
       </div>
-      
-      <OccupationDetailsModal 
-        isOpen={isOccupationModalOpen} 
+
+      <OccupationDetailsModal
+        isOpen={isOccupationModalOpen}
         onClose={() => setIsOccupationModalOpen(false)}
         character={character}
         onChange={handleModalChange}

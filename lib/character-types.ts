@@ -16,8 +16,8 @@ export interface Skill {
   isFieldHeader?: boolean // Cabecera de campo (no editable)
   isFieldSlot?: boolean // Slot vacío bajo cabecera de campo
   isSpecialCalc?: boolean // Habilidades calculadas (Esquivar, Lengua propia)
-  occupationalPoints?: number; // Puntos gastados del pool de profesión
-  personalPoints?: number;     // Puntos gastados del pool personal
+  occupationalPoints?: number // Puntos gastados del pool de profesión
+  personalPoints?: number // Puntos gastados del pool personal
 }
 
 export interface Weapon {
@@ -38,9 +38,9 @@ export interface Armor {
 }
 
 export interface Character {
-  occupationLabel?: string; // Nombre personalizado de la profesión
-  occupationFormula?: string; // Fórmula usada
-  occupationalSkills?: string[];
+  occupationLabel?: string // Nombre personalizado de la profesión
+  occupationFormula?: string // Fórmula usada
+  occupationalSkills?: any[]
   id: string
   era: CharacterEra
   createdAt: number

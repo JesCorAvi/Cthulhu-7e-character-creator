@@ -18,6 +18,11 @@ export interface Skill {
   isSpecialCalc?: boolean // Habilidades calculadas (Esquivar, Lengua propia)
   occupationalPoints?: number // Puntos gastados del pool de profesión
   personalPoints?: number // Puntos gastados del pool personal
+  markedForImprovement?: boolean // Marcada para mejora (acertó el control)
+  improvementChecked?: boolean // Ya se comprobó la mejora
+  improvementRoll?: number // Resultado del d100
+  improvementAmount?: number // Cantidad subida con d10
+  improvementSuccess?: boolean // Si tuvo éxito la mejora
 }
 
 export interface Weapon {

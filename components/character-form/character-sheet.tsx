@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import { OccupationDetailsModal } from "./occupation-details-modal"
 import { DiceRoller } from "@/components/dice-roller"
+import { SkillImprovementModal } from "@/components/skill-improvement-modal"
 
 interface CharacterSheetProps {
   character: Character
@@ -109,6 +110,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const [isOccupationModalOpen, setIsOccupationModalOpen] = useState(false)
   const [showDiceRoller, setShowDiceRoller] = useState(false)
   const [hasRolledCharacteristics, setHasRolledCharacteristics] = useState(false)
+  const [improvingSkill, setImprovingSkill] = useState<{ skill: Skill; index: number } | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -343,6 +345,22 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   // Determinar si mostrar el botón de gestión
   const showOccupationButton = character.occupation && character.occupation !== "Personalizada"
 
+  const handleSkillImprovement = (index: number, amount: number) => {
+    const updatedSkills = [...character.skills]
+    const skill = updatedSkills[index]
+
+    skill.improvementChecked = true
+    skill.improvementSuccess = amount > 0
+
+    if (amount > 0) {
+      skill.value += amount
+      skill.improvementAmount = amount
+    }
+
+    onChange({ ...character, skills: updatedSkills })
+    setImprovingSkill(null)
+  }
+
   const renderSkillRow = (skill: Skill, idx: number) => {
     const actualIndex = character.skills.indexOf(skill)
     const half = Math.floor(skill.value / 2)
@@ -389,13 +407,45 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           <div className="absolute left-0 top-0 bottom-1/2 w-3 border-l border-b border-stone-300 dark:border-stone-600 rounded-bl-sm -translate-y-[2px]" />
         )}
 
-        {skill.isOccupational ? (
-          <div className="h-4 w-12 flex items-center justify-center bg-amber-500 dark:bg-amber-600 text-white rounded-sm text-[9px] font-bold tracking-wide shrink-0">
-            PROF
-          </div>
-        ) : (
-          <div className="h-3.5 w-3.5 shrink-0" />
-        )}
+        <button
+          onClick={() => {
+            updateSkill(actualIndex, { markedForImprovement: !skill.markedForImprovement })
+          }}
+          className={cn(
+            "h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors",
+            skill.markedForImprovement
+              ? "bg-emerald-500 border-emerald-500"
+              : "bg-transparent border-stone-400 dark:border-stone-600 hover:border-emerald-500",
+          )}
+          title="Marcar para mejora (acerté el control)"
+        >
+          {skill.markedForImprovement && (
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            if (!skill.markedForImprovement) {
+              // Primera vez: marcar
+              updateSkill(actualIndex, { markedForImprovement: true })
+            } else {
+              // Segunda vez: abrir modal
+              setImprovingSkill({ skill, index: actualIndex })
+            }
+          }}
+          className={cn(
+            "h-5 w-5 rounded shrink-0 flex items-center justify-center transition-all",
+            skill.markedForImprovement
+              ? "bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
+              : "bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-500 dark:text-stone-400",
+          )}
+          title={skill.markedForImprovement ? "Comprobar mejora" : "Marcar para mejora"}
+        >
+          <Dices className="h-3 w-3" />
+        </button>
 
         <div className="flex-1 min-w-0 font-serif flex items-center">
           {skill.isCustom || skill.isFieldSlot ? (
@@ -417,12 +467,19 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           )}
         </div>
 
-        <Input
-          type="number"
-          value={skill.value}
-          onChange={(e) => updateSkill(actualIndex, { value: Number.parseInt(e.target.value) || 0 })}
-          className="h-6 w-9 text-center text-[11px] p-0 border border-stone-300 dark:border-stone-700 rounded-sm font-bold bg-white dark:bg-stone-900"
-        />
+        <div className="flex items-center gap-1">
+          {skill.isOccupational && (
+            <div className="h-4 px-1.5 flex items-center justify-center bg-amber-500 dark:bg-amber-600 text-white rounded-sm text-[9px] font-bold tracking-wide shrink-0">
+              PROF
+            </div>
+          )}
+          <Input
+            type="number"
+            value={skill.value}
+            onChange={(e) => updateSkill(actualIndex, { value: Number.parseInt(e.target.value) || 0 })}
+            className="h-6 w-9 text-center text-[11px] p-0 border border-stone-300 dark:border-stone-700 rounded-sm font-bold bg-white dark:bg-stone-900"
+          />
+        </div>
 
         <div className="flex flex-col text-[9px] leading-none text-stone-500 w-6 text-center font-mono gap-[2px]">
           <span>{half}</span>
@@ -445,6 +502,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   return (
     <div className="w-full max-w-[1100px] mx-auto bg-[#fdfaf5] dark:bg-stone-950 text-stone-900 dark:text-stone-200 font-sans p-4 md:p-8 shadow-2xl border border-stone-300 dark:border-stone-800 min-h-screen relative transition-colors duration-300">
       {showDiceRoller && <DiceRoller onComplete={handleDiceRollComplete} onCancel={() => setShowDiceRoller(false)} />}
+
+      {improvingSkill && (
+        <SkillImprovementModal
+          skill={improvingSkill.skill}
+          onComplete={(amount) => handleSkillImprovement(improvingSkill.index, amount)}
+          onCancel={() => setImprovingSkill(null)}
+        />
+      )}
 
       {mounted && (
         <Button

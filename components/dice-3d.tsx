@@ -3,8 +3,9 @@
 import type React from "react"
 import { useRef, useState, useEffect, useCallback, Suspense, useMemo, useLayoutEffect } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { Environment, RoundedBox } from "@react-three/drei"
+import { Environment } from "@react-three/drei"
 import * as THREE from "three"
+import { Text } from "@react-three/drei"
 
 // Simple dice component with manual animation
 interface DieProps {
@@ -20,6 +21,7 @@ interface DieProps {
   allPositions: React.MutableRefObject<THREE.Vector3[]> // Nueva prop para ver a los otros dados
   onSettled: (id: number, value: number) => void
   onPositionUpdate: (id: number, pos: THREE.Vector3) => void
+  diceType: "d6" | "d10" | "d20"
 }
 
 function Die({
@@ -35,13 +37,14 @@ function Die({
   allPositions,
   onSettled,
   onPositionUpdate,
+  diceType,
 }: DieProps) {
   const groupRef = useRef<THREE.Group>(null)
-  
+
   const phase = useRef<"waiting" | "rolling" | "settling" | "settled">("waiting")
   const currentPos = useRef<THREE.Vector3>(new THREE.Vector3(position[0], -0.5, position[2]))
   const rotation = useRef<THREE.Euler>(new THREE.Euler(0, 0, 0))
-  
+
   const animationTime = useRef(0)
   const hasSettled = useRef(false)
   const settlingStartRotation = useRef<[number, number, number]>([0, 0, 0])
@@ -53,23 +56,41 @@ function Die({
 
   // Variables de Caos
   const chaosRef = useRef({
-      spinAxis: new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(),
-      spinSpeed: 20 + Math.random() * 15,
-      driftX: (Math.random() - 0.5) * 2,
-      driftZ: (Math.random() - 0.5) * 2
+    spinAxis: new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(),
+    spinSpeed: 20 + Math.random() * 15,
+    driftX: (Math.random() - 0.5) * 2,
+    driftZ: (Math.random() - 0.5) * 2,
   })
 
   // --- 1. LÓGICA DE ROTACIÓN ---
-  const getFinalRotation = (value: number): [number, number, number] => {
-    switch (value) {
-      case 1: return [0, 0, 0]
-      case 2: return [-Math.PI / 2, 0, 0]
-      case 3: return [0, 0, Math.PI / 2]
-      case 4: return [0, 0, -Math.PI / 2]
-      case 5: return [Math.PI / 2, 0, 0]
-      case 6: return [Math.PI, 0, 0]
-      default: return [0, 0, 0]
+  const getFinalRotation = (value: number, type: "d6" | "d10" | "d20"): [number, number, number] => {
+    if (type === "d6") {
+      switch (value) {
+        case 1:
+          return [0, 0, 0]
+        case 2:
+          return [-Math.PI / 2, 0, 0]
+        case 3:
+          return [0, 0, Math.PI / 2]
+        case 4:
+          return [0, 0, -Math.PI / 2]
+        case 5:
+          return [Math.PI / 2, 0, 0]
+        case 6:
+          return [Math.PI, 0, 0]
+        default:
+          return [0, 0, 0]
+      }
+    } else if (type === "d10") {
+      // Rotaciones para d10 pentagonal - cada cara tiene 72 grados de separación
+      const baseAngle = (((value - 1) % 5) * (Math.PI * 2)) / 5
+      const isTop = value <= 5
+      return isTop ? [Math.PI / 6, baseAngle, 0] : [-Math.PI / 6, baseAngle, 0]
+    } else if (type === "d20") {
+      // Placeholder for d20 logic
+      return [0, 0, 0]
     }
+    return [0, 0, 0]
   }
 
   const normalizeAngle = (angle: number): number => {
@@ -107,7 +128,7 @@ function Die({
       }, startDelay)
       return () => clearTimeout(timer)
     }
-  }, [isRolling, startDelay]) 
+  }, [isRolling, startDelay])
 
   // RESET
   useEffect(() => {
@@ -117,16 +138,16 @@ function Die({
     rotation.current.set(0, 0, 0)
     hasSettled.current = false
     animationTime.current = 0
-    
+
     // Reset colisiones
     collisionOffset.current.set(0, 0, 0)
     collisionRotOffset.current.set(0, 0, 0)
-    
+
     chaosRef.current = {
       spinAxis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
       spinSpeed: 25 + Math.random() * 20,
       driftX: (Math.random() - 0.5) * 3,
-      driftZ: (Math.random() - 0.5) * 3
+      driftZ: (Math.random() - 0.5) * 3,
     }
 
     if (groupRef.current) {
@@ -147,20 +168,20 @@ function Die({
       const maxThrowDistance = 7 * throwForce
       const throwProgress = Math.min(progress * 1.1, 1)
       const easeOut = 1 - Math.pow(1 - throwProgress, 2)
-      
+
       const throwOffsetX = throwDirection.x * maxThrowDistance * easeOut
       const throwOffsetZ = throwDirection.z * maxThrowDistance * easeOut
-      
+
       const driftScale = Math.sin(progress * Math.PI) * 1.5
       const currentDriftX = chaosRef.current.driftX * driftScale * 0.5
       const currentDriftZ = chaosRef.current.driftZ * driftScale * 0.5
 
       let y: number
       if (progress < 0.15) {
-        y = -0.5 + (progress / 0.15) * 1.5 
+        y = -0.5 + (progress / 0.15) * 1.5
       } else if (progress < 0.65) {
         const arcProgress = (progress - 0.15) / 0.5
-        y = 1.0 + Math.sin(arcProgress * Math.PI) * 0.8 - arcProgress * 1.0 
+        y = 1.0 + Math.sin(arcProgress * Math.PI) * 0.8 - arcProgress * 1.0
       } else {
         const fallProgress = (progress - 0.65) / 0.35
         const bounce = Math.abs(Math.cos(fallProgress * Math.PI * 3)) * 0.3 * (1 - fallProgress)
@@ -173,41 +194,37 @@ function Die({
 
       // B. DETECCIÓN DE COLISIONES (Repulsión)
       const myPos = new THREE.Vector3(idealX + collisionOffset.current.x, y, idealZ + collisionOffset.current.z)
-      
+
       // Chequear contra todos los otros dados
       allPositions.current.forEach((otherPos, index) => {
-          if (index === id) return // No chocar conmigo mismo
-          
-          const dist = myPos.distanceTo(otherPos)
-          const MIN_DIST = 1.1 // Tamaño del dado (1) + margen (0.1)
-          
-          if (dist < MIN_DIST) {
-              // Vector de empuje (desde el otro dado hacia mí)
-              const pushDir = new THREE.Vector3().subVectors(myPos, otherPos).normalize()
-              
-              // Evitar NaNs si están en la misma posición exacta
-              if (pushDir.lengthSq() === 0) pushDir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize()
-              
-              // Fuerza de repulsión (cuanto más cerca, más fuerte)
-              const overlap = MIN_DIST - dist
-              const pushForce = overlap * 0.15 // Factor de suavidad
+        if (index === id) return // No chocar conmigo mismo
 
-              // Acumular el empujón en mi offset
-              collisionOffset.current.x += pushDir.x * pushForce
-              collisionOffset.current.z += pushDir.z * pushForce
+        const dist = myPos.distanceTo(otherPos)
+        const MIN_DIST = 1.1 // Tamaño del dado (1) + margen (0.1)
 
-              // Efecto visual: Cambiar rotación al chocar
-              collisionRotOffset.current.x += (Math.random() - 0.5) * 0.5
-              collisionRotOffset.current.z += (Math.random() - 0.5) * 0.5
-          }
+        if (dist < MIN_DIST) {
+          // Vector de empuje (desde el otro dado hacia mí)
+          const pushDir = new THREE.Vector3().subVectors(myPos, otherPos).normalize()
+
+          // Evitar NaNs si están en la misma posición exacta
+          if (pushDir.lengthSq() === 0) pushDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize()
+
+          // Fuerza de repulsión (cuanto más cerca, más fuerte)
+          const overlap = MIN_DIST - dist
+          const pushForce = overlap * 0.15 // Factor de suavidad
+
+          // Acumular el empujón en mi offset
+          collisionOffset.current.x += pushDir.x * pushForce
+          collisionOffset.current.z += pushDir.z * pushForce
+
+          // Efecto visual: Cambiar rotación al chocar
+          collisionRotOffset.current.x += (Math.random() - 0.5) * 0.5
+          collisionRotOffset.current.z += (Math.random() - 0.5) * 0.5
+        }
       })
 
       // Aplicar posición final
-      currentPos.current.set(
-        idealX + collisionOffset.current.x,
-        y,
-        idealZ + collisionOffset.current.z
-      )
+      currentPos.current.set(idealX + collisionOffset.current.x, y, idealZ + collisionOffset.current.z)
 
       // C. Rotación
       const spinDamping = Math.max(0, 1 - Math.pow(progress, 3))
@@ -216,22 +233,22 @@ function Die({
       rotation.current.x += chaosRef.current.spinAxis.x * currentSpinSpeed + collisionRotOffset.current.x * 0.1
       rotation.current.y += chaosRef.current.spinAxis.y * currentSpinSpeed
       rotation.current.z += chaosRef.current.spinAxis.z * currentSpinSpeed + collisionRotOffset.current.z * 0.1
-      
+
       // Decaer el efecto de choque en rotación
       collisionRotOffset.current.x *= 0.9
       collisionRotOffset.current.z *= 0.9
 
       // D. Guía Invisible (Corrección final)
       if (progress > 0.75) {
-         const finalRot = getFinalRotation(targetValue)
-         const currentRotTuple: [number, number, number] = [rotation.current.x, rotation.current.y, rotation.current.z]
-         const targetRot = findClosestTargetRotation(currentRotTuple, finalRot)
-         
-         const guideStrength = Math.pow((progress - 0.75) / 0.25, 3) * 0.25
-         
-         rotation.current.x += (targetRot[0] - rotation.current.x) * guideStrength
-         rotation.current.y += (targetRot[1] - rotation.current.y) * guideStrength
-         rotation.current.z += (targetRot[2] - rotation.current.z) * guideStrength
+        const finalRot = getFinalRotation(targetValue, diceType)
+        const currentRotTuple: [number, number, number] = [rotation.current.x, rotation.current.y, rotation.current.z]
+        const targetRot = findClosestTargetRotation(currentRotTuple, finalRot)
+
+        const guideStrength = Math.pow((progress - 0.75) / 0.25, 3) * 0.25
+
+        rotation.current.x += (targetRot[0] - rotation.current.x) * guideStrength
+        rotation.current.y += (targetRot[1] - rotation.current.y) * guideStrength
+        rotation.current.z += (targetRot[2] - rotation.current.z) * guideStrength
       }
 
       if (progress >= 1) {
@@ -245,51 +262,57 @@ function Die({
       animationTime.current += delta
       const settleDuration = 0.5
       const progress = Math.min(animationTime.current / settleDuration, 1)
-      
-      const c1 = 1.70158;
-      const c3 = c1 + 1;
-      const eased = 1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2);
 
-      const finalRot = getFinalRotation(targetValue)
+      const c1 = 1.70158
+      const c3 = c1 + 1
+      const eased = 1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2)
+
+      const finalRot = getFinalRotation(targetValue, diceType)
       const startRot = settlingStartRotation.current
       const closestTarget = findClosestTargetRotation(startRot, finalRot)
 
       rotation.current.set(
         startRot[0] + (closestTarget[0] - startRot[0]) * eased,
         startRot[1] + (closestTarget[1] - startRot[1]) * eased,
-        startRot[2] + (closestTarget[2] - startRot[2]) * eased
+        startRot[2] + (closestTarget[2] - startRot[2]) * eased,
       )
-      
+
       // Mantener separación en el suelo también
       const myPos = currentPos.current.clone()
       myPos.y = -0.5 // Forzar altura de suelo
-      
+
       allPositions.current.forEach((otherPos, index) => {
-          if (index === id) return
-          const dist = myPos.distanceTo(otherPos)
-          const MIN_DIST = 1.1
-           if (dist < MIN_DIST) {
-              const pushDir = new THREE.Vector3().subVectors(myPos, otherPos).normalize()
-              if (pushDir.lengthSq() === 0) pushDir.set(1,0,0)
-              
-              const pushForce = (MIN_DIST - dist) * 0.1
-              collisionOffset.current.x += pushDir.x * pushForce
-              collisionOffset.current.z += pushDir.z * pushForce
-           }
+        if (index === id) return
+        const dist = myPos.distanceTo(otherPos)
+        const MIN_DIST = 1.1
+        if (dist < MIN_DIST) {
+          const pushDir = new THREE.Vector3().subVectors(myPos, otherPos).normalize()
+          if (pushDir.lengthSq() === 0) pushDir.set(1, 0, 0)
+
+          const pushForce = (MIN_DIST - dist) * 0.1
+          collisionOffset.current.x += pushDir.x * pushForce
+          collisionOffset.current.z += pushDir.z * pushForce
+        }
       })
 
       // Vibración de impacto
       let wobbleY = -0.5
       if (progress < 0.5) {
-          wobbleY += Math.sin(progress * Math.PI * 4) * 0.05 * (1 - progress*2)
+        wobbleY += Math.sin(progress * Math.PI * 4) * 0.05 * (1 - progress * 2)
       }
-      
+
       currentPos.current.set(
-          startingPos.current[0] + 7*throwForce*throwDirection.x + chaosRef.current.driftX*0.75*0.5 + collisionOffset.current.x, // Estimado final aproximado
-          wobbleY,
-          startingPos.current[2] + 7*throwForce*throwDirection.z + chaosRef.current.driftZ*0.75*0.5 + collisionOffset.current.z
+        startingPos.current[0] +
+          7 * throwForce * throwDirection.x +
+          chaosRef.current.driftX * 0.75 * 0.5 +
+          collisionOffset.current.x, // Estimado final aproximado
+        wobbleY,
+        startingPos.current[2] +
+          7 * throwForce * throwDirection.z +
+          chaosRef.current.driftZ * 0.75 * 0.5 +
+          collisionOffset.current.z,
       )
-      // Nota: En settling simplificamos la posición X/Z para que no "tiemble", 
+      // Nota: En settling simplificamos la posición X/Z para que no "tiemble",
       // usando el último collisionOffset acumulado
 
       if (progress >= 1 && !hasSettled.current) {
@@ -301,24 +324,156 @@ function Die({
 
     groupRef.current.position.copy(currentPos.current)
     groupRef.current.rotation.copy(rotation.current)
-    
+
     // IMPORTANTE: Reportar mi posición actual al sistema central
     onPositionUpdate(id, currentPos.current)
   })
 
   return (
-    <group ref={groupRef}>
-      <RoundedBox args={[1, 1, 1]} radius={0.1} smoothness={4} castShadow receiveShadow>
-        <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
-      </RoundedBox>
-      <DiceDots position={[0, 0.51, 0]} rotation={[-Math.PI / 2, 0, 0]} value={1} />
-      <DiceDots position={[0, -0.51, 0]} rotation={[Math.PI / 2, 0, 0]} value={6} />
-      <DiceDots position={[0.51, 0, 0]} rotation={[0, Math.PI / 2, 0]} value={3} />
-      <DiceDots position={[-0.51, 0, 0]} rotation={[0, -Math.PI / 2, 0]} value={4} />
-      <DiceDots position={[0, 0, 0.51]} rotation={[0, 0, 0]} value={2} />
-      <DiceDots position={[0, 0, -0.51]} rotation={[0, Math.PI, 0]} value={5} />
+    <group ref={groupRef} position={position}>
+      <DiceModel diceType={diceType} value={targetValue} color={color} />
     </group>
   )
+}
+
+function DiceModel({
+  diceType,
+  value,
+  color,
+}: {
+  diceType: "d6" | "d10" | "d20"
+  value: number
+  color: string
+}) {
+  return (
+    <group>
+      {diceType === "d6" ? (
+        <>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
+          </mesh>
+          <DiceDots position={[0, 0.51, 0]} rotation={[-Math.PI / 2, 0, 0]} value={1} />
+          <DiceDots position={[0, -0.51, 0]} rotation={[Math.PI / 2, 0, 0]} value={6} />
+          <DiceDots position={[0.51, 0, 0]} rotation={[0, Math.PI / 2, 0]} value={3} />
+          <DiceDots position={[-0.51, 0, 0]} rotation={[0, -Math.PI / 2, 0]} value={4} />
+          <DiceDots position={[0, 0, 0.51]} rotation={[0, 0, 0]} value={2} />
+          <DiceDots position={[0, 0, -0.51]} rotation={[0, Math.PI, 0]} value={5} />
+        </>
+      ) : diceType === "d10" ? (
+        <>
+          <mesh castShadow receiveShadow>
+            <TrapezohedronGeometry />
+            <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
+          </mesh>
+          {/* Números del 0-9 en las 10 caras del trapezoedro */}
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
+            // Alternar entre caras superiores e inferiores
+            const isTop = num % 2 === 0
+            const faceIndex = Math.floor(num / 2)
+            const angle = (faceIndex * Math.PI * 2) / 5
+
+            // Posicionar en las caras del trapezoedro
+            const radius = 0.52
+            const height = isTop ? 0.4 : -0.4
+            const x = Math.sin(angle) * radius
+            const z = Math.cos(angle) * radius
+
+            // Calcular rotación para que el número mire hacia afuera
+            const tilt = isTop ? -Math.PI / 5 : Math.PI / 5
+
+            return (
+              <Text
+                key={num}
+                position={[x, height, z]}
+                rotation={[tilt, -angle, 0]}
+                fontSize={0.25}
+                color="#000000"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.01}
+                outlineColor="#ffffff"
+              >
+                {num}
+              </Text>
+            )
+          })}
+        </>
+      ) : (
+        // d20 placeholder
+        <mesh castShadow receiveShadow>
+          <icosahedronGeometry args={[0.6]} />
+          <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
+function TrapezohedronGeometry() {
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry()
+
+    // Vértices de un trapezoedro pentagonal
+    const h = 0.65 // altura desde el centro
+    const r1 = 0.4 // radio superior
+    const r2 = 0.4 // radio inferior
+
+    const vertices: number[] = []
+    const indices: number[] = []
+
+    // Vértice superior (0)
+    vertices.push(0, h, 0)
+
+    // 5 vértices del pentágono superior (1-5)
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * Math.PI * 2) / 5
+      vertices.push(Math.sin(angle) * r1, h * 0.3, Math.cos(angle) * r1)
+    }
+
+    // 5 vértices del pentágono inferior (6-10)
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * Math.PI * 2) / 5 + Math.PI / 5
+      vertices.push(Math.sin(angle) * r2, -h * 0.3, Math.cos(angle) * r2)
+    }
+
+    // Vértice inferior (11)
+    vertices.push(0, -h, 0)
+
+    // Crear las 10 caras (triángulos)
+    // 5 caras superiores
+    for (let i = 0; i < 5; i++) {
+      const next = (i + 1) % 5
+      indices.push(0, i + 1, next + 1)
+    }
+
+    // 10 caras del medio (2 triángulos por sección = 5 caras cometa)
+    for (let i = 0; i < 5; i++) {
+      const next = (i + 1) % 5
+      const topCurrent = i + 1
+      const topNext = next + 1
+      const bottomCurrent = i + 6
+      const bottomNext = ((i + 1) % 5) + 6
+
+      // Cara cometa como dos triángulos
+      indices.push(topCurrent, topNext, bottomCurrent)
+      indices.push(bottomCurrent, topNext, bottomNext)
+    }
+
+    // 5 caras inferiores
+    for (let i = 0; i < 5; i++) {
+      const next = (i + 1) % 5
+      indices.push(11, next + 6, i + 6)
+    }
+
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3))
+    geo.setIndex(indices)
+    geo.computeVertexNormals()
+
+    return geo
+  }, [])
+
+  return <primitive object={geometry} attach="geometry" />
 }
 
 function DiceDots({
@@ -345,15 +500,40 @@ function getDotPositions(value: number): [number, number][] {
     case 1:
       return [[0, 0]]
     case 2:
-      return [[-s, s], [s, -s]]
+      return [
+        [-s, s],
+        [s, -s],
+      ]
     case 3:
-      return [[-s, s], [0, 0], [s, -s]]
+      return [
+        [-s, s],
+        [0, 0],
+        [s, -s],
+      ]
     case 4:
-      return [[-s, s], [s, s], [-s, -s], [s, -s]]
+      return [
+        [-s, s],
+        [s, s],
+        [-s, -s],
+        [s, -s],
+      ]
     case 5:
-      return [[-s, s], [s, s], [0, 0], [-s, -s], [s, -s]]
+      return [
+        [-s, s],
+        [s, s],
+        [0, 0],
+        [-s, -s],
+        [s, -s],
+      ]
     case 6:
-      return [[-s, s], [-s, 0], [-s, -s], [s, s], [s, 0], [s, -s]]
+      return [
+        [-s, s],
+        [-s, 0],
+        [-s, -s],
+        [s, s],
+        [s, 0],
+        [s, -s],
+      ]
     default:
       return []
   }
@@ -414,6 +594,7 @@ function SceneContent({
   throwDirection,
   throwForce,
   onDieSettled,
+  diceType,
 }: {
   diceCount: number
   isRolling: boolean
@@ -422,6 +603,7 @@ function SceneContent({
   throwDirection: { x: number; z: number }
   throwForce: number
   onDieSettled: (id: number, value: number) => void
+  diceType: "d6" | "d10" | "d20"
 }) {
   const DICE_COLORS = ["#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#9333ea", "#db2777"]
 
@@ -490,6 +672,7 @@ function SceneContent({
           allPositions={dicePositionsRef} // Pasamos la "visión" global a cada dado
           onSettled={onDieSettled}
           onPositionUpdate={handlePositionUpdate}
+          diceType={diceType}
         />
       ))}
       <Environment preset="city" />
@@ -500,9 +683,10 @@ function SceneContent({
 interface Dice3DSceneProps {
   diceCount: number
   onRollComplete: (values: number[]) => void
+  diceType?: "d6" | "d10" | "d20"
 }
 
-export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
+export function Dice3DScene({ diceCount, onRollComplete, diceType = "d6" }: Dice3DSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isRolling, setIsRolling] = useState(false)
   const [rollKey, setRollKey] = useState(0)
@@ -579,7 +763,16 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
       setThrowDirection({ x: normalizedX, z: normalizedZ })
       setThrowForce(force)
 
-      const values = Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1)
+      const values = Array.from({ length: diceCount }, () => {
+        if (diceType === "d6") {
+          return Math.floor(Math.random() * 6) + 1
+        } else if (diceType === "d10") {
+          return Math.floor(Math.random() * 10) + 1
+        } else if (diceType === "d20") {
+          return Math.floor(Math.random() * 20) + 1
+        }
+        return 1
+      })
       setTargetValues(values)
       setRollKey((prev) => prev + 1)
       setIsRolling(true)
@@ -590,7 +783,7 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
     setIsDragging(false)
     setDragStart(null)
     setDragEnd(null)
-  }, [isDragging, dragStart, dragEnd, isRolling, diceCount])
+  }, [isDragging, dragStart, dragEnd, isRolling, diceCount, diceType])
 
   useEffect(() => {
     const container = containerRef.current
@@ -671,6 +864,7 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
             throwDirection={throwDirection}
             throwForce={throwForce}
             onDieSettled={handleDieSettled}
+            diceType={diceType}
           />
         </Canvas>
       </Suspense>

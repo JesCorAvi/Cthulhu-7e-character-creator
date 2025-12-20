@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useRef, useState, useEffect, useCallback, Suspense } from "react"
+import { useRef, useState, useEffect, useCallback, Suspense, useMemo, useLayoutEffect } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { Environment, RoundedBox } from "@react-three/drei"
 import * as THREE from "three"
@@ -13,7 +12,7 @@ interface DieProps {
   color: string
   targetValue: number
   isRolling: boolean
-  rollKey: number // Added rollKey to force re-mount on each roll
+  rollKey: number
   startDelay: number
   position: [number, number, number]
   throwDirection: { x: number; z: number }
@@ -36,30 +35,28 @@ function Die({
   onPositionUpdate,
 }: DieProps) {
   const groupRef = useRef<THREE.Group>(null)
-  const [phase, setPhase] = useState<"waiting" | "rolling" | "settling" | "settled">("waiting")
-  const [currentPos, setCurrentPos] = useState<[number, number, number]>([position[0], -0.5, position[2]])
-  const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0])
+  
+  // Refs para estado de animación (evita re-renders)
+  const phase = useRef<"waiting" | "rolling" | "settling" | "settled">("waiting")
+  // Inicializamos con la posición recibida
+  const currentPos = useRef<THREE.Vector3>(new THREE.Vector3(position[0], -0.5, position[2]))
+  const rotation = useRef<THREE.Euler>(new THREE.Euler(0, 0, 0))
+  
   const animationTime = useRef(0)
   const hasSettled = useRef(false)
   const settlingStartRotation = useRef<[number, number, number]>([0, 0, 0])
   const startingPos = useRef<[number, number, number]>([position[0], -0.5, position[2]])
 
+  // Función auxiliar para calcular rotación final
   const getFinalRotation = (value: number): [number, number, number] => {
     switch (value) {
-      case 1:
-        return [Math.PI / 2, 0, 0]
-      case 2:
-        return [0, 0, 0]
-      case 3:
-        return [0, 0, -Math.PI / 2]
-      case 4:
-        return [0, 0, Math.PI / 2]
-      case 5:
-        return [Math.PI, 0, 0]
-      case 6:
-        return [-Math.PI / 2, 0, 0]
-      default:
-        return [0, 0, 0]
+      case 1: return [Math.PI / 2, 0, 0]
+      case 2: return [0, 0, 0]
+      case 3: return [0, 0, -Math.PI / 2]
+      case 4: return [0, 0, Math.PI / 2]
+      case 5: return [Math.PI, 0, 0]
+      case 6: return [-Math.PI / 2, 0, 0]
+      default: return [0, 0, 0]
     }
   }
 
@@ -81,29 +78,51 @@ function Die({
     }) as [number, number, number]
   }
 
+  // Establecer posición inicial al montar o cambiar posición base
+  useLayoutEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(position[0], -0.5, position[2])
+      groupRef.current.rotation.set(0, 0, 0)
+    }
+    // Actualizamos los refs internos
+    currentPos.current.set(position[0], -0.5, position[2])
+    startingPos.current = [position[0], -0.5, position[2]]
+  }, [position])
+
+  // Control de inicio de animación (Delay)
   useEffect(() => {
-    if (isRolling && phase === "waiting") {
+    if (isRolling && phase.current === "waiting") {
       const timer = setTimeout(() => {
-        setPhase("rolling")
+        phase.current = "rolling"
         animationTime.current = 0
       }, startDelay)
       return () => clearTimeout(timer)
     }
-  }, [isRolling, phase, startDelay])
+  }, [isRolling, startDelay]) 
 
+  // Reset del dado ÚNICAMENTE cuando cambia rollKey (nueva tirada)
   useEffect(() => {
-    setPhase("waiting")
-    setCurrentPos([position[0], -0.5, position[2]])
+    phase.current = "waiting"
+    
+    // Reset posiciones
     startingPos.current = [position[0], -0.5, position[2]]
-    setRotation([0, 0, 0])
+    currentPos.current.set(position[0], -0.5, position[2])
+    rotation.current.set(0, 0, 0)
+    
     hasSettled.current = false
     animationTime.current = 0
-  }, [rollKey, position])
+    
+    // Aplicar inmediatamente visualmente
+    if (groupRef.current) {
+      groupRef.current.position.set(position[0], -0.5, position[2])
+      groupRef.current.rotation.set(0, 0, 0)
+    }
+  }, [rollKey])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
 
-    if (phase === "rolling") {
+    if (phase.current === "rolling") {
       animationTime.current += delta
       const rollDuration = 1.8
       const progress = Math.min(animationTime.current / rollDuration, 1)
@@ -136,29 +155,27 @@ function Die({
       const rotationBiasX = throwDirection.z * 1.5
       const rotationBiasZ = -throwDirection.x * 1.5
 
-      setRotation((prev) => [
-        prev[0] + delta * tumbleSpeed * (1 + rotationBiasX + Math.sin(animationTime.current * 4) * 0.3),
-        prev[1] + delta * tumbleSpeed * 1.2,
-        prev[2] + delta * tumbleSpeed * (0.8 + rotationBiasZ),
-      ])
+      rotation.current.x += delta * tumbleSpeed * (1 + rotationBiasX + Math.sin(animationTime.current * 4) * 0.3)
+      rotation.current.y += delta * tumbleSpeed * 1.2
+      rotation.current.z += delta * tumbleSpeed * (0.8 + rotationBiasZ)
 
       const wobbleX = Math.sin(progress * Math.PI * 2.5) * 0.1 * (1 - progress * 0.5)
       const wobbleZ = Math.cos(progress * Math.PI * 3) * 0.08 * (1 - progress * 0.5)
 
-      setCurrentPos([
+      currentPos.current.set(
         startingPos.current[0] + throwOffsetX + wobbleX,
         y,
-        startingPos.current[2] + throwOffsetZ + wobbleZ,
-      ])
+        startingPos.current[2] + throwOffsetZ + wobbleZ
+      )
 
       if (progress >= 1) {
-        settlingStartRotation.current = rotation
-        setPhase("settling")
+        settlingStartRotation.current = [rotation.current.x, rotation.current.y, rotation.current.z]
+        phase.current = "settling"
         animationTime.current = 0
       }
     }
 
-    if (phase === "settling") {
+    if (phase.current === "settling") {
       animationTime.current += delta
       const settleDuration = 0.6
       const progress = Math.min(animationTime.current / settleDuration, 1)
@@ -168,27 +185,30 @@ function Die({
       const startRot = settlingStartRotation.current
       const closestTarget = findClosestTargetRotation(startRot, finalRot)
 
-      setRotation([
+      rotation.current.set(
         startRot[0] + (closestTarget[0] - startRot[0]) * eased,
         startRot[1] + (closestTarget[1] - startRot[1]) * eased,
-        startRot[2] + (closestTarget[2] - startRot[2]) * eased,
-      ])
+        startRot[2] + (closestTarget[2] - startRot[2]) * eased
+      )
 
       const wobble = Math.sin(progress * Math.PI * 4) * 0.02 * (1 - progress)
 
-      setCurrentPos((prev) => [prev[0] + wobble * 0.5, -0.5 + (prev[1] + 0.5) * (1 - eased), prev[2] + wobble * 0.3])
+      currentPos.current.x += wobble * 0.5
+      currentPos.current.y = -0.5 + (currentPos.current.y + 0.5) * (1 - eased)
+      currentPos.current.z += wobble * 0.3
 
       if (progress >= 1 && !hasSettled.current) {
         hasSettled.current = true
-        setPhase("settled")
+        phase.current = "settled"
         onSettled(id, targetValue)
       }
     }
 
-    groupRef.current.position.set(currentPos[0], currentPos[1], currentPos[2])
-    groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2])
+    // Aplicar transformaciones manualmente
+    groupRef.current.position.copy(currentPos.current)
+    groupRef.current.rotation.copy(rotation.current)
 
-    onPositionUpdate(id, new THREE.Vector3(currentPos[0], currentPos[1], currentPos[2]))
+    onPositionUpdate(id, currentPos.current)
   })
 
   return (
@@ -230,40 +250,15 @@ function getDotPositions(value: number): [number, number][] {
     case 1:
       return [[0, 0]]
     case 2:
-      return [
-        [-s, s],
-        [s, -s],
-      ]
+      return [[-s, s], [s, -s]]
     case 3:
-      return [
-        [-s, s],
-        [0, 0],
-        [s, -s],
-      ]
+      return [[-s, s], [0, 0], [s, -s]]
     case 4:
-      return [
-        [-s, s],
-        [s, s],
-        [-s, -s],
-        [s, -s],
-      ]
+      return [[-s, s], [s, s], [-s, -s], [s, -s]]
     case 5:
-      return [
-        [-s, s],
-        [s, s],
-        [0, 0],
-        [-s, -s],
-        [s, -s],
-      ]
+      return [[-s, s], [s, s], [0, 0], [-s, -s], [s, -s]]
     case 6:
-      return [
-        [-s, s],
-        [-s, 0],
-        [-s, -s],
-        [s, s],
-        [s, 0],
-        [s, -s],
-      ]
+      return [[-s, s], [-s, 0], [-s, -s], [s, s], [s, 0], [s, -s]]
     default:
       return []
   }
@@ -335,39 +330,37 @@ function SceneContent({
 }) {
   const DICE_COLORS = ["#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#9333ea", "#db2777"]
 
-  const getDicePositions = (): [number, number, number][] => {
-    if (diceCount === 1) return [[0, 0, 0]]
+  const positions = useMemo(() => {
+    if (diceCount === 1) return [[0, 0, 0]] as [number, number, number][]
     if (diceCount === 2)
       return [
         [-1, 0, 0],
         [1, 0, 0],
-      ]
+      ] as [number, number, number][]
     if (diceCount === 3)
       return [
         [-1.2, 0, 0.5],
         [1.2, 0, 0.5],
         [0, 0, -0.8],
-      ]
+      ] as [number, number, number][]
     if (diceCount === 4)
       return [
         [-1.2, 0, -0.8],
         [1.2, 0, -0.8],
         [-1.2, 0, 0.8],
         [1.2, 0, 0.8],
-      ]
+      ] as [number, number, number][]
     return Array.from({ length: diceCount }, (_, i) => {
       const angle = (i / diceCount) * Math.PI * 2
       return [Math.cos(angle) * 1.5, 0, Math.sin(angle) * 1.5] as [number, number, number]
     })
-  }
-
-  const positions = getDicePositions()
+  }, [diceCount])
 
   const dicePositionsRef = useRef<THREE.Vector3[]>(positions.map((pos) => new THREE.Vector3(pos[0], -0.5, pos[2])))
 
   useEffect(() => {
     dicePositionsRef.current = positions.map((pos) => new THREE.Vector3(pos[0], -0.5, pos[2]))
-  }, [diceCount])
+  }, [positions])
 
   const handlePositionUpdate = useCallback((id: number, pos: THREE.Vector3) => {
     if (dicePositionsRef.current[id]) {
@@ -415,7 +408,7 @@ interface Dice3DSceneProps {
 export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isRolling, setIsRolling] = useState(false)
-  const [rollKey, setRollKey] = useState(0) // Added rollKey to force dice re-mount
+  const [rollKey, setRollKey] = useState(0)
   const [targetValues, setTargetValues] = useState<number[]>([])
   const [settledCount, setSettledCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -482,7 +475,9 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
     if (distance > 50) {
       const length = Math.sqrt(dx * dx + dy * dy)
       const normalizedX = dx / length
-      const normalizedZ = -dy / length
+      // CORRECCIÓN: Eliminado el signo negativo. 
+      // Arrastrar hacia arriba (dy negativo) = Lanzar hacia el fondo (z negativo)
+      const normalizedZ = dy / length
 
       const force = Math.min(1, Math.max(0.3, distance / 300))
 
@@ -491,7 +486,7 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
 
       const values = Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1)
       setTargetValues(values)
-      setRollKey((prev) => prev + 1) // Increment rollKey to force re-mount
+      setRollKey((prev) => prev + 1)
       setIsRolling(true)
       setSettledCount(0)
       hasCompletedRef.current = false

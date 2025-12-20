@@ -424,10 +424,10 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
                       key={i}
                       className={cn(
                         "inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold",
+                        // CORRECCIÓN: Usar indexOf para asegurar que solo se tacha la primera ocurrencia
                         roll.droppedValue !== undefined &&
                           v === roll.droppedValue &&
-                          roll.diceValues.filter((d) => d === roll.droppedValue).length >
-                            roll.diceValues.slice(0, i).filter((d) => d === roll.droppedValue).length
+                          roll.diceValues.indexOf(roll.droppedValue) === i
                           ? "bg-destructive/20 text-destructive line-through"
                           : "bg-primary/20 text-primary",
                       )}

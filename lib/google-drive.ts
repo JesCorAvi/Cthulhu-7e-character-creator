@@ -1,7 +1,6 @@
 import type { Character } from "./character-types"
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ""
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
 const SCOPES = "https://www.googleapis.com/auth/drive.file"
 
@@ -29,13 +28,12 @@ export const initGoogleDrive = (onInit: (success: boolean) => void) => {
   }
 
   gapi.load("client", async () => {
-    await gapi.client.init({
-      apiKey: API_KEY,
-      discoveryDocs: DISCOVERY_DOCS,
+      await gapi.client.init({
+        discoveryDocs: DISCOVERY_DOCS,
+      })
+      gapiInited = true
+      checkAuth()
     })
-    gapiInited = true
-    checkAuth()
-  })
 
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,

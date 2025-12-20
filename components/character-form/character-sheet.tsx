@@ -389,11 +389,13 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           <div className="absolute left-0 top-0 bottom-1/2 w-3 border-l border-b border-stone-300 dark:border-stone-600 rounded-bl-sm -translate-y-[2px]" />
         )}
 
-        <Checkbox
-          className="h-3.5 w-3.5 rounded-sm border-stone-400 data-[state=checked]:bg-stone-800 data-[state=checked]:text-stone-50"
-          checked={skill.isOccupational}
-          onCheckedChange={(c) => updateSkill(actualIndex, { isOccupational: !!c })}
-        />
+        {skill.isOccupational ? (
+          <div className="h-4 w-12 flex items-center justify-center bg-amber-500 dark:bg-amber-600 text-white rounded-sm text-[9px] font-bold tracking-wide shrink-0">
+            PROF
+          </div>
+        ) : (
+          <div className="h-3.5 w-3.5 shrink-0" />
+        )}
 
         <div className="flex-1 min-w-0 font-serif flex items-center">
           {skill.isCustom || skill.isFieldSlot ? (

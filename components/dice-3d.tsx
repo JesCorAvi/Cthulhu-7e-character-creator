@@ -1,145 +1,149 @@
 "use client"
 
-import type React from "react"
-
-import { useRef, useState, useEffect, useCallback } from "react"
+import { useRef, useState, useEffect, useCallback, Suspense } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
-import { Physics, useBox, usePlane } from "@react-three/cannon"
-import { Environment, Text, RoundedBox, Line } from "@react-three/drei"
-import * as THREE from "three"
+import { Environment, RoundedBox } from "@react-three/drei"
+import type * as THREE from "three"
 
-// Configuración de caras del dado - mapea la normal hacia arriba al valor de la cara opuesta
-const FACE_NORMALS: { normal: THREE.Vector3; value: number }[] = [
-  { normal: new THREE.Vector3(0, 1, 0), value: 6 },
-  { normal: new THREE.Vector3(0, -1, 0), value: 1 },
-  { normal: new THREE.Vector3(1, 0, 0), value: 3 },
-  { normal: new THREE.Vector3(-1, 0, 0), value: 4 },
-  { normal: new THREE.Vector3(0, 0, 1), value: 2 },
-  { normal: new THREE.Vector3(0, 0, -1), value: 5 },
-]
+console.log("[v0] dice-3d.tsx module loaded")
 
-interface DiePhysicsProps {
+// Simple dice component with manual animation
+interface DieProps {
   id: number
   color: string
-  onValueDetermined: (id: number, value: number) => void
-  throwForce: { x: number; y: number; z: number } | null
-  startPosition: [number, number, number]
+  targetValue: number
+  isRolling: boolean
+  startDelay: number
+  position: [number, number, number]
+  onSettled: (id: number, value: number) => void
 }
 
-function Die3DPhysics({ id, color, onValueDetermined, throwForce, startPosition }: DiePhysicsProps) {
-  const [ref, api] = useBox<THREE.Group>(() => ({
-    mass: 1,
-    position: startPosition,
-    args: [1, 1, 1],
-    material: {
-      friction: 0.6,
-      restitution: 0.3,
-    },
-    angularDamping: 0.3,
-    linearDamping: 0.1,
-  }))
+function Die({ id, color, targetValue, isRolling, startDelay, position, onSettled }: DieProps) {
+  const groupRef = useRef<THREE.Group>(null)
+  const [phase, setPhase] = useState<"waiting" | "rolling" | "settling" | "settled">("waiting")
+  const [currentPos, setCurrentPos] = useState<[number, number, number]>([position[0], 5, position[2]])
+  const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0])
+  const animationTime = useRef(0)
+  const hasSettled = useRef(false)
 
-  const [isSettled, setIsSettled] = useState(false)
-  const [hasBeenThrown, setHasBeenThrown] = useState(false)
-  const velocityRef = useRef([0, 0, 0])
-  const angularRef = useRef([0, 0, 0])
-  const positionRef = useRef([0, 0, 0])
-  const settleTimer = useRef<NodeJS.Timeout | null>(null)
-  const quaternionRef = useRef([0, 0, 0, 1])
+  console.log("[v0] Die rendered", { id, phase, isRolling, targetValue })
+
+  const getFinalRotation = (value: number): [number, number, number] => {
+    switch (value) {
+      case 1:
+        return [Math.PI / 2, 0, 0]
+      case 2:
+        return [0, 0, 0]
+      case 3:
+        return [0, 0, -Math.PI / 2]
+      case 4:
+        return [0, 0, Math.PI / 2]
+      case 5:
+        return [Math.PI, 0, 0]
+      case 6:
+        return [-Math.PI / 2, 0, 0]
+      default:
+        return [0, 0, 0]
+    }
+  }
 
   useEffect(() => {
-    const unsubVel = api.velocity.subscribe((v) => (velocityRef.current = v))
-    const unsubAng = api.angularVelocity.subscribe((v) => (angularRef.current = v))
-    const unsubPos = api.position.subscribe((p) => (positionRef.current = p))
-    const unsubQuat = api.quaternion.subscribe((q) => (quaternionRef.current = q))
-    return () => {
-      unsubVel()
-      unsubAng()
-      unsubPos()
-      unsubQuat()
+    if (isRolling && phase === "waiting") {
+      console.log("[v0] Die starting roll after delay", { id, startDelay })
+      const timer = setTimeout(() => {
+        setPhase("rolling")
+        animationTime.current = 0
+      }, startDelay)
+      return () => clearTimeout(timer)
     }
-  }, [api])
+  }, [isRolling, startDelay, phase, id])
 
-  // Aplicar fuerza cuando se lanza
-  useEffect(() => {
-    if (throwForce && !hasBeenThrown) {
-      setHasBeenThrown(true)
-      setIsSettled(false)
+  useFrame((_, delta) => {
+    if (!groupRef.current) return
 
-      api.velocity.set(throwForce.x * 8, throwForce.y * 6 + 5, throwForce.z * 8)
-      api.angularVelocity.set((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20)
-    }
-  }, [throwForce, hasBeenThrown, api])
+    if (phase === "rolling") {
+      animationTime.current += delta
+      const rollDuration = 2
+      const progress = Math.min(animationTime.current / rollDuration, 1)
 
-  // Detectar cuando el dado se detiene
-  useFrame(() => {
-    if (!hasBeenThrown || isSettled) return
+      const tumbleSpeed = 15 * (1 - progress * 0.8)
+      setRotation((prev) => [
+        prev[0] + delta * tumbleSpeed * (1 + Math.sin(animationTime.current * 3)),
+        prev[1] + delta * tumbleSpeed * 1.3,
+        prev[2] + delta * tumbleSpeed * 0.7,
+      ])
 
-    const vel = Math.sqrt(velocityRef.current[0] ** 2 + velocityRef.current[1] ** 2 + velocityRef.current[2] ** 2)
-    const angVel = Math.sqrt(angularRef.current[0] ** 2 + angularRef.current[1] ** 2 + angularRef.current[2] ** 2)
+      const arcHeight = 3 * Math.sin(progress * Math.PI)
+      const fallProgress = Math.pow(progress, 0.5)
+      const y = 5 - fallProgress * 5.5 + arcHeight * (1 - progress)
 
-    if (vel < 0.05 && angVel < 0.05 && positionRef.current[1] < 0) {
-      if (!settleTimer.current) {
-        settleTimer.current = setTimeout(() => {
-          const quat = new THREE.Quaternion(
-            quaternionRef.current[0],
-            quaternionRef.current[1],
-            quaternionRef.current[2],
-            quaternionRef.current[3],
-          )
+      const bounceX = Math.sin(progress * Math.PI * 3) * (1 - progress) * 0.5
+      const bounceZ = Math.cos(progress * Math.PI * 2) * (1 - progress) * 0.3
 
-          const upVector = new THREE.Vector3(0, 1, 0)
-          let maxDot = Number.NEGATIVE_INFINITY
-          let faceValue = 1
+      setCurrentPos([position[0] + bounceX, Math.max(-0.5, y), position[2] + bounceZ])
 
-          for (const face of FACE_NORMALS) {
-            const rotatedNormal = face.normal.clone().applyQuaternion(quat)
-            const dot = rotatedNormal.dot(upVector)
-            if (dot > maxDot) {
-              maxDot = dot
-              faceValue = face.value
-            }
-          }
-
-          setIsSettled(true)
-          onValueDetermined(id, faceValue)
-        }, 300)
-      }
-    } else {
-      if (settleTimer.current) {
-        clearTimeout(settleTimer.current)
-        settleTimer.current = null
+      if (progress >= 1) {
+        console.log("[v0] Die finished rolling, now settling", { id })
+        setPhase("settling")
+        animationTime.current = 0
       }
     }
+
+    if (phase === "settling") {
+      animationTime.current += delta
+      const settleDuration = 0.5
+      const progress = Math.min(animationTime.current / settleDuration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+
+      const finalRot = getFinalRotation(targetValue)
+      const currentRot = rotation.map((r) => r % (Math.PI * 2))
+
+      setRotation([
+        currentRot[0] + (finalRot[0] - currentRot[0]) * eased,
+        currentRot[1] + (finalRot[1] - currentRot[1]) * eased,
+        currentRot[2] + (finalRot[2] - currentRot[2]) * eased,
+      ])
+
+      setCurrentPos((prev) => [position[0], -0.5 + (prev[1] + 0.5) * (1 - eased), position[2]])
+
+      if (progress >= 1 && !hasSettled.current) {
+        hasSettled.current = true
+        setPhase("settled")
+        console.log("[v0] Die settled", { id, targetValue })
+        onSettled(id, targetValue)
+      }
+    }
+
+    groupRef.current.position.set(currentPos[0], currentPos[1], currentPos[2])
+    groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2])
   })
 
   return (
-    <group ref={ref}>
-      <RoundedBox args={[1, 1, 1]} radius={0.08} smoothness={4} castShadow receiveShadow>
-        <meshStandardMaterial color={color} roughness={0.2} metalness={0.1} />
+    <group ref={groupRef}>
+      <RoundedBox args={[1, 1, 1]} radius={0.1} smoothness={4} castShadow receiveShadow>
+        <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
       </RoundedBox>
-      <DiceFace position={[0, 0.51, 0]} rotation={[-Math.PI / 2, 0, 0]} value={1} />
-      <DiceFace position={[0, -0.51, 0]} rotation={[Math.PI / 2, 0, 0]} value={6} />
-      <DiceFace position={[0.51, 0, 0]} rotation={[0, Math.PI / 2, 0]} value={3} />
-      <DiceFace position={[-0.51, 0, 0]} rotation={[0, -Math.PI / 2, 0]} value={4} />
-      <DiceFace position={[0, 0, 0.51]} rotation={[0, 0, 0]} value={2} />
-      <DiceFace position={[0, 0, -0.51]} rotation={[0, Math.PI, 0]} value={5} />
+      <DiceDots position={[0, 0.51, 0]} rotation={[-Math.PI / 2, 0, 0]} value={1} />
+      <DiceDots position={[0, -0.51, 0]} rotation={[Math.PI / 2, 0, 0]} value={6} />
+      <DiceDots position={[0.51, 0, 0]} rotation={[0, Math.PI / 2, 0]} value={3} />
+      <DiceDots position={[-0.51, 0, 0]} rotation={[0, -Math.PI / 2, 0]} value={4} />
+      <DiceDots position={[0, 0, 0.51]} rotation={[0, 0, 0]} value={2} />
+      <DiceDots position={[0, 0, -0.51]} rotation={[0, Math.PI, 0]} value={5} />
     </group>
   )
 }
 
-function DiceFace({
+function DiceDots({
   position,
   rotation,
   value,
 }: { position: [number, number, number]; rotation: [number, number, number]; value: number }) {
   const dotPositions = getDotPositions(value)
-
   return (
     <group position={position} rotation={rotation}>
       {dotPositions.map((pos, idx) => (
         <mesh key={idx} position={[pos[0], pos[1], 0.01]}>
-          <circleGeometry args={[0.08, 16]} />
+          <circleGeometry args={[0.09, 16]} />
           <meshStandardMaterial color="#1a1a1a" />
         </mesh>
       ))}
@@ -148,7 +152,7 @@ function DiceFace({
 }
 
 function getDotPositions(value: number): [number, number][] {
-  const s = 0.25
+  const s = 0.22
   switch (value) {
     case 1:
       return [[0, 0]]
@@ -192,220 +196,184 @@ function getDotPositions(value: number): [number, number][] {
   }
 }
 
-function Ground() {
-  const [ref] = usePlane<THREE.Mesh>(() => ({
-    rotation: [-Math.PI / 2, 0, 0],
-    position: [0, -1.5, 0],
-    material: { friction: 0.8, restitution: 0.2 },
-  }))
-
+function Table() {
   return (
-    <mesh ref={ref} receiveShadow>
-      <planeGeometry args={[30, 30]} />
-      <meshStandardMaterial color="#1a472a" roughness={0.9} />
-    </mesh>
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
+        <meshStandardMaterial color="#1a472a" roughness={0.9} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
+        <ringGeometry args={[5, 5.3, 64]} />
+        <meshStandardMaterial color="#5d3a1a" roughness={0.7} />
+      </mesh>
+    </group>
   )
 }
 
-function Walls() {
-  const wallProps = { material: { friction: 0.5, restitution: 0.5 } }
-
-  const [back] = usePlane<THREE.Mesh>(() => ({ ...wallProps, position: [0, 0, -6], rotation: [0, 0, 0] }))
-  const [front] = usePlane<THREE.Mesh>(() => ({ ...wallProps, position: [0, 0, 6], rotation: [0, Math.PI, 0] }))
-  const [left] = usePlane<THREE.Mesh>(() => ({ ...wallProps, position: [-6, 0, 0], rotation: [0, Math.PI / 2, 0] }))
-  const [right] = usePlane<THREE.Mesh>(() => ({ ...wallProps, position: [6, 0, 0], rotation: [0, -Math.PI / 2, 0] }))
-
-  return (
-    <>
-      <mesh ref={back}>
-        <planeGeometry args={[12, 8]} />
-        <meshStandardMaterial color="#2d1810" transparent opacity={0.3} />
-      </mesh>
-      <mesh ref={front}>
-        <planeGeometry args={[12, 8]} />
-        <meshStandardMaterial color="#2d1810" transparent opacity={0.3} />
-      </mesh>
-      <mesh ref={left}>
-        <planeGeometry args={[12, 8]} />
-        <meshStandardMaterial color="#2d1810" transparent opacity={0.3} />
-      </mesh>
-      <mesh ref={right}>
-        <planeGeometry args={[12, 8]} />
-        <meshStandardMaterial color="#2d1810" transparent opacity={0.3} />
-      </mesh>
-    </>
-  )
-}
-
-function ThrowZone({
+function SceneContent({
   diceCount,
-  canThrow,
-  dragState,
+  isRolling,
+  targetValues,
+  onDieSettled,
 }: {
   diceCount: number
-  canThrow: boolean
-  dragState: {
-    isDragging: boolean
-    startWorld: { x: number; z: number } | null
-    currentWorld: { x: number; z: number } | null
-  }
+  isRolling: boolean
+  targetValues: number[]
+  onDieSettled: (id: number, value: number) => void
 }) {
-  const { isDragging, startWorld, currentWorld } = dragState
+  console.log("[v0] SceneContent rendered", { diceCount, isRolling, targetValues })
 
-  const arrowPoints: [number, number, number][] =
-    isDragging && startWorld && currentWorld
-      ? [
-          [startWorld.x, -1.4, startWorld.z],
-          [currentWorld.x, -1.4, currentWorld.z],
-        ]
-      : []
+  const DICE_COLORS = ["#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#9333ea", "#db2777"]
+
+  const getDicePositions = (): [number, number, number][] => {
+    if (diceCount === 1) return [[0, 0, 0]]
+    if (diceCount === 2)
+      return [
+        [-1, 0, 0],
+        [1, 0, 0],
+      ]
+    if (diceCount === 3)
+      return [
+        [-1.2, 0, 0.5],
+        [1.2, 0, 0.5],
+        [0, 0, -0.8],
+      ]
+    if (diceCount === 4)
+      return [
+        [-1.2, 0, -0.8],
+        [1.2, 0, -0.8],
+        [-1.2, 0, 0.8],
+        [1.2, 0, 0.8],
+      ]
+    return Array.from({ length: diceCount }, (_, i) => {
+      const angle = (i / diceCount) * Math.PI * 2
+      return [Math.cos(angle) * 1.5, 0, Math.sin(angle) * 1.5] as [number, number, number]
+    })
+  }
+
+  const positions = getDicePositions()
 
   return (
     <>
-      {/* Visual throw zone indicator */}
-      {canThrow && (
-        <mesh position={[0, -1.49, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[2, 3, 32]} />
-          <meshBasicMaterial color="#4ade80" transparent opacity={0.2} side={THREE.DoubleSide} />
-        </mesh>
-      )}
-
-      {/* Drag direction arrow */}
-      {isDragging && arrowPoints.length === 2 && <Line points={arrowPoints} color="#ef4444" lineWidth={4} />}
-
-      {/* Instruction text */}
-      {canThrow && !isDragging && (
-        <Text
-          position={[0, -1.4, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          fontSize={0.5}
-          color="#ffffff"
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.02}
-          outlineColor="#000000"
-        >
-          {`Arrastra para lanzar ${diceCount} dado${diceCount > 1 ? "s" : ""}`}
-        </Text>
-      )}
+      <color attach="background" args={["#0f172a"]} />
+      <fog attach="fog" args={["#0f172a", 12, 25]} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
+      <pointLight position={[-3, 5, -3]} intensity={0.4} color="#ffd700" />
+      <Table />
+      {positions.map((pos, i) => (
+        <Die
+          key={`die-${i}`}
+          id={i}
+          color={DICE_COLORS[i % DICE_COLORS.length]}
+          position={pos}
+          targetValue={targetValues[i] || 1}
+          isRolling={isRolling}
+          startDelay={i * 100}
+          onSettled={onDieSettled}
+        />
+      ))}
+      <Environment preset="city" />
     </>
-  )
-}
-
-function WaitingDice({ count, colors }: { count: number; colors: string[] }) {
-  return (
-    <group position={[0, 0, 4]}>
-      {Array.from({ length: count }).map((_, i) => {
-        const angle = (i / count) * Math.PI - Math.PI / 2
-        const radius = count > 1 ? 1.2 : 0
-        return (
-          <group key={i} position={[Math.cos(angle) * radius, -0.5, Math.sin(angle) * radius]}>
-            <RoundedBox args={[0.8, 0.8, 0.8]} radius={0.06} smoothness={4} castShadow>
-              <meshStandardMaterial color={colors[i % colors.length]} roughness={0.2} metalness={0.1} />
-            </RoundedBox>
-            <DiceFace position={[0, 0, 0.41]} rotation={[0, 0, 0]} value={i + 1} />
-          </group>
-        )
-      })}
-    </group>
   )
 }
 
 interface Dice3DSceneProps {
   diceCount: number
   onRollComplete: (values: number[]) => void
-  onReady?: () => void
 }
 
-export function Dice3DScene({ diceCount, onRollComplete, onReady }: Dice3DSceneProps) {
-  const [throwForce, setThrowForce] = useState<{ x: number; y: number; z: number } | null>(null)
-  const [diceValues, setDiceValues] = useState<Map<number, number>>(new Map())
-  const [isThrown, setIsThrown] = useState(false)
-  const [rollComplete, setRollComplete] = useState(false)
-  const hasCalledComplete = useRef(false)
+export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
+  console.log("[v0] Dice3DScene rendered", { diceCount })
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const [isRolling, setIsRolling] = useState(false)
+  const [targetValues, setTargetValues] = useState<number[]>([])
+  const [settledCount, setSettledCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
-  const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null)
-  const [dragWorldStart, setDragWorldStart] = useState<{ x: number; z: number } | null>(null)
-  const [dragWorldCurrent, setDragWorldCurrent] = useState<{ x: number; z: number } | null>(null)
+  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
+  const [canvasError, setCanvasError] = useState<string | null>(null)
+  const hasCompletedRef = useRef(false)
 
-  const DICE_COLORS = ["#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#9333ea", "#db2777"]
+  useEffect(() => {
+    console.log("[v0] Resetting dice state for new roll")
+    setIsRolling(false)
+    setTargetValues([])
+    setSettledCount(0)
+    hasCompletedRef.current = false
+  }, [diceCount])
 
-  // Convert screen coordinates to world coordinates on the table plane
-  const screenToWorld = useCallback((screenX: number, screenY: number, rect: DOMRect) => {
-    const x = ((screenX - rect.left) / rect.width) * 2 - 1
-    const y = -((screenY - rect.top) / rect.height) * 2 + 1
-    const worldX = x * 8
-    const worldZ = -y * 6 + 2
-    return { x: worldX, z: worldZ }
-  }, [])
+  const handleDieSettled = useCallback(
+    (id: number, value: number) => {
+      console.log("[v0] handleDieSettled called", { id, value, currentSettledCount: settledCount })
+      setSettledCount((prev) => {
+        const newCount = prev + 1
+        console.log("[v0] settledCount updated", { newCount, diceCount })
+        if (newCount === diceCount && !hasCompletedRef.current) {
+          hasCompletedRef.current = true
+          console.log("[v0] All dice settled, completing roll in 2s")
+          setTimeout(() => {
+            console.log("[v0] Calling onRollComplete", { targetValues })
+            onRollComplete(targetValues)
+          }, 2000)
+        }
+        return newCount
+      })
+    },
+    [diceCount, targetValues, onRollComplete],
+  )
 
-  const handleDragStart = useCallback(
+  const startDrag = useCallback(
     (clientX: number, clientY: number) => {
-      if (isThrown) return
-      const rect = containerRef.current?.getBoundingClientRect()
-      if (!rect) return
-
+      if (isRolling) return
+      console.log("[v0] startDrag", { clientX, clientY })
       setIsDragging(true)
       setDragStart({ x: clientX, y: clientY })
-      setDragCurrent({ x: clientX, y: clientY })
-
-      const world = screenToWorld(clientX, clientY, rect)
-      setDragWorldStart(world)
-      setDragWorldCurrent(world)
+      setDragEnd({ x: clientX, y: clientY })
     },
-    [isThrown, screenToWorld],
+    [isRolling],
   )
 
-  const handleDragMove = useCallback(
+  const moveDrag = useCallback(
     (clientX: number, clientY: number) => {
       if (!isDragging) return
-      const rect = containerRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      setDragCurrent({ x: clientX, y: clientY })
-      const world = screenToWorld(clientX, clientY, rect)
-      setDragWorldCurrent(world)
+      setDragEnd({ x: clientX, y: clientY })
     },
-    [isDragging, screenToWorld],
+    [isDragging],
   )
 
-  const handleDragEnd = useCallback(() => {
-    if (!isDragging || !dragStart || !dragCurrent || isThrown) {
+  const endDrag = useCallback(() => {
+    console.log("[v0] endDrag", { isDragging, dragStart, dragEnd, isRolling })
+    if (!isDragging || !dragStart || !dragEnd || isRolling) {
       setIsDragging(false)
       setDragStart(null)
-      setDragCurrent(null)
-      setDragWorldStart(null)
-      setDragWorldCurrent(null)
+      setDragEnd(null)
       return
     }
 
-    const dx = dragCurrent.x - dragStart.x
-    const dy = dragCurrent.y - dragStart.y
+    const dx = dragEnd.x - dragStart.x
+    const dy = dragEnd.y - dragStart.y
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    if (distance > 30) {
-      const force = Math.min(distance / 30, 8)
-      setThrowForce({
-        x: (dx / distance) * force,
-        y: force * 0.8,
-        z: (-dy / distance) * force,
-      })
-      setIsThrown(true)
-      setDiceValues(new Map())
-      setRollComplete(false)
-      hasCalledComplete.current = false
+    console.log("[v0] Drag distance", { distance })
+
+    if (distance > 50) {
+      const values = Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1)
+      console.log("[v0] Starting roll with values", { values })
+      setTargetValues(values)
+      setIsRolling(true)
+      setSettledCount(0)
+      hasCompletedRef.current = false
     }
 
     setIsDragging(false)
     setDragStart(null)
-    setDragCurrent(null)
-    setDragWorldStart(null)
-    setDragWorldCurrent(null)
-  }, [isDragging, dragStart, dragCurrent, isThrown])
+    setDragEnd(null)
+  }, [isDragging, dragStart, dragEnd, isRolling, diceCount])
 
+  // Touch handlers with passive: false
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -413,208 +381,125 @@ export function Dice3DScene({ diceCount, onRollComplete, onReady }: Dice3DSceneP
     const handleTouchStart = (e: TouchEvent) => {
       e.preventDefault()
       const touch = e.touches[0]
-      handleDragStart(touch.clientX, touch.clientY)
+      startDrag(touch.clientX, touch.clientY)
     }
 
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault()
       const touch = e.touches[0]
-      handleDragMove(touch.clientX, touch.clientY)
+      moveDrag(touch.clientX, touch.clientY)
     }
 
     const handleTouchEnd = (e: TouchEvent) => {
       e.preventDefault()
-      handleDragEnd()
+      endDrag()
     }
 
-    // Add event listeners with passive: false to allow preventDefault
     container.addEventListener("touchstart", handleTouchStart, { passive: false })
     container.addEventListener("touchmove", handleTouchMove, { passive: false })
     container.addEventListener("touchend", handleTouchEnd, { passive: false })
-    container.addEventListener("touchcancel", handleTouchEnd, { passive: false })
 
     return () => {
       container.removeEventListener("touchstart", handleTouchStart)
       container.removeEventListener("touchmove", handleTouchMove)
       container.removeEventListener("touchend", handleTouchEnd)
-      container.removeEventListener("touchcancel", handleTouchEnd)
     }
-  }, [handleDragStart, handleDragMove, handleDragEnd])
+  }, [startDrag, moveDrag, endDrag])
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      handleDragStart(e.clientX, e.clientY)
-    },
-    [handleDragStart],
-  )
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      handleDragMove(e.clientX, e.clientY)
-    },
-    [handleDragMove],
-  )
-
-  const handleMouseUp = useCallback(() => {
-    handleDragEnd()
-  }, [handleDragEnd])
-
-  const handleMouseLeave = useCallback(() => {
-    if (isDragging) {
-      handleDragEnd()
-    }
-  }, [isDragging, handleDragEnd])
-
-  const getStartPositions = useCallback((): [number, number, number][] => {
-    return Array.from({ length: diceCount }).map((_, i) => {
-      const angle = (i / diceCount) * Math.PI * 2
-      const radius = diceCount > 1 ? 1.5 : 0
-      return [Math.cos(angle) * radius + (Math.random() - 0.5) * 0.5, 3 + i * 0.5, Math.sin(angle) * radius + 2] as [
-        number,
-        number,
-        number,
-      ]
-    })
-  }, [diceCount])
-
-  const handleValueDetermined = useCallback(
-    (id: number, value: number) => {
-      setDiceValues((prev) => {
-        const newMap = new Map(prev)
-        newMap.set(id, value)
-
-        if (newMap.size === diceCount && !hasCalledComplete.current) {
-          hasCalledComplete.current = true
-          setRollComplete(true)
-          const values = Array.from({ length: diceCount }).map((_, i) => newMap.get(i) || 1)
-          setTimeout(() => {
-            onRollComplete(values)
-          }, 2000)
-        }
-
-        return newMap
-      })
-    },
-    [diceCount, onRollComplete],
-  )
-
-  useEffect(() => {
-    onReady?.()
-  }, [onReady])
-
-  const startPositions = getStartPositions()
-
-  const dragState = {
-    isDragging,
-    startWorld: dragWorldStart,
-    currentWorld: dragWorldCurrent,
-  }
-
-  // Calculate arrow position for SVG overlay
-  const getArrowCoords = () => {
-    if (!dragStart || !dragCurrent || !containerRef.current) return null
+  // Get relative position for SVG arrow
+  const getRelativePos = (pos: { x: number; y: number } | null) => {
+    if (!pos || !containerRef.current) return null
     const rect = containerRef.current.getBoundingClientRect()
-    return {
-      x1: dragStart.x - rect.left,
-      y1: dragStart.y - rect.top,
-      x2: dragCurrent.x - rect.left,
-      y2: dragCurrent.y - rect.top,
-    }
+    return { x: pos.x - rect.left, y: pos.y - rect.top }
   }
 
-  const arrowCoords = getArrowCoords()
+  const relStart = getRelativePos(dragStart)
+  const relEnd = getRelativePos(dragEnd)
+
+  if (canvasError) {
+    return (
+      <div className="w-full h-[400px] bg-slate-900 rounded-xl flex items-center justify-center">
+        <p className="text-red-400">Error: {canvasError}</p>
+      </div>
+    )
+  }
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-[450px] bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-700 relative select-none"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-      style={{ cursor: isThrown ? "default" : isDragging ? "grabbing" : "grab", touchAction: "none" }}
+      className="w-full h-[400px] md:h-[450px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 relative select-none"
+      style={{ touchAction: "none" }}
+      onMouseDown={(e) => startDrag(e.clientX, e.clientY)}
+      onMouseMove={(e) => moveDrag(e.clientX, e.clientY)}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
     >
-      <Canvas shadows camera={{ position: [0, 8, 12], fov: 45 }}>
-        <color attach="background" args={["#0f172a"]} />
-        <fog attach="fog" args={["#0f172a", 15, 30]} />
+      <Suspense
+        fallback={
+          <div className="w-full h-full bg-slate-900 flex items-center justify-center">
+            <p className="text-white">Cargando dados 3D...</p>
+          </div>
+        }
+      >
+        <Canvas
+          shadows
+          camera={{ position: [0, 8, 8], fov: 45 }}
+          style={{ cursor: isRolling ? "default" : isDragging ? "grabbing" : "grab" }}
+          onCreated={() => console.log("[v0] Canvas created successfully")}
+        >
+          <SceneContent
+            diceCount={diceCount}
+            isRolling={isRolling}
+            targetValues={targetValues}
+            onDieSettled={handleDieSettled}
+          />
+        </Canvas>
+      </Suspense>
 
-        <ambientLight intensity={0.4} />
-        <directionalLight
-          position={[5, 10, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-camera-far={50}
-          shadow-camera-left={-10}
-          shadow-camera-right={10}
-          shadow-camera-top={10}
-          shadow-camera-bottom={-10}
-        />
-        <pointLight position={[-5, 5, -5]} intensity={0.5} color="#ffd700" />
+      {/* UI Overlay */}
+      <div className="absolute bottom-4 left-4 right-4 pointer-events-none z-10">
+        <div className="bg-black/70 backdrop-blur-sm px-4 py-3 rounded-lg text-center">
+          {!isRolling ? (
+            <p className="text-green-400 font-medium">
+              {isDragging ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  Arrastra y suelta para lanzar
+                </span>
+              ) : (
+                `Arrastra sobre la mesa para lanzar ${diceCount} dado${diceCount > 1 ? "s" : ""}`
+              )}
+            </p>
+          ) : settledCount < diceCount ? (
+            <p className="text-yellow-400 font-medium animate-pulse">Dados rodando...</p>
+          ) : (
+            <p className="text-emerald-400 font-medium">
+              Resultado: {targetValues.join(" + ")} = {targetValues.reduce((a, b) => a + b, 0)}
+            </p>
+          )}
+        </div>
+      </div>
 
-        <Physics gravity={[0, -25, 0]}>
-          <Ground />
-          <Walls />
-
-          {!isThrown && <WaitingDice count={diceCount} colors={DICE_COLORS} />}
-
-          <ThrowZone diceCount={diceCount} canThrow={!isThrown} dragState={dragState} />
-
-          {isThrown &&
-            throwForce &&
-            startPositions.map((pos, i) => (
-              <Die3DPhysics
-                key={i}
-                id={i}
-                color={DICE_COLORS[i % DICE_COLORS.length]}
-                startPosition={pos}
-                throwForce={throwForce}
-                onValueDetermined={handleValueDetermined}
-              />
-            ))}
-        </Physics>
-
-        <Environment preset="city" />
-      </Canvas>
-
-      {/* SVG overlay for drag arrow */}
-      {isDragging && arrowCoords && (
-        <svg className="absolute inset-0 pointer-events-none z-20" style={{ width: "100%", height: "100%" }}>
+      {/* Drag arrow SVG overlay */}
+      {isDragging && relStart && relEnd && (
+        <svg className="absolute inset-0 pointer-events-none z-20" width="100%" height="100%">
           <defs>
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
             </marker>
           </defs>
           <line
-            x1={arrowCoords.x1}
-            y1={arrowCoords.y1}
-            x2={arrowCoords.x2}
-            y2={arrowCoords.y2}
+            x1={relStart.x}
+            y1={relStart.y}
+            x2={relEnd.x}
+            y2={relEnd.y}
             stroke="#ef4444"
             strokeWidth="4"
             strokeLinecap="round"
             markerEnd="url(#arrowhead)"
           />
-          <circle cx={arrowCoords.x1} cy={arrowCoords.y1} r="8" fill="#ef4444" opacity="0.6" />
         </svg>
       )}
-
-      {/* Status indicator */}
-      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end pointer-events-none z-10">
-        <div className="bg-black/60 backdrop-blur-sm px-4 py-2 rounded-lg">
-          {!isThrown ? (
-            <p className="text-green-400 text-sm font-medium">
-              {isDragging ? "Suelta para lanzar..." : "Arrastra sobre la mesa para lanzar los dados"}
-            </p>
-          ) : !rollComplete ? (
-            <p className="text-yellow-400 text-sm font-medium animate-pulse">Esperando que los dados se detengan...</p>
-          ) : (
-            <p className="text-emerald-400 text-sm font-medium">
-              Resultado: {Array.from(diceValues.values()).join(", ")}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

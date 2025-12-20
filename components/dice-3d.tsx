@@ -17,6 +17,7 @@ interface DieProps {
   position: [number, number, number]
   throwDirection: { x: number; z: number }
   throwForce: number
+  allPositions: React.MutableRefObject<THREE.Vector3[]> // Nueva prop para ver a los otros dados
   onSettled: (id: number, value: number) => void
   onPositionUpdate: (id: number, pos: THREE.Vector3) => void
 }
@@ -31,14 +32,13 @@ function Die({
   position,
   throwDirection,
   throwForce,
+  allPositions,
   onSettled,
   onPositionUpdate,
 }: DieProps) {
   const groupRef = useRef<THREE.Group>(null)
   
-  // Refs para estado de animación (evita re-renders)
   const phase = useRef<"waiting" | "rolling" | "settling" | "settled">("waiting")
-  // Inicializamos con la posición recibida
   const currentPos = useRef<THREE.Vector3>(new THREE.Vector3(position[0], -0.5, position[2]))
   const rotation = useRef<THREE.Euler>(new THREE.Euler(0, 0, 0))
   
@@ -47,15 +47,27 @@ function Die({
   const settlingStartRotation = useRef<[number, number, number]>([0, 0, 0])
   const startingPos = useRef<[number, number, number]>([position[0], -0.5, position[2]])
 
-  // Función auxiliar para calcular rotación final
+  // Offset acumulado por colisiones (empujones)
+  const collisionOffset = useRef(new THREE.Vector3(0, 0, 0))
+  const collisionRotOffset = useRef(new THREE.Euler(0, 0, 0))
+
+  // Variables de Caos
+  const chaosRef = useRef({
+      spinAxis: new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(),
+      spinSpeed: 20 + Math.random() * 15,
+      driftX: (Math.random() - 0.5) * 2,
+      driftZ: (Math.random() - 0.5) * 2
+  })
+
+  // --- 1. LÓGICA DE ROTACIÓN ---
   const getFinalRotation = (value: number): [number, number, number] => {
     switch (value) {
-      case 1: return [Math.PI / 2, 0, 0]
-      case 2: return [0, 0, 0]
-      case 3: return [0, 0, -Math.PI / 2]
-      case 4: return [0, 0, Math.PI / 2]
-      case 5: return [Math.PI, 0, 0]
-      case 6: return [-Math.PI / 2, 0, 0]
+      case 1: return [0, 0, 0]
+      case 2: return [-Math.PI / 2, 0, 0]
+      case 3: return [0, 0, Math.PI / 2]
+      case 4: return [0, 0, -Math.PI / 2]
+      case 5: return [Math.PI / 2, 0, 0]
+      case 6: return [Math.PI, 0, 0]
       default: return [0, 0, 0]
     }
   }
@@ -78,18 +90,15 @@ function Die({
     }) as [number, number, number]
   }
 
-  // Establecer posición inicial al montar o cambiar posición base
   useLayoutEffect(() => {
     if (groupRef.current) {
       groupRef.current.position.set(position[0], -0.5, position[2])
       groupRef.current.rotation.set(0, 0, 0)
     }
-    // Actualizamos los refs internos
     currentPos.current.set(position[0], -0.5, position[2])
     startingPos.current = [position[0], -0.5, position[2]]
   }, [position])
 
-  // Control de inicio de animación (Delay)
   useEffect(() => {
     if (isRolling && phase.current === "waiting") {
       const timer = setTimeout(() => {
@@ -100,19 +109,26 @@ function Die({
     }
   }, [isRolling, startDelay]) 
 
-  // Reset del dado ÚNICAMENTE cuando cambia rollKey (nueva tirada)
+  // RESET
   useEffect(() => {
     phase.current = "waiting"
-    
-    // Reset posiciones
     startingPos.current = [position[0], -0.5, position[2]]
     currentPos.current.set(position[0], -0.5, position[2])
     rotation.current.set(0, 0, 0)
-    
     hasSettled.current = false
     animationTime.current = 0
     
-    // Aplicar inmediatamente visualmente
+    // Reset colisiones
+    collisionOffset.current.set(0, 0, 0)
+    collisionRotOffset.current.set(0, 0, 0)
+    
+    chaosRef.current = {
+      spinAxis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
+      spinSpeed: 25 + Math.random() * 20,
+      driftX: (Math.random() - 0.5) * 3,
+      driftZ: (Math.random() - 0.5) * 3
+    }
+
     if (groupRef.current) {
       groupRef.current.position.set(position[0], -0.5, position[2])
       groupRef.current.rotation.set(0, 0, 0)
@@ -124,49 +140,99 @@ function Die({
 
     if (phase.current === "rolling") {
       animationTime.current += delta
-      const rollDuration = 1.8
+      const rollDuration = 1.6
       const progress = Math.min(animationTime.current / rollDuration, 1)
 
-      const maxThrowDistance = 6 * throwForce
-      const throwProgress = Math.min(progress * 1.2, 1)
+      // A. Posición Base (Trayectoria)
+      const maxThrowDistance = 7 * throwForce
+      const throwProgress = Math.min(progress * 1.1, 1)
       const easeOut = 1 - Math.pow(1 - throwProgress, 2)
-
+      
       const throwOffsetX = throwDirection.x * maxThrowDistance * easeOut
       const throwOffsetZ = throwDirection.z * maxThrowDistance * easeOut
+      
+      const driftScale = Math.sin(progress * Math.PI) * 1.5
+      const currentDriftX = chaosRef.current.driftX * driftScale * 0.5
+      const currentDriftZ = chaosRef.current.driftZ * driftScale * 0.5
 
       let y: number
-      if (progress < 0.1) {
-        const liftProgress = progress / 0.1
-        y = -0.5 + liftProgress * 1.2
-      } else if (progress < 0.6) {
-        const arcProgress = (progress - 0.1) / 0.5
-        const arcHeight = Math.sin(arcProgress * Math.PI) * 0.6
-        y = 0.7 + arcHeight - arcProgress * 0.8
+      if (progress < 0.15) {
+        y = -0.5 + (progress / 0.15) * 1.5 
+      } else if (progress < 0.65) {
+        const arcProgress = (progress - 0.15) / 0.5
+        y = 1.0 + Math.sin(arcProgress * Math.PI) * 0.8 - arcProgress * 1.0 
       } else {
-        const fallProgress = (progress - 0.6) / 0.4
-        const currentHeight = 0.5 - fallProgress * 1
-        const bounce = Math.sin(fallProgress * Math.PI * 3) * 0.15 * (1 - fallProgress)
-        y = Math.max(-0.5, currentHeight + bounce)
+        const fallProgress = (progress - 0.65) / 0.35
+        const bounce = Math.abs(Math.cos(fallProgress * Math.PI * 3)) * 0.3 * (1 - fallProgress)
+        y = -0.5 + bounce
       }
 
-      const tumbleIntensity = progress < 0.6 ? 1 : (1 - (progress - 0.6) / 0.4) * 0.5
-      const tumbleSpeed = 12 * tumbleIntensity
+      // Posición "ideal" antes de colisiones
+      const idealX = startingPos.current[0] + throwOffsetX + currentDriftX
+      const idealZ = startingPos.current[2] + throwOffsetZ + currentDriftZ
 
-      const rotationBiasX = throwDirection.z * 1.5
-      const rotationBiasZ = -throwDirection.x * 1.5
+      // B. DETECCIÓN DE COLISIONES (Repulsión)
+      const myPos = new THREE.Vector3(idealX + collisionOffset.current.x, y, idealZ + collisionOffset.current.z)
+      
+      // Chequear contra todos los otros dados
+      allPositions.current.forEach((otherPos, index) => {
+          if (index === id) return // No chocar conmigo mismo
+          
+          const dist = myPos.distanceTo(otherPos)
+          const MIN_DIST = 1.1 // Tamaño del dado (1) + margen (0.1)
+          
+          if (dist < MIN_DIST) {
+              // Vector de empuje (desde el otro dado hacia mí)
+              const pushDir = new THREE.Vector3().subVectors(myPos, otherPos).normalize()
+              
+              // Evitar NaNs si están en la misma posición exacta
+              if (pushDir.lengthSq() === 0) pushDir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize()
+              
+              // Fuerza de repulsión (cuanto más cerca, más fuerte)
+              const overlap = MIN_DIST - dist
+              const pushForce = overlap * 0.15 // Factor de suavidad
 
-      rotation.current.x += delta * tumbleSpeed * (1 + rotationBiasX + Math.sin(animationTime.current * 4) * 0.3)
-      rotation.current.y += delta * tumbleSpeed * 1.2
-      rotation.current.z += delta * tumbleSpeed * (0.8 + rotationBiasZ)
+              // Acumular el empujón en mi offset
+              collisionOffset.current.x += pushDir.x * pushForce
+              collisionOffset.current.z += pushDir.z * pushForce
 
-      const wobbleX = Math.sin(progress * Math.PI * 2.5) * 0.1 * (1 - progress * 0.5)
-      const wobbleZ = Math.cos(progress * Math.PI * 3) * 0.08 * (1 - progress * 0.5)
+              // Efecto visual: Cambiar rotación al chocar
+              collisionRotOffset.current.x += (Math.random() - 0.5) * 0.5
+              collisionRotOffset.current.z += (Math.random() - 0.5) * 0.5
+          }
+      })
 
+      // Aplicar posición final
       currentPos.current.set(
-        startingPos.current[0] + throwOffsetX + wobbleX,
+        idealX + collisionOffset.current.x,
         y,
-        startingPos.current[2] + throwOffsetZ + wobbleZ
+        idealZ + collisionOffset.current.z
       )
+
+      // C. Rotación
+      const spinDamping = Math.max(0, 1 - Math.pow(progress, 3))
+      const currentSpinSpeed = chaosRef.current.spinSpeed * spinDamping * delta
+
+      rotation.current.x += chaosRef.current.spinAxis.x * currentSpinSpeed + collisionRotOffset.current.x * 0.1
+      rotation.current.y += chaosRef.current.spinAxis.y * currentSpinSpeed
+      rotation.current.z += chaosRef.current.spinAxis.z * currentSpinSpeed + collisionRotOffset.current.z * 0.1
+      
+      // Decaer el efecto de choque en rotación
+      collisionRotOffset.current.x *= 0.9
+      collisionRotOffset.current.z *= 0.9
+
+      // D. Guía Invisible (Corrección final)
+      if (progress > 0.75) {
+         const finalRot = getFinalRotation(targetValue)
+         const currentRotTuple: [number, number, number] = [rotation.current.x, rotation.current.y, rotation.current.z]
+         const targetRot = findClosestTargetRotation(currentRotTuple, finalRot)
+         
+         const guideStrength = Math.pow((progress - 0.75) / 0.25, 3) * 0.25
+         
+         rotation.current.x += (targetRot[0] - rotation.current.x) * guideStrength
+         rotation.current.y += (targetRot[1] - rotation.current.y) * guideStrength
+         rotation.current.z += (targetRot[2] - rotation.current.z) * guideStrength
+      }
 
       if (progress >= 1) {
         settlingStartRotation.current = [rotation.current.x, rotation.current.y, rotation.current.z]
@@ -177,9 +243,12 @@ function Die({
 
     if (phase.current === "settling") {
       animationTime.current += delta
-      const settleDuration = 0.6
+      const settleDuration = 0.5
       const progress = Math.min(animationTime.current / settleDuration, 1)
-      const eased = 1 - Math.pow(1 - progress, 4)
+      
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      const eased = 1 + c3 * Math.pow(progress - 1, 3) + c1 * Math.pow(progress - 1, 2);
 
       const finalRot = getFinalRotation(targetValue)
       const startRot = settlingStartRotation.current
@@ -190,12 +259,38 @@ function Die({
         startRot[1] + (closestTarget[1] - startRot[1]) * eased,
         startRot[2] + (closestTarget[2] - startRot[2]) * eased
       )
+      
+      // Mantener separación en el suelo también
+      const myPos = currentPos.current.clone()
+      myPos.y = -0.5 // Forzar altura de suelo
+      
+      allPositions.current.forEach((otherPos, index) => {
+          if (index === id) return
+          const dist = myPos.distanceTo(otherPos)
+          const MIN_DIST = 1.1
+           if (dist < MIN_DIST) {
+              const pushDir = new THREE.Vector3().subVectors(myPos, otherPos).normalize()
+              if (pushDir.lengthSq() === 0) pushDir.set(1,0,0)
+              
+              const pushForce = (MIN_DIST - dist) * 0.1
+              collisionOffset.current.x += pushDir.x * pushForce
+              collisionOffset.current.z += pushDir.z * pushForce
+           }
+      })
 
-      const wobble = Math.sin(progress * Math.PI * 4) * 0.02 * (1 - progress)
-
-      currentPos.current.x += wobble * 0.5
-      currentPos.current.y = -0.5 + (currentPos.current.y + 0.5) * (1 - eased)
-      currentPos.current.z += wobble * 0.3
+      // Vibración de impacto
+      let wobbleY = -0.5
+      if (progress < 0.5) {
+          wobbleY += Math.sin(progress * Math.PI * 4) * 0.05 * (1 - progress*2)
+      }
+      
+      currentPos.current.set(
+          startingPos.current[0] + 7*throwForce*throwDirection.x + chaosRef.current.driftX*0.75*0.5 + collisionOffset.current.x, // Estimado final aproximado
+          wobbleY,
+          startingPos.current[2] + 7*throwForce*throwDirection.z + chaosRef.current.driftZ*0.75*0.5 + collisionOffset.current.z
+      )
+      // Nota: En settling simplificamos la posición X/Z para que no "tiemble", 
+      // usando el último collisionOffset acumulado
 
       if (progress >= 1 && !hasSettled.current) {
         hasSettled.current = true
@@ -204,10 +299,10 @@ function Die({
       }
     }
 
-    // Aplicar transformaciones manualmente
     groupRef.current.position.copy(currentPos.current)
     groupRef.current.rotation.copy(rotation.current)
-
+    
+    // IMPORTANTE: Reportar mi posición actual al sistema central
     onPositionUpdate(id, currentPos.current)
   })
 
@@ -356,6 +451,7 @@ function SceneContent({
     })
   }, [diceCount])
 
+  // Esta referencia guarda la "verdad" de dónde están todos los dados
   const dicePositionsRef = useRef<THREE.Vector3[]>(positions.map((pos) => new THREE.Vector3(pos[0], -0.5, pos[2])))
 
   useEffect(() => {
@@ -391,6 +487,7 @@ function SceneContent({
           startDelay={i * 100}
           throwDirection={throwDirection}
           throwForce={throwForce}
+          allPositions={dicePositionsRef} // Pasamos la "visión" global a cada dado
           onSettled={onDieSettled}
           onPositionUpdate={handlePositionUpdate}
         />
@@ -475,8 +572,6 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
     if (distance > 50) {
       const length = Math.sqrt(dx * dx + dy * dy)
       const normalizedX = dx / length
-      // CORRECCIÓN: Eliminado el signo negativo. 
-      // Arrastrar hacia arriba (dy negativo) = Lanzar hacia el fondo (z negativo)
       const normalizedZ = dy / length
 
       const force = Math.min(1, Math.max(0.3, distance / 300))

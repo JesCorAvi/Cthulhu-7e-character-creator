@@ -47,7 +47,14 @@ export default function HomePage() {
         setLoading(false)
     }
   }, [])
-
+  const refreshCharacters = async () => {
+      try {
+          const chars = await getCharacters()
+          setCharacters(chars)
+      } catch (error) {
+          console.error("Error refrescando personajes:", error)
+      }
+    }
   // 3. Lógica principal: Cuando Google está listo, decidir qué hacer
   useEffect(() => {
       const initializeSession = async () => {
@@ -145,7 +152,7 @@ export default function HomePage() {
   }
 
   const handleSaveCallback = async () => {
-      await loadCharacters()
+      await refreshCharacters()
   }
 
   // Este botón ahora es crucial: permite recuperar la sesión tras recargar

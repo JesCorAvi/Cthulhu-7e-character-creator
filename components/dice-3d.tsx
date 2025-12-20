@@ -142,8 +142,8 @@ function Die({
     startPos: THREE.Vector3
     startQ: THREE.Quaternion
     targetQ: THREE.Quaternion
-    rotationAxis: THREE.Vector3
-    totalRotationAngle: number
+    tumbleAxis: THREE.Vector3
+    spins: number
     driftX: number
     driftZ: number
     hasSettledCallbackFired: boolean
@@ -154,8 +154,8 @@ function Die({
     startPos: new THREE.Vector3(),
     startQ: new THREE.Quaternion(),
     targetQ: new THREE.Quaternion(),
-    rotationAxis: new THREE.Vector3(1, 0, 0),
-    totalRotationAngle: 0,
+    tumbleAxis: new THREE.Vector3(1, 0, 0),
+    spins: 0,
     driftX: 0,
     driftZ: 0,
     hasSettledCallbackFired: false
@@ -164,59 +164,54 @@ function Die({
   const currentPos = useRef<THREE.Vector3>(new THREE.Vector3(position[0], -0.5, position[2]))
   const collisionOffset = useRef(new THREE.Vector3(0, 0, 0))
 
-  // --- 1. Calcular Orientación Final ---
+  // --- 1. Calcular Orientación Final Robusta ---
   const calculateTargetQuaternion = (value: number, type: DiceType): THREE.Quaternion => {
-    const q = new THREE.Quaternion()
-    const targetUpWorld = new THREE.Vector3(0, 1, 0)
-    
-    // Para D6, restringimos el giro aleatorio a 90 grados (PI/2) para que quede alineado a la "cuadrícula"
-    // y no parezca que ha caído de canto. Para otros dados, usamos giro libre.
-    let yawAngle = 0;
-    if (type === "d6") {
-       // 0, 90, 180, 270 grados aleatorios
-       const quadrant = Math.floor(Math.random() * 4);
-       yawAngle = quadrant * (Math.PI / 2);
+    // Definir vectores locales (Normal y Up) para la cara deseada.
+    const localNormal = new THREE.Vector3(0, 1, 0);
+    const localUp = new THREE.Vector3(0, 0, -1);
+
+    if (type === 'd6') {
+        switch (value) {
+            case 1: localNormal.set(0, 1, 0); localUp.set(0, 0, -1); break;
+            case 2: localNormal.set(0, 0, 1); localUp.set(0, 1, 0); break;
+            case 3: localNormal.set(1, 0, 0); localUp.set(0, 1, 0); break;
+            case 4: localNormal.set(-1, 0, 0); localUp.set(0, 1, 0); break;
+            case 5: localNormal.set(0, 0, -1); localUp.set(0, 1, 0); break;
+            case 6: localNormal.set(0, -1, 0); localUp.set(0, 0, 1); break;
+        }
+    } else if (type === 'd10' || type === 'd100') {
+         const face = D10_DATA.faces.find(f => f.value === value);
+         if (face) {
+             localNormal.copy(face.normal);
+             localUp.copy(face.upVector);
+         }
+    }
+
+    // A. Rotación para llevar la cara al cielo (0,1,0)
+    const targetNormalWorld = new THREE.Vector3(0, 1, 0);
+    const qAlign = new THREE.Quaternion().setFromUnitVectors(localNormal, targetNormalWorld);
+
+    // B. Ver dónde quedó el vector "Up" tras esa alineación
+    const currentUpWorld = localUp.clone().applyQuaternion(qAlign);
+
+    // C. Decidir rotación final (Yaw) en el plano horizontal
+    let targetYaw = 0;
+    if (type === 'd6') {
+         const quadrant = Math.floor(Math.random() * 4);
+         targetYaw = quadrant * (Math.PI / 2);
     } else {
-       // Giro libre suave (+/- 45 grados)
-       yawAngle = (Math.random() - 0.5) * 1.5;
+         targetYaw = (Math.random() - 0.5) * Math.PI * 2;
     }
 
-    // Vector hacia donde apunta la "parte de arriba" del texto/número
-    const targetTextUpWorld = new THREE.Vector3(Math.sin(yawAngle), 0, -Math.cos(yawAngle)).normalize();
-
-    if (type === "d6") {
-       const euler = new THREE.Euler(0,0,0)
-       switch (value) {
-            case 1: euler.set(0, 0, 0); break; 
-            case 2: euler.set(-Math.PI / 2, 0, 0); break;
-            case 3: euler.set(0, 0, Math.PI / 2); break;
-            case 4: euler.set(0, 0, -Math.PI / 2); break;
-            case 5: euler.set(Math.PI / 2, 0, 0); break;
-            case 6: euler.set(Math.PI, 0, 0); break;
-       }
-       q.setFromEuler(euler)
-       // Aplicamos la rotación de Yaw calculada antes
-       q.multiply(new THREE.Quaternion().setFromAxisAngle(targetUpWorld, yawAngle));
-
-    } else if (type === "d10" || type === "d100") {
-      const targetFace = D10_DATA.faces.find((f) => f.value === value)
-      if (targetFace) {
-        const qAlignFace = new THREE.Quaternion().setFromUnitVectors(targetFace.normal, targetUpWorld)
-        
-        const currentTextUp = targetFace.upVector.clone().applyQuaternion(qAlignFace)
-        currentTextUp.y = 0
-        currentTextUp.normalize()
-
-        const angle = Math.atan2(
-            currentTextUp.x * targetTextUpWorld.z - currentTextUp.z * targetTextUpWorld.x,
-            currentTextUp.x * targetTextUpWorld.x + currentTextUp.z * targetTextUpWorld.z
-        )
-        
-        const qRotateText = new THREE.Quaternion().setFromAxisAngle(targetUpWorld, angle)
-        q.multiplyQuaternions(qRotateText, qAlignFace)
-      }
+    const targetUpDir = new THREE.Vector3(Math.sin(targetYaw), 0, -Math.cos(targetYaw)).normalize();
+    const flatCurrentUp = new THREE.Vector3(currentUpWorld.x, 0, currentUpWorld.z).normalize();
+    
+    const qYaw = new THREE.Quaternion();
+    if (flatCurrentUp.lengthSq() > 0.01) {
+        qYaw.setFromUnitVectors(flatCurrentUp, targetUpDir);
     }
-    return q
+
+    return qYaw.multiply(qAlign);
   }
 
   useLayoutEffect(() => {
@@ -236,43 +231,12 @@ function Die({
         const startQ = groupRef.current.quaternion.clone();
         const targetQ = calculateTargetQuaternion(targetValue, diceType);
 
-        const qDiff = startQ.clone().invert().multiply(targetQ);
+        // Elegir un eje de rotación "divertido" (horizontal) para el tumbling
+        const randAngle = Math.random() * Math.PI * 2;
+        const tumbleAxis = new THREE.Vector3(Math.cos(randAngle), 0, Math.sin(randAngle)).normalize();
         
-        let angle = 2 * Math.acos(Math.min(Math.max(qDiff.w, -1), 1));
-        const s = Math.sqrt(1 - qDiff.w * qDiff.w);
-        let axis: THREE.Vector3;
-        
-        // CORRECCIÓN CLAVE: Si el ángulo inicial y final son muy parecidos (ej. sale 1 y era 1),
-        // o el eje calculado es muy vertical (spin aburrido), forzamos un eje transversal.
-        const isSmallAngle = s < 0.05;
-        // Si la componente Y del eje es muy alta (>0.8), es un giro tipo peonza. Lo evitamos.
-        let isVerticalSpin = false;
-        if (!isSmallAngle) {
-             axis = new THREE.Vector3(qDiff.x / s, qDiff.y / s, qDiff.z / s);
-             if (Math.abs(axis.y) > 0.8) isVerticalSpin = true;
-        } else {
-             axis = new THREE.Vector3(1, 0, 0); 
-        }
-
-        if (isSmallAngle || isVerticalSpin) {
-            // Forzamos un eje horizontal aleatorio para asegurar volteretas
-            const randAngle = Math.random() * Math.PI * 2;
-            axis = new THREE.Vector3(Math.cos(randAngle), 0, Math.sin(randAngle)).normalize();
-            // Recalculamos el ángulo "artificial" para llegar al target rotando sobre este nuevo eje
-            // Nota: Esto es una simplificación visual, matemáticamente no es exacto llegar al target 
-            // solo rotando en este eje si no era el natural, pero con muchas vueltas se disimula 
-            // al mezclarse con el movimiento. 
-            // Para ser exactos, mantenemos el eje natural pero le damos MUCHAS vueltas si es válido,
-            // o si forzamos eje, asumimos un pequeño salto final visualmente aceptable por la velocidad.
-            
-            // Mejor enfoque: Usar el eje natural pero añadirle vueltas. 
-            // Si el eje natural era malo (vertical o nulo), usamos uno horizontal y aceptamos
-            // que la interpolación lo corregirá.
-        }
-
-        // Aseguramos al menos 4 vueltas completas (4 * 360)
-        const fullSpins = 4 + Math.floor(Math.random() * 2); 
-        const totalAngle = angle + (fullSpins * Math.PI * 2);
+        // Número ENTERO de vueltas extra (para asegurar que 360 grados nos devuelven a la orientación original relativa)
+        const spins = 3 + Math.floor(Math.random() * 3); 
 
         state.current = {
           active: true,
@@ -281,8 +245,8 @@ function Die({
           startPos: currentPos.current.clone(),
           startQ: startQ,
           targetQ: targetQ,
-          rotationAxis: axis,
-          totalRotationAngle: totalAngle,
+          tumbleAxis: tumbleAxis,
+          spins: spins,
           driftX: (Math.random() - 0.5) * 3,
           driftZ: (Math.random() - 0.5) * 3,
           hasSettledCallbackFired: false
@@ -305,12 +269,29 @@ function Die({
     
     const progress = Math.min(state.current.time / state.current.duration, 1)
     
-    // Easing cuartico para frenada realista
+    // Easing suave
     const easeOut = 1 - Math.pow(1 - progress, 4); 
     
-    const currentAngle = state.current.totalRotationAngle * easeOut;
-    const qRot = new THREE.Quaternion().setFromAxisAngle(state.current.rotationAxis, currentAngle);
-    groupRef.current.quaternion.copy(state.current.startQ).multiply(qRot);
+    // --- LÓGICA DE ROTACIÓN CORREGIDA (SLERP + TUMBLE) ---
+    // 1. Interpolamos desde Start hasta Target (camino más corto).
+    // Esto garantiza que al final (progress=1), la base de la rotación sea EXACTAMENTE targetQ.
+    const qBase = state.current.startQ.clone().slerp(state.current.targetQ, easeOut);
+    
+    // 2. Calculamos una rotación adicional "Tumble" (volteretas) sobre un eje horizontal.
+    // Usamos vueltas completas (N * 360 grados).
+    // Al principio (progress=0), ángulo 0 -> Identidad.
+    // Al final (progress=1), ángulo N*360 -> Identidad.
+    // Durante el movimiento, añade giros locos.
+    const tumbleAngle = easeOut * state.current.spins * Math.PI * 2;
+    const qTumble = new THREE.Quaternion().setFromAxisAngle(state.current.tumbleAxis, tumbleAngle);
+    
+    // 3. Combinamos: Aplicamos el Tumble en coordenadas globales a la interpolación base.
+    groupRef.current.quaternion.multiplyQuaternions(qTumble, qBase);
+
+    // Forzar exactitud al final para evitar micro-errores de flotante
+    if (progress >= 1) {
+       groupRef.current.quaternion.copy(state.current.targetQ);
+    }
 
     // --- POSICIÓN ---
     const maxThrowDistance = 7 * throwForce
@@ -320,13 +301,11 @@ function Die({
     const throwOffsetX = throwDirection.x * maxThrowDistance * posEase
     const throwOffsetZ = throwDirection.z * maxThrowDistance * posEase
     
-    // Altura del suelo ajustada según tipo de dado
-    // D6 es un cubo de altura 1, centro en 0. Su suelo es -0.5.
-    // D10 es más complejo, ajustamos visualmente a -0.55.
     const FLOOR_Y = diceType === "d6" ? -0.5 : -0.55;
 
     let y = FLOOR_Y
     
+    // Rebotes simples
     if (progress < 0.2) {
        const p = progress / 0.2;
        y = FLOOR_Y + Math.sin(p * Math.PI) * 1.5;
@@ -342,7 +321,6 @@ function Die({
     const idealX = state.current.startPos.x + throwOffsetX + (state.current.driftX * driftScale * 0.5)
     const idealZ = state.current.startPos.z + throwOffsetZ + (state.current.driftZ * driftScale * 0.5)
 
-    // Colisiones
     const COLLISION_RADIUS = 1.1
     const myPos = new THREE.Vector3(idealX + collisionOffset.current.x, y, idealZ + collisionOffset.current.z)
     
@@ -362,14 +340,11 @@ function Die({
     })
 
     currentPos.current.set(idealX + collisionOffset.current.x, y, idealZ + collisionOffset.current.z)
-    
     groupRef.current.position.copy(currentPos.current)
     onPositionUpdate(id, currentPos.current)
 
     if (progress >= 1 && !state.current.hasSettledCallbackFired) {
         state.current.hasSettledCallbackFired = true;
-        groupRef.current.quaternion.copy(state.current.targetQ);
-        // Asegurar posición final exacta en Y
         groupRef.current.position.y = FLOOR_Y; 
         onSettled(id, targetValue);
     }

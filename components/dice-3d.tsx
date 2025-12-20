@@ -1,11 +1,11 @@
 "use client"
 
-import { useRef, useState, useEffect, useCallback, Suspense } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
-import { Environment, RoundedBox } from "@react-three/drei"
-import type * as THREE from "three"
+import type React from "react"
 
-console.log("[v0] dice-3d.tsx module loaded")
+import { useRef, useState, useEffect, useCallback, Suspense } from "react"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
+import { Environment, RoundedBox } from "@react-three/drei"
+import * as THREE from "three"
 
 // Simple dice component with manual animation
 interface DieProps {
@@ -13,20 +13,36 @@ interface DieProps {
   color: string
   targetValue: number
   isRolling: boolean
+  rollKey: number // Added rollKey to force re-mount on each roll
   startDelay: number
   position: [number, number, number]
+  throwDirection: { x: number; z: number }
+  throwForce: number
   onSettled: (id: number, value: number) => void
+  onPositionUpdate: (id: number, pos: THREE.Vector3) => void
 }
 
-function Die({ id, color, targetValue, isRolling, startDelay, position, onSettled }: DieProps) {
+function Die({
+  id,
+  color,
+  targetValue,
+  isRolling,
+  rollKey,
+  startDelay,
+  position,
+  throwDirection,
+  throwForce,
+  onSettled,
+  onPositionUpdate,
+}: DieProps) {
   const groupRef = useRef<THREE.Group>(null)
   const [phase, setPhase] = useState<"waiting" | "rolling" | "settling" | "settled">("waiting")
-  const [currentPos, setCurrentPos] = useState<[number, number, number]>([position[0], 5, position[2]])
+  const [currentPos, setCurrentPos] = useState<[number, number, number]>([position[0], -0.5, position[2]])
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0])
   const animationTime = useRef(0)
   const hasSettled = useRef(false)
-
-  console.log("[v0] Die rendered", { id, phase, isRolling, targetValue })
+  const settlingStartRotation = useRef<[number, number, number]>([0, 0, 0])
+  const startingPos = useRef<[number, number, number]>([position[0], -0.5, position[2]])
 
   const getFinalRotation = (value: number): [number, number, number] => {
     switch (value) {
@@ -47,43 +63,96 @@ function Die({ id, color, targetValue, isRolling, startDelay, position, onSettle
     }
   }
 
+  const normalizeAngle = (angle: number): number => {
+    let normalized = angle % (Math.PI * 2)
+    if (normalized > Math.PI) normalized -= Math.PI * 2
+    if (normalized < -Math.PI) normalized += Math.PI * 2
+    return normalized
+  }
+
+  const findClosestTargetRotation = (
+    current: [number, number, number],
+    target: [number, number, number],
+  ): [number, number, number] => {
+    return target.map((t, i) => {
+      const c = current[i]
+      const diff = normalizeAngle(t - c)
+      return c + diff
+    }) as [number, number, number]
+  }
+
   useEffect(() => {
     if (isRolling && phase === "waiting") {
-      console.log("[v0] Die starting roll after delay", { id, startDelay })
       const timer = setTimeout(() => {
         setPhase("rolling")
         animationTime.current = 0
       }, startDelay)
       return () => clearTimeout(timer)
     }
-  }, [isRolling, startDelay, phase, id])
+  }, [isRolling, phase, startDelay])
+
+  useEffect(() => {
+    setPhase("waiting")
+    setCurrentPos([position[0], -0.5, position[2]])
+    startingPos.current = [position[0], -0.5, position[2]]
+    setRotation([0, 0, 0])
+    hasSettled.current = false
+    animationTime.current = 0
+  }, [rollKey, position])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
 
     if (phase === "rolling") {
       animationTime.current += delta
-      const rollDuration = 2
+      const rollDuration = 1.8
       const progress = Math.min(animationTime.current / rollDuration, 1)
 
-      const tumbleSpeed = 15 * (1 - progress * 0.8)
+      const maxThrowDistance = 6 * throwForce
+      const throwProgress = Math.min(progress * 1.2, 1)
+      const easeOut = 1 - Math.pow(1 - throwProgress, 2)
+
+      const throwOffsetX = throwDirection.x * maxThrowDistance * easeOut
+      const throwOffsetZ = throwDirection.z * maxThrowDistance * easeOut
+
+      let y: number
+      if (progress < 0.1) {
+        const liftProgress = progress / 0.1
+        y = -0.5 + liftProgress * 1.2
+      } else if (progress < 0.6) {
+        const arcProgress = (progress - 0.1) / 0.5
+        const arcHeight = Math.sin(arcProgress * Math.PI) * 0.6
+        y = 0.7 + arcHeight - arcProgress * 0.8
+      } else {
+        const fallProgress = (progress - 0.6) / 0.4
+        const currentHeight = 0.5 - fallProgress * 1
+        const bounce = Math.sin(fallProgress * Math.PI * 3) * 0.15 * (1 - fallProgress)
+        y = Math.max(-0.5, currentHeight + bounce)
+      }
+
+      const tumbleIntensity = progress < 0.6 ? 1 : (1 - (progress - 0.6) / 0.4) * 0.5
+      const tumbleSpeed = 12 * tumbleIntensity
+
+      const rotationBiasX = throwDirection.z * 1.5
+      const rotationBiasZ = -throwDirection.x * 1.5
+
       setRotation((prev) => [
-        prev[0] + delta * tumbleSpeed * (1 + Math.sin(animationTime.current * 3)),
-        prev[1] + delta * tumbleSpeed * 1.3,
-        prev[2] + delta * tumbleSpeed * 0.7,
+        prev[0] + delta * tumbleSpeed * (1 + rotationBiasX + Math.sin(animationTime.current * 4) * 0.3),
+        prev[1] + delta * tumbleSpeed * 1.2,
+        prev[2] + delta * tumbleSpeed * (0.8 + rotationBiasZ),
       ])
 
-      const arcHeight = 3 * Math.sin(progress * Math.PI)
-      const fallProgress = Math.pow(progress, 0.5)
-      const y = 5 - fallProgress * 5.5 + arcHeight * (1 - progress)
+      const wobbleX = Math.sin(progress * Math.PI * 2.5) * 0.1 * (1 - progress * 0.5)
+      const wobbleZ = Math.cos(progress * Math.PI * 3) * 0.08 * (1 - progress * 0.5)
 
-      const bounceX = Math.sin(progress * Math.PI * 3) * (1 - progress) * 0.5
-      const bounceZ = Math.cos(progress * Math.PI * 2) * (1 - progress) * 0.3
-
-      setCurrentPos([position[0] + bounceX, Math.max(-0.5, y), position[2] + bounceZ])
+      setCurrentPos([
+        startingPos.current[0] + throwOffsetX + wobbleX,
+        y,
+        startingPos.current[2] + throwOffsetZ + wobbleZ,
+      ])
 
       if (progress >= 1) {
-        console.log("[v0] Die finished rolling, now settling", { id })
+        settlingStartRotation.current = rotation
         setPhase("settling")
         animationTime.current = 0
       }
@@ -91,31 +160,35 @@ function Die({ id, color, targetValue, isRolling, startDelay, position, onSettle
 
     if (phase === "settling") {
       animationTime.current += delta
-      const settleDuration = 0.5
+      const settleDuration = 0.6
       const progress = Math.min(animationTime.current / settleDuration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
+      const eased = 1 - Math.pow(1 - progress, 4)
 
       const finalRot = getFinalRotation(targetValue)
-      const currentRot = rotation.map((r) => r % (Math.PI * 2))
+      const startRot = settlingStartRotation.current
+      const closestTarget = findClosestTargetRotation(startRot, finalRot)
 
       setRotation([
-        currentRot[0] + (finalRot[0] - currentRot[0]) * eased,
-        currentRot[1] + (finalRot[1] - currentRot[1]) * eased,
-        currentRot[2] + (finalRot[2] - currentRot[2]) * eased,
+        startRot[0] + (closestTarget[0] - startRot[0]) * eased,
+        startRot[1] + (closestTarget[1] - startRot[1]) * eased,
+        startRot[2] + (closestTarget[2] - startRot[2]) * eased,
       ])
 
-      setCurrentPos((prev) => [position[0], -0.5 + (prev[1] + 0.5) * (1 - eased), position[2]])
+      const wobble = Math.sin(progress * Math.PI * 4) * 0.02 * (1 - progress)
+
+      setCurrentPos((prev) => [prev[0] + wobble * 0.5, -0.5 + (prev[1] + 0.5) * (1 - eased), prev[2] + wobble * 0.3])
 
       if (progress >= 1 && !hasSettled.current) {
         hasSettled.current = true
         setPhase("settled")
-        console.log("[v0] Die settled", { id, targetValue })
         onSettled(id, targetValue)
       }
     }
 
     groupRef.current.position.set(currentPos[0], currentPos[1], currentPos[2])
     groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2])
+
+    onPositionUpdate(id, new THREE.Vector3(currentPos[0], currentPos[1], currentPos[2]))
   })
 
   return (
@@ -211,19 +284,55 @@ function Table() {
   )
 }
 
+function CameraController({
+  dicePositionsRef,
+  isRolling,
+}: {
+  dicePositionsRef: React.MutableRefObject<THREE.Vector3[]>
+  isRolling: boolean
+}) {
+  const { camera } = useThree()
+  const targetPosition = useRef(new THREE.Vector3(0, 8, 8))
+  const targetLookAt = useRef(new THREE.Vector3(0, 0, 0))
+
+  useFrame((_, delta) => {
+    const dicePositions = dicePositionsRef.current
+    if (dicePositions.length === 0) return
+
+    const center = new THREE.Vector3()
+    dicePositions.forEach((pos) => center.add(pos))
+    center.divideScalar(dicePositions.length)
+
+    const desiredCameraPos = new THREE.Vector3(center.x * 0.5, 8, 8 + center.z * 0.3)
+
+    const lerpSpeed = isRolling ? 3 : 5
+    targetPosition.current.lerp(desiredCameraPos, delta * lerpSpeed)
+    targetLookAt.current.lerp(center, delta * lerpSpeed)
+
+    camera.position.copy(targetPosition.current)
+    camera.lookAt(targetLookAt.current)
+  })
+
+  return null
+}
+
 function SceneContent({
   diceCount,
   isRolling,
+  rollKey,
   targetValues,
+  throwDirection,
+  throwForce,
   onDieSettled,
 }: {
   diceCount: number
   isRolling: boolean
+  rollKey: number
   targetValues: number[]
+  throwDirection: { x: number; z: number }
+  throwForce: number
   onDieSettled: (id: number, value: number) => void
 }) {
-  console.log("[v0] SceneContent rendered", { diceCount, isRolling, targetValues })
-
   const DICE_COLORS = ["#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#9333ea", "#db2777"]
 
   const getDicePositions = (): [number, number, number][] => {
@@ -254,6 +363,18 @@ function SceneContent({
 
   const positions = getDicePositions()
 
+  const dicePositionsRef = useRef<THREE.Vector3[]>(positions.map((pos) => new THREE.Vector3(pos[0], -0.5, pos[2])))
+
+  useEffect(() => {
+    dicePositionsRef.current = positions.map((pos) => new THREE.Vector3(pos[0], -0.5, pos[2]))
+  }, [diceCount])
+
+  const handlePositionUpdate = useCallback((id: number, pos: THREE.Vector3) => {
+    if (dicePositionsRef.current[id]) {
+      dicePositionsRef.current[id].copy(pos)
+    }
+  }, [])
+
   return (
     <>
       <color attach="background" args={["#0f172a"]} />
@@ -261,17 +382,24 @@ function SceneContent({
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
       <pointLight position={[-3, 5, -3]} intensity={0.4} color="#ffd700" />
+
+      <CameraController dicePositionsRef={dicePositionsRef} isRolling={isRolling} />
+
       <Table />
       {positions.map((pos, i) => (
         <Die
-          key={`die-${i}`}
+          key={`die-${i}-${rollKey}`}
           id={i}
           color={DICE_COLORS[i % DICE_COLORS.length]}
           position={pos}
           targetValue={targetValues[i] || 1}
           isRolling={isRolling}
+          rollKey={rollKey}
           startDelay={i * 100}
+          throwDirection={throwDirection}
+          throwForce={throwForce}
           onSettled={onDieSettled}
+          onPositionUpdate={handlePositionUpdate}
         />
       ))}
       <Environment preset="city" />
@@ -285,10 +413,9 @@ interface Dice3DSceneProps {
 }
 
 export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
-  console.log("[v0] Dice3DScene rendered", { diceCount })
-
   const containerRef = useRef<HTMLDivElement>(null)
   const [isRolling, setIsRolling] = useState(false)
+  const [rollKey, setRollKey] = useState(0) // Added rollKey to force dice re-mount
   const [targetValues, setTargetValues] = useState<number[]>([])
   const [settledCount, setSettledCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -296,9 +423,10 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null)
   const [canvasError, setCanvasError] = useState<string | null>(null)
   const hasCompletedRef = useRef(false)
+  const [throwDirection, setThrowDirection] = useState<{ x: number; z: number }>({ x: 0, z: -1 })
+  const [throwForce, setThrowForce] = useState(0.5)
 
   useEffect(() => {
-    console.log("[v0] Resetting dice state for new roll")
     setIsRolling(false)
     setTargetValues([])
     setSettledCount(0)
@@ -307,15 +435,11 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
 
   const handleDieSettled = useCallback(
     (id: number, value: number) => {
-      console.log("[v0] handleDieSettled called", { id, value, currentSettledCount: settledCount })
       setSettledCount((prev) => {
         const newCount = prev + 1
-        console.log("[v0] settledCount updated", { newCount, diceCount })
         if (newCount === diceCount && !hasCompletedRef.current) {
           hasCompletedRef.current = true
-          console.log("[v0] All dice settled, completing roll in 2s")
           setTimeout(() => {
-            console.log("[v0] Calling onRollComplete", { targetValues })
             onRollComplete(targetValues)
           }, 2000)
         }
@@ -328,7 +452,6 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
   const startDrag = useCallback(
     (clientX: number, clientY: number) => {
       if (isRolling) return
-      console.log("[v0] startDrag", { clientX, clientY })
       setIsDragging(true)
       setDragStart({ x: clientX, y: clientY })
       setDragEnd({ x: clientX, y: clientY })
@@ -345,7 +468,6 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
   )
 
   const endDrag = useCallback(() => {
-    console.log("[v0] endDrag", { isDragging, dragStart, dragEnd, isRolling })
     if (!isDragging || !dragStart || !dragEnd || isRolling) {
       setIsDragging(false)
       setDragStart(null)
@@ -357,12 +479,19 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
     const dy = dragEnd.y - dragStart.y
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    console.log("[v0] Drag distance", { distance })
-
     if (distance > 50) {
+      const length = Math.sqrt(dx * dx + dy * dy)
+      const normalizedX = dx / length
+      const normalizedZ = -dy / length
+
+      const force = Math.min(1, Math.max(0.3, distance / 300))
+
+      setThrowDirection({ x: normalizedX, z: normalizedZ })
+      setThrowForce(force)
+
       const values = Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1)
-      console.log("[v0] Starting roll with values", { values })
       setTargetValues(values)
+      setRollKey((prev) => prev + 1) // Increment rollKey to force re-mount
       setIsRolling(true)
       setSettledCount(0)
       hasCompletedRef.current = false
@@ -373,7 +502,6 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
     setDragEnd(null)
   }, [isDragging, dragStart, dragEnd, isRolling, diceCount])
 
-  // Touch handlers with passive: false
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -406,7 +534,6 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
     }
   }, [startDrag, moveDrag, endDrag])
 
-  // Get relative position for SVG arrow
   const getRelativePos = (pos: { x: number; y: number } | null) => {
     if (!pos || !containerRef.current) return null
     const rect = containerRef.current.getBoundingClientRect()
@@ -445,12 +572,14 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
           shadows
           camera={{ position: [0, 8, 8], fov: 45 }}
           style={{ cursor: isRolling ? "default" : isDragging ? "grabbing" : "grab" }}
-          onCreated={() => console.log("[v0] Canvas created successfully")}
         >
           <SceneContent
             diceCount={diceCount}
             isRolling={isRolling}
+            rollKey={rollKey}
             targetValues={targetValues}
+            throwDirection={throwDirection}
+            throwForce={throwForce}
             onDieSettled={handleDieSettled}
           />
         </Canvas>
@@ -459,33 +588,20 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
       {/* UI Overlay */}
       <div className="absolute bottom-4 left-4 right-4 pointer-events-none z-10">
         <div className="bg-black/70 backdrop-blur-sm px-4 py-3 rounded-lg text-center">
-          {!isRolling ? (
-            <p className="text-green-400 font-medium">
-              {isDragging ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  Arrastra y suelta para lanzar
-                </span>
-              ) : (
-                `Arrastra sobre la mesa para lanzar ${diceCount} dado${diceCount > 1 ? "s" : ""}`
-              )}
-            </p>
-          ) : settledCount < diceCount ? (
-            <p className="text-yellow-400 font-medium animate-pulse">Dados rodando...</p>
+          {isRolling ? (
+            <p className="text-white font-medium">Lanzando dados...</p>
           ) : (
-            <p className="text-emerald-400 font-medium">
-              Resultado: {targetValues.join(" + ")} = {targetValues.reduce((a, b) => a + b, 0)}
-            </p>
+            <p className="text-white/80 text-sm">Arrastra para lanzar los dados</p>
           )}
         </div>
       </div>
 
-      {/* Drag arrow SVG overlay */}
+      {/* Drag indicator */}
       {isDragging && relStart && relEnd && (
-        <svg className="absolute inset-0 pointer-events-none z-20" width="100%" height="100%">
+        <svg className="absolute inset-0 pointer-events-none z-20" style={{ overflow: "visible" }}>
           <defs>
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+              <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255,255,255,0.8)" />
             </marker>
           </defs>
           <line
@@ -493,11 +609,12 @@ export function Dice3DScene({ diceCount, onRollComplete }: Dice3DSceneProps) {
             y1={relStart.y}
             x2={relEnd.x}
             y2={relEnd.y}
-            stroke="#ef4444"
-            strokeWidth="4"
+            stroke="rgba(255,255,255,0.8)"
+            strokeWidth="3"
             strokeLinecap="round"
             markerEnd="url(#arrowhead)"
           />
+          <circle cx={relStart.x} cy={relStart.y} r="8" fill="rgba(255,255,255,0.3)" stroke="white" strokeWidth="2" />
         </svg>
       )}
     </div>

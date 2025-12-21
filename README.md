@@ -197,6 +197,4 @@ El uso de mecánicas, nombres y términos específicos del juego se realiza bajo
 [Go to English Version / Ir a la versión en Inglés](#english)
 
 <br>
-<div align="center">
-  Hecho con 🖤 y pérdida de 1d4 puntos de Cordura.
 </div>

@@ -15,6 +15,7 @@ import { Trash2, Settings2, Plus, X } from "lucide-react"
 import type { Character, CharacteristicValue } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS, type SkillRequirement, type FieldRequirement } from "@/lib/occupations-data"
 import { calculateSpentPoints } from "@/lib/occupation-utils"
+import { useLanguage } from "@/components/language-provider" // Importar hook
 
 function PointsInput({
   value = 0,
@@ -213,6 +214,7 @@ interface OccupationDetailsModalProps {
 }
 
 export function OccupationDetailsModal({ isOpen, onClose, character, onChange }: OccupationDetailsModalProps) {
+  const { t } = useLanguage()
   const currentOccupation = PRESET_OCCUPATIONS.find((occ) => occ.name === character.occupation)
   const isCustomOccupation = character.occupation === "Otra"
 
@@ -235,11 +237,11 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     if (isCustomOccupation || !character.occupationFormula) return { type: "simple", options: [] as string[] }
     const f = character.occupationFormula.toUpperCase()
     if (f.includes("STR") && f.includes("DEX") && (f.includes("OR") || f.includes("O")))
-      return { type: "choice", options: ["STR", "DEX"], label: "Elige característica:" }
+      return { type: "choice", options: ["STR", "DEX"], label: t("occupation_choose_stat") }
     if (f.includes("APP") && f.includes("POW") && (f.includes("OR") || f.includes("O")))
-      return { type: "choice", options: ["APP", "POW"], label: "Elige característica:" }
+      return { type: "choice", options: ["APP", "POW"], label: t("occupation_choose_stat") }
     return { type: "simple", options: [] as string[] }
-  }, [character.occupationFormula, isCustomOccupation])
+  }, [character.occupationFormula, isCustomOccupation, t])
 
   const totalPoints = useMemo(() => {
     if (isCustomOccupation) return getCharacteristicVal(customStat1) * 2 + getCharacteristicVal(customStat2) * 2
@@ -268,6 +270,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   if (!currentOccupation && !isCustomOccupation) return null
 
   const updateSkillPoints = (name: string, pts: number, customBaseValue?: number) => {
+    // ... Lógica idéntica al original ...
     const newSkills = [...character.skills]
     const isFieldSpecialization = name.includes(": ")
 
@@ -446,7 +449,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 setTempBaseValue("")
               }}
             >
-              <Plus className="w-3 h-3 mr-1" /> Definir {req.field}
+              <Plus className="w-3 h-3 mr-1" /> {t("define")} {req.field}
             </Button>
           )}
 
@@ -482,7 +485,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
               </div>
               {needsBaseValue && (
                 <div className="flex gap-1 items-center">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">Valor base (%):</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{t("base_value_label")}</span>
                   <BaseValueInput
                     placeholder="Ej: 25"
                     className="h-8 text-xs w-20"
@@ -508,7 +511,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 </div>
               )}
               {needsBaseValue && (
-                <p className="text-xs text-muted-foreground">El valor base no se resta de tus puntos de ocupación.</p>
+                <p className="text-xs text-muted-foreground">{t("base_value_hint")}</p>
               )}
             </div>
           )}
@@ -584,7 +587,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                   <div key={i} className="p-2 rounded border bg-white dark:bg-slate-950">
                     <div className="flex items-center gap-2 mb-2">
                       <Badge variant="secondary">{opt.field}</Badge>
-                      <span className="text-xs text-muted-foreground">Especialización</span>
+                      <span className="text-xs text-muted-foreground">{t("specialization")}</span>
                     </div>
                     <FieldSelector req={opt} uniqueId={`choice-${index}-${i}`} isInsideChoice={true} />
                   </div>
@@ -678,10 +681,10 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 onValueChange={(v) => (FIELDS.includes(v) ? setActiveFieldKey(`any-${v}`) : updateSkillPoints(v, 10))}
               >
                 <SelectTrigger className="h-9 bg-white dark:bg-slate-950">
-                  <SelectValue placeholder="Añadir..." />
+                  <SelectValue placeholder={t("add_custom")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <div className="text-xs font-bold p-2 text-muted-foreground">Especialidades</div>
+                  <div className="text-xs font-bold p-2 text-muted-foreground">{t("specialties")}</div>
                   {FIELDS.map((f) => (
                     <SelectItem key={f} value={f}>
                       {f}...
@@ -753,17 +756,17 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-2xl">{currentOccupation?.name || "Otra"}</DialogTitle>
           <div className="flex gap-2 text-sm mt-1">
-            <Badge variant="outline">Crédito: {currentOccupation?.creditRating.join("-") || "0-99"}</Badge>
+            <Badge variant="outline">{t("credit_rating")}: {currentOccupation?.creditRating.join("-") || "0-99"}</Badge>
             <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-              Fórmula: {character.occupationFormula}
+              {t("formula")}: {character.occupationFormula}
             </span>
           </div>
         </DialogHeader>
         <div className="px-6 py-2 bg-slate-50 dark:bg-slate-900 border-y">
           <div className="flex justify-between text-sm font-bold mb-1">
-            <span>Puntos de Ocupación</span>
+            <span>{t("occupation_points")}</span>
             <span className={remainingPoints < 0 ? "text-red-500" : "text-green-600"}>
-              {remainingPoints} disponibles
+              {remainingPoints} {t("available")}
             </span>
           </div>
           <Progress
@@ -775,7 +778,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           {isCustomOccupation && (
             <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-100 space-y-4">
               <Label className="font-bold flex items-center gap-2">
-                <Settings2 className="w-4 h-4" /> Configuración
+                <Settings2 className="w-4 h-4" /> {t("configuration")}
               </Label>
               <div className="flex items-center gap-2">
                 <Select value={customStat1} onValueChange={setCustomStat1}>
@@ -809,12 +812,12 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           )}
           {(
             currentOccupation?.skills ||
-            (isCustomOccupation ? [{ type: "any", count: 8, label: "Habilidades a elección" } as SkillRequirement] : [])
+            (isCustomOccupation ? [{ type: "any", count: 8, label: t("skills_choice") } as SkillRequirement] : [])
           ).map((req, i) => renderRequirement(req, i))}
         </div>
         <DialogFooter className="p-4 border-t bg-slate-50 dark:bg-slate-900">
           <Button onClick={onClose} className="w-full">
-            Guardar y Cerrar
+            {t("save_and_close")}
           </Button>
         </DialogFooter>
       </DialogContent>

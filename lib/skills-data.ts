@@ -2,19 +2,20 @@ import type { CharacterEra, Skill } from "./character-types"
 
 export interface SkillDefinition {
   name: string
-  nameEn: string // Nuevo campo para inglés
+  nameEn: string
   baseValue: number | "special"
   isFieldHeader?: boolean
   fieldSlots?: number
   subSkills?: { name: string; nameEn: string; baseValue: number }[]
 }
 
+// 1. LISTAS DE HABILIDADES
 const skills1920sAndModern: SkillDefinition[] = [
   { name: "Antropología", nameEn: "Anthropology", baseValue: 1 },
   {
     name: "Armas de fuego",
     nameEn: "Firearms",
-    baseValue: 0, 
+    baseValue: 0,
     isFieldHeader: true,
     fieldSlots: 1,
     subSkills: [
@@ -32,7 +33,7 @@ const skills1920sAndModern: SkillDefinition[] = [
   {
     name: "Combatir",
     nameEn: "Fighting",
-    baseValue: 0, 
+    baseValue: 0,
     isFieldHeader: true,
     fieldSlots: 2,
     subSkills: [{ name: "Pelea", nameEn: "Brawl", baseValue: 25 }],
@@ -137,6 +138,42 @@ const skillsDarkAges: SkillDefinition[] = [
   { name: "Trepar", nameEn: "Climb", baseValue: 20 },
 ]
 
+// 2. MAPEO DE TRADUCCIÓN
+const skillTranslationMap: Record<string, string> = {}
+const skillReverseMap: Record<string, string> = {}
+
+const allSkills = [...skills1920sAndModern, ...modernOnlySkills, ...skillsDarkAges]
+
+allSkills.forEach(skill => {
+  skillTranslationMap[skill.name] = skill.nameEn
+  skillReverseMap[skill.nameEn] = skill.name
+  
+  if (skill.subSkills) {
+    skill.subSkills.forEach(sub => {
+       skillTranslationMap[sub.name] = sub.nameEn
+       skillReverseMap[sub.nameEn] = sub.name
+    })
+  }
+})
+
+// 3. FUNCIÓN DE TRADUCCIÓN
+export const getTranslatedSkillName = (originalName: string, lang: "es" | "en"): string => {
+  if (lang === "es") {
+    // Si queremos español, intentamos revertir desde inglés si es necesario
+    return skillReverseMap[originalName] || originalName
+  } else {
+    // Si queremos inglés...
+    if (originalName.includes(":")) {
+       const [main, sub] = originalName.split(":").map(s => s.trim())
+       const mainEn = skillTranslationMap[main] || main
+       const subEn = skillTranslationMap[sub] || sub 
+       return `${mainEn}: ${subEn}`
+    }
+    return skillTranslationMap[originalName] || originalName
+  }
+}
+
+// 4. FUNCIONES DE GENERACIÓN (Sin cambios lógicos, solo usan el campo nameEn si es necesario al crear)
 export const getSkillDefinitionsForEra = (era: CharacterEra): SkillDefinition[] => {
   if (era === "darkAges") {
     return skillsDarkAges
@@ -203,7 +240,6 @@ export const getBaseSkillsForEra = (era: CharacterEra, language: "es" | "en" = "
     }
   }
 
-  // Añadir 6 habilidades personalizadas vacías
   const customLabel = language === "en" ? "Custom Skill" : "Habilidad personalizada"
   for (let i = 0; i < 6; i++) {
     skills.push({

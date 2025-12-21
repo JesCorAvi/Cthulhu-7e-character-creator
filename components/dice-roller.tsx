@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { Dice3DScene } from "./dice-3d"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { useLanguage } from "@/components/language-provider"
 
 interface DiceProps {
   value: number
@@ -110,24 +111,20 @@ interface DiceRollerProps {
   onCancel: () => void
 }
 
-const CHARACTERISTIC_FORMULAS: Array<{
-  key: string
-  label: string
-  formula: "3d6" | "2d6+6"
-  alternativeFormula?: "4d6kh3" | "3d6+6kh3"
-}> = [
-  { key: "STR", label: "FUE (Fuerza)", formula: "3d6", alternativeFormula: "4d6kh3" },
-  { key: "DEX", label: "DES (Destreza)", formula: "3d6", alternativeFormula: "4d6kh3" },
-  { key: "POW", label: "POD (Poder)", formula: "3d6", alternativeFormula: "4d6kh3" },
-  { key: "CON", label: "CON (Constitución)", formula: "3d6", alternativeFormula: "4d6kh3" },
-  { key: "APP", label: "APA (Apariencia)", formula: "3d6", alternativeFormula: "4d6kh3" },
-  { key: "SIZ", label: "TAM (Tamaño)", formula: "2d6+6", alternativeFormula: "3d6+6kh3" },
-  { key: "INT", label: "INT (Inteligencia)", formula: "2d6+6", alternativeFormula: "3d6+6kh3" },
-  { key: "EDU", label: "EDU (Educación)", formula: "2d6+6", alternativeFormula: "3d6+6kh3" },
-  { key: "LUCK", label: "Suerte", formula: "3d6", alternativeFormula: "4d6kh3" },
-]
+const CHARACTERISTIC_FORMULAS = [
+  { key: "STR", formula: "3d6", alternativeFormula: "4d6kh3" },
+  { key: "DEX", formula: "3d6", alternativeFormula: "4d6kh3" },
+  { key: "POW", formula: "3d6", alternativeFormula: "4d6kh3" },
+  { key: "CON", formula: "3d6", alternativeFormula: "4d6kh3" },
+  { key: "APP", formula: "3d6", alternativeFormula: "4d6kh3" },
+  { key: "SIZ", formula: "2d6+6", alternativeFormula: "3d6+6kh3" },
+  { key: "INT", formula: "2d6+6", alternativeFormula: "3d6+6kh3" },
+  { key: "EDU", formula: "2d6+6", alternativeFormula: "3d6+6kh3" },
+  { key: "LUCK", formula: "3d6", alternativeFormula: "4d6kh3" },
+] as const
 
 export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
+  const { t } = useLanguage()
   const [currentIndex, setCurrentIndex] = useState(-1)
   const [rolls, setRolls] = useState<CharacteristicRoll[]>([])
   const [started, setStarted] = useState(false)
@@ -180,7 +177,7 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
 
       const newRoll: CharacteristicRoll = {
         name: characteristic.key,
-        label: characteristic.label,
+        label: t(characteristic.key.toLowerCase()),
         formula:
           useAlternativeMethod && characteristic.alternativeFormula
             ? characteristic.alternativeFormula
@@ -199,7 +196,7 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
 
       processingRoll.current = false
     },
-    [currentIndex, useAlternativeMethod],
+    [currentIndex, useAlternativeMethod, t],
   )
 
   const handleNextRoll = useCallback(() => {
@@ -238,18 +235,17 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
               </div>
             </div>
             <div className="text-center space-y-3">
-              <h2 className="text-2xl font-bold text-foreground">Tiradas de Caracteristicas</h2>
+              <h2 className="text-2xl font-bold text-foreground">{t("dice_roller_title")}</h2>
               <p className="text-muted-foreground text-sm">
-                Lanza los dados para determinar las caracteristicas de tu investigador segun las reglas de Call of
-                Cthulhu 7e
+               {t("dice_roller_desc")}
               </p>
             </div>
 
             <div className="bg-muted/30 p-4 rounded-lg w-full space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="alternative-method" className="text-sm font-normal text-left flex-1 cursor-pointer">
-                  <div className="font-semibold">Metodo Heroico</div>
-                  <div className="text-xs text-muted-foreground">Tira un dado extra y descarta el mas bajo</div>
+                  <div className="font-semibold">{t("heroic_method")}</div>
+                  <div className="text-xs text-muted-foreground">{t("heroic_desc")}</div>
                 </Label>
                 <Switch
                   id="alternative-method"
@@ -260,28 +256,28 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
 
               <div className="flex items-center justify-between gap-3 pt-3 border-t border-border/50">
                 <Label htmlFor="3d-dice" className="text-sm font-normal text-left flex-1 cursor-pointer">
-                  <div className="font-semibold">Dados 3D Interactivos</div>
+                  <div className="font-semibold">{t("interactive_dice")}</div>
                   <div className="text-xs text-muted-foreground">
-                    Lanza los dados tu mismo
+                    {t("interactive_desc")}
                   </div>
                 </Label>
                 <Switch id="3d-dice" checked={use3DDice} onCheckedChange={setUse3DDice} />
               </div>
 
               <div className="pt-3 border-t border-border/50">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Formulas de tirada:</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{t("formulas_title")}</p>
                 <ul className="text-xs text-muted-foreground space-y-1">
                   {useAlternativeMethod ? (
                     <>
-                      <li>• FUE, DES, POD, CON, APA: 4D6 (- menor) x 5</li>
-                      <li>• TAM, INT, EDU: 3D6+6 (- menor) x 5</li>
-                      <li>• Suerte: 4D6 (- menor) x 5</li>
+                      <li>• {t("str")}, {t("dex")}, {t("pow")}, {t("con")}, {t("app")}: 4D6 (- min) x 5</li>
+                      <li>• {t("siz")}, {t("int")}, {t("edu")}: 3D6+6 (- min) x 5</li>
+                      <li>• {t("luck")}: 4D6 (- min) x 5</li>
                     </>
                   ) : (
                     <>
-                      <li>• FUE, DES, POD, CON, APA: 3D6 x 5</li>
-                      <li>• TAM, INT, EDU: (2D6+6) x 5</li>
-                      <li>• Suerte: 3D6 x 5</li>
+                      <li>• {t("str")}, {t("dex")}, {t("pow")}, {t("con")}, {t("app")}: 3D6 x 5</li>
+                      <li>• {t("siz")}, {t("int")}, {t("edu")}: (2D6+6) x 5</li>
+                      <li>• {t("luck")}: 3D6 x 5</li>
                     </>
                   )}
                 </ul>
@@ -290,11 +286,11 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
 
             <div className="flex gap-3 w-full">
               <Button variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
-                Cancelar
+                {t("cancel")}
               </Button>
               <Button onClick={handleStart} className="flex-1 gap-2">
                 <Dices className="h-4 w-4" />
-                Comenzar
+                {t("start")}
               </Button>
             </div>
           </div>
@@ -311,13 +307,13 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
       <div className="bg-card border-2 border-primary rounded-xl p-6 max-w-4xl w-full shadow-2xl my-8">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-foreground">
-            {isComplete ? "Tiradas Completadas" : currentChar?.label || ""}
+            {isComplete ? t("rolls_complete") : (currentChar ? t(currentChar.key.toLowerCase()) : "")}
           </h2>
           {!isComplete && currentChar && (
             <p className="text-sm text-muted-foreground mt-1">
               Formula:{" "}
               {useAlternativeMethod && currentChar.alternativeFormula
-                ? currentChar.alternativeFormula.replace("kh3", " (descartando el menor)")
+                ? currentChar.alternativeFormula.replace("kh3", " (drop low)")
                 : currentChar.formula}{" "}
               x 5
             </p>
@@ -358,11 +354,11 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
               <p className="text-emerald-400 text-lg font-medium mb-2">
                 {rolls[rolls.length - 1]?.label}: {rolls[rolls.length - 1]?.finalResult}
               </p>
-              <p className="text-white/60 text-sm">Siguiente: {CHARACTERISTIC_FORMULAS[currentIndex + 1]?.label}</p>
+              <p className="text-white/60 text-sm">Next: {CHARACTERISTIC_FORMULAS[currentIndex + 1] ? t(CHARACTERISTIC_FORMULAS[currentIndex + 1].key.toLowerCase()) : ""}</p>
             </div>
             <Button onClick={handleNextRoll} className="gap-2">
               <Dices className="h-4 w-4" />
-              Continuar con la siguiente tirada
+              {t("next_roll")}
             </Button>
           </div>
         )}
@@ -378,7 +374,7 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
                   <Simple2DDice key={idx} />
                 ))}
               </div>
-              <p className="text-white/80 group-hover:text-white transition-colors">Haz clic para lanzar los dados</p>
+              <p className="text-white/80 group-hover:text-white transition-colors">{t("click_to_roll")}</p>
             </div>
           </div>
         )}
@@ -389,11 +385,11 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
               <p className="text-emerald-400 text-lg font-medium mb-2">
                 {rolls[rolls.length - 1]?.label}: {rolls[rolls.length - 1]?.finalResult}
               </p>
-              <p className="text-white/60 text-sm">Siguiente: {CHARACTERISTIC_FORMULAS[currentIndex + 1]?.label}</p>
+              <p className="text-white/60 text-sm">Next: {CHARACTERISTIC_FORMULAS[currentIndex + 1] ? t(CHARACTERISTIC_FORMULAS[currentIndex + 1].key.toLowerCase()) : ""}</p>
             </div>
             <Button onClick={handleNextRoll} className="gap-2">
               <Dices className="h-4 w-4" />
-              Continuar con la siguiente tirada
+              {t("next_roll")}
             </Button>
           </div>
         )}
@@ -454,7 +450,7 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
               className="flex-1 bg-transparent gap-2"
             >
               <RotateCcw className="h-4 w-4" />
-              Volver a tirar todo
+              {t("reroll_all")}
             </Button>
             <Button
               onClick={() => {
@@ -466,7 +462,7 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
               }}
               className="flex-1"
             >
-              Aplicar Resultados
+              {t("apply_results")}
             </Button>
           </div>
         )}

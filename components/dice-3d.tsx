@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useId } from "react"
 import DiceBox from "@3d-dice/dice-box"
 import { Dices } from "lucide-react"
+import { useLanguage } from "@/components/language-provider"
 
 interface Dice3DSceneProps {
   diceCount?: number
@@ -17,6 +18,7 @@ export function Dice3DScene({
   diceType = "d6", 
   diceConfig 
 }: Dice3DSceneProps) {
+  const { t } = useLanguage()
   const containerRef = useRef<HTMLDivElement>(null)
   const diceBoxRef = useRef<DiceBox | null>(null)
   
@@ -26,37 +28,31 @@ export function Dice3DScene({
   const rawId = useId()
   const containerId = `dice-box-${rawId.replace(/[^a-zA-Z0-9-_]/g, "")}`
 
-  // 1. INICIALIZACIÓN CON RETRASO DE SEGURIDAD
   useEffect(() => {
     if (!containerRef.current) return
 
-    // Limpieza inicial
     containerRef.current.innerHTML = ""
     diceBoxRef.current = null
 
     const BASE_PATH = "/Cthulhu-7e-character-creator"
     
-    // Configuración robusta (Fuerzas medias, ni muy flojas ni muy fuertes)
     const boxConfig = {
       id: containerId,
       container: `#${containerId}`,
       assetPath: `${BASE_PATH}/assets/dice-box/`, 
       theme: "default",
-      scale: 9,           // Escala grande para visibilidad
+      scale: 9,
       gravity: 3,
       mass: 5,
       friction: 0.8,     
       restitution: 0.5,
       lightIntensity: 1,
-      startingHeight: 15, // Altura estándar (no 8, para evitar clipping)
-      spinForce: 6,       // Giro normal
-      throwForce: 6,      // Fuerza normal (no 1, para evitar estancamiento)
+      startingHeight: 15,
+      spinForce: 6,
+      throwForce: 6,
     }
 
-    // EL FIX CLAVE: Esperar a que el Modal termine su animación (300ms)
-    // antes de crear el contexto 3D.
     const timer = setTimeout(() => {
-        // Doble chequeo de seguridad
         if (!containerRef.current) return;
 
         const box = new DiceBox(boxConfig)
@@ -64,12 +60,11 @@ export function Dice3DScene({
         box.init().then(() => {
           diceBoxRef.current = box
           setIsReady(true)
-          // Forzar resize inmediato tras init
           box.resizeWorld()
         }).catch((e: any) => {
           console.error("Error al inicializar DiceBox:", e)
         })
-    }, 500) // 500ms da tiempo de sobra a cualquier animación de CSS/Dialog
+    }, 500)
 
     const handleResize = () => {
       if (diceBoxRef.current) {
@@ -79,28 +74,22 @@ export function Dice3DScene({
     window.addEventListener("resize", handleResize)
 
     return () => {
-        clearTimeout(timer) // Limpiar timer si el usuario cierra rápido
+        clearTimeout(timer)
         window.removeEventListener("resize", handleResize)
         diceBoxRef.current = null; 
     }
   }, [containerId])
 
-  // 2. LÓGICA DE LANZAMIENTO
   const handleRoll = async () => {
     if (!diceBoxRef.current || !isReady || isRolling) return
 
-    // PREPARACIÓN DE ESCENA
     try {
         diceBoxRef.current.clear()
-        // IMPORTANTE: Recalcular tamaño justo antes de tirar
         diceBoxRef.current.resizeWorld()
-    } catch (e) {
-        // Ignorar errores de limpieza si el motor no está listo
-    }
+    } catch (e) { }
 
     setIsRolling(true)
 
-    // Configuración física estándar para asegurar movimiento
     // @ts-ignore
     if (diceBoxRef.current.updateConfig) {
        // @ts-ignore
@@ -111,7 +100,6 @@ export function Dice3DScene({
        })
     }
     
-    // Preparación de notación "1d..." 
     const requestedDice: string[] = []
     
     const addDie = (typeInput: string) => {
@@ -142,7 +130,6 @@ export function Dice3DScene({
       const finalValues: number[] = []
       let rawIndex = 0
 
-      // PARSEO ROBUSTO (Tu corrección anterior)
       for (let i = 0; i < requestedDice.length; i++) {
         const type = requestedDice[i]
         
@@ -184,20 +171,18 @@ export function Dice3DScene({
   return (
     <div className="relative w-full h-[400px] md:h-[450px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-900 group">
       
-      {/* Contenedor 3D */}
       <div 
         id={containerId} 
         ref={containerRef} 
         className="w-full h-full absolute inset-0 z-0 [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:block" 
       />
 
-      {/* UI Overlay */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-end pb-8 pointer-events-none">
         
         {!isReady && (
           <div className="bg-black/60 px-4 py-2 rounded text-white backdrop-blur-sm animate-pulse flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Cargando motor físico...
+            {t("loading_physics")}
           </div>
         )}
         
@@ -207,13 +192,13 @@ export function Dice3DScene({
             className="pointer-events-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 px-8 rounded-full shadow-lg transform transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border-2 border-white/20 backdrop-blur-sm"
           >
             <Dices className="w-5 h-5" />
-            Lanzar Dados
+            {t("launch_dice")}
           </button>
         )}
 
         {isRolling && (
           <div className="text-white/80 font-medium shadow-sm animate-pulse px-4 py-2 bg-black/30 rounded-lg backdrop-blur-sm">
-            Rodando...
+            {t("rolling")}
           </div>
         )}
       </div>

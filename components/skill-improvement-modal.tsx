@@ -8,6 +8,8 @@ import { X, Dices } from "lucide-react"
 import { Dice3DScene } from "./dice-3d"
 import { cn } from "@/lib/utils"
 import type { Skill } from "@/lib/character-types"
+import { useLanguage } from "@/components/language-provider"
+import { getTranslatedSkillName } from "@/lib/skills-data"
 
 interface SkillImprovementModalProps {
   skill: Skill
@@ -16,21 +18,21 @@ interface SkillImprovementModalProps {
 }
 
 export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImprovementModalProps) {
+  const { t, language } = useLanguage()
   const [stage, setStage] = useState<"initial" | "roll-d100" | "result-d100" | "roll-d10" | "final">("initial")
   const [d100Result, setD100Result] = useState<number | null>(null)
   const [d10Result, setD10Result] = useState<number | null>(null)
   const [manualResult, setManualResult] = useState("")
 
+  const translatedSkillName = skill.customName || getTranslatedSkillName(skill.name, language)
+
   const handleD100Complete = (values: number[]) => {
-    // CORRECCIÓN: Dice3DScene ya devuelve el valor final del d100 (1-100) en la posición 0.
-    // No hace falta multiplicar por 10 ni sumar nada manualmente.
     const result = values[0]
     setD100Result(result)
     setStage("result-d100")
   }
 
   const handleD10Complete = (values: number[]) => {
-    // El d10 normal devuelve 1-10, tal cual.
     const result = values[0]
     setD10Result(result)
     setStage("final")
@@ -59,9 +61,9 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
       <div className="bg-card border-2 border-primary rounded-xl p-6 max-w-2xl w-full shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Mejorar Habilidad</h2>
+            <h2 className="text-2xl font-bold text-foreground">{t("improve_title")}</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {skill.customName || skill.name} (Valor actual: {skill.value}%)
+              {translatedSkillName} ({t("current_value")}: {skill.value}%)
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancel}>
@@ -72,9 +74,9 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
         {stage === "initial" && (
           <div className="space-y-6">
             <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-              <h3 className="font-semibold text-sm">¿Cómo quieres proceder?</h3>
+              <h3 className="font-semibold text-sm">{t("how_to_proceed")}</h3>
               <p className="text-xs text-muted-foreground">
-                Puedes tirar los dados para determinar si la habilidad mejora, o introducir manualmente el resultado.
+                {t("how_to_proceed_desc")}
               </p>
             </div>
 
@@ -82,26 +84,26 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
               <Button onClick={() => setStage("roll-d100")} className="gap-2 justify-start h-auto p-4">
                 <Dices className="h-5 w-5" />
                 <div className="text-left">
-                  <div className="font-semibold">Tirar los dados</div>
-                  <div className="text-xs opacity-80">Lanzar d100 (Decenas + Unidades)</div>
+                  <div className="font-semibold">{t("roll_dice_button")}</div>
+                  <div className="text-xs opacity-80">{t("roll_d100_hint")}</div>
                 </div>
               </Button>
 
               <div className="space-y-2">
                 <Label htmlFor="manual-result" className="text-sm">
-                  O introduce el resultado manualmente:
+                  {t("manual_input")}
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     id="manual-result"
                     type="number"
-                    placeholder="Cantidad a subir"
+                    placeholder={t("amount_placeholder")}
                     value={manualResult}
                     onChange={(e) => setManualResult(e.target.value)}
                     className="flex-1"
                   />
                   <Button onClick={handleManualResult} disabled={!manualResult}>
-                    Aplicar
+                    {t("apply")}
                   </Button>
                 </div>
               </div>
@@ -112,11 +114,11 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
         {stage === "roll-d100" && (
           <div className="space-y-4">
             <div className="bg-muted/30 p-4 rounded-lg">
-              <h3 className="font-semibold text-sm mb-2">Tira d100 de Comprobación</h3>
+              <h3 className="font-semibold text-sm mb-2">{t("check_d100_title")}</h3>
               <p className="text-xs text-muted-foreground">
                 {skill.value >= 95
-                  ? "Tu habilidad es muy alta (>=95). Solo mejorarás si sacas entre 96 y 100."
-                  : `Necesitas sacar más de ${skill.value} en el d100 para mejorar.`}
+                  ? t("check_d100_desc_high")
+                  : t("check_d100_desc_normal", { value: skill.value })}
               </p>
             </div>
 
@@ -130,7 +132,6 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
                 </div>
               }
             >
-              {/* CORRECCIÓN: Solo pedimos "d100". Dice3DScene se encarga de mostrar 2 dados d10 */}
               <Dice3DScene 
                 diceConfig={["d100"]} 
                 onRollComplete={handleD100Complete} 
@@ -151,26 +152,26 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
               )}
             >
               <div className="text-6xl font-bold">{d100Result}</div>
-              <div className="text-lg font-semibold">{checkSuccess() ? "¡Éxito! Puedes mejorar" : "Fallaste"}</div>
+              <div className="text-lg font-semibold">{checkSuccess() ? t("success_msg") : t("fail_msg")}</div>
               <p className="text-sm text-muted-foreground">
                 {checkSuccess()
-                  ? `Sacaste más de ${skill.value}`
-                  : `Necesitabas más de ${skill.value}`}
+                  ? t("rolled_more", { value: skill.value })
+                  : t("needed_more", { value: skill.value })}
               </p>
             </div>
 
             {checkSuccess() ? (
               <Button onClick={() => setStage("roll-d10")} className="w-full gap-2">
                 <Dices className="h-4 w-4" />
-                Tirar 1d10 para ver cuánto mejoras
+                {t("roll_d10_button")}
               </Button>
             ) : (
               <div className="flex gap-3">
                 <Button variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
-                  Cerrar
+                  {t("close")}
                 </Button>
                 <Button onClick={() => onComplete(0)} className="flex-1">
-                  Continuar (sin cambios)
+                  {t("continue_no_change")}
                 </Button>
               </div>
             )}
@@ -180,8 +181,8 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
         {stage === "roll-d10" && (
           <div className="space-y-4">
             <div className="bg-muted/30 p-4 rounded-lg">
-              <h3 className="font-semibold text-sm mb-2">Tira 1d10 de Mejora</h3>
-              <p className="text-xs text-muted-foreground">El resultado se sumará a tu habilidad actual.</p>
+              <h3 className="font-semibold text-sm mb-2">{t("roll_d10_title")}</h3>
+              <p className="text-xs text-muted-foreground">{t("roll_d10_desc")}</p>
             </div>
 
             <Suspense
@@ -204,14 +205,18 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
           <div className="space-y-6">
             <div className="p-6 rounded-lg text-center space-y-3 bg-emerald-500/20 border-2 border-emerald-500">
               <div className="text-6xl font-bold">+{d10Result}</div>
-              <div className="text-lg font-semibold">¡Habilidad mejorada!</div>
+              <div className="text-lg font-semibold">{t("skill_improved")}</div>
               <p className="text-sm text-muted-foreground">
-                {skill.customName || skill.name} sube de {skill.value}% a {skill.value + d10Result}%
+                {t("skill_improved_desc", { 
+                    name: translatedSkillName, 
+                    old: skill.value, 
+                    new: skill.value + d10Result 
+                })}
               </p>
             </div>
 
             <Button onClick={() => onComplete(d10Result)} className="w-full">
-              Aplicar mejora
+              {t("apply_improvement")}
             </Button>
           </div>
         )}

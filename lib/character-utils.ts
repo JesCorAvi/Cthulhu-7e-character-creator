@@ -62,24 +62,21 @@ export const createDefaultWeapon = (): Weapon => ({
   malfunction: "",
 })
 
-export const createNewCharacter = (era: CharacterEra): Character => {
+// MODIFICADO: Acepta unarmedName
+export const createNewCharacter = (era: CharacterEra, unarmedName: string = "Desarmado"): Character => {
   const defaultPow = 50
   const defaultCon = 50
   const defaultSiz = 50
   const defaultEdu = 50
   const defaultDex = 50
   
-  // Obtenemos las habilidades base
   const skills = getBaseSkillsForEra(era)
 
-  // Aplicamos valores dinámicos a las habilidades especiales
   skills.forEach(skill => {
-    // Para Lengua Propia: Si es un slot de campo, asignamos EDU
     if (skill.name === "Lengua propia" && skill.isFieldSlot) {
       skill.baseValue = defaultEdu
       skill.value = defaultEdu
     }
-    // Para Esquivar: Asignamos DES / 2
     else if (skill.name === "Esquivar") {
       const halfDex = Math.floor(defaultDex / 2)
       skill.baseValue = halfDex
@@ -142,7 +139,7 @@ export const createNewCharacter = (era: CharacterEra): Character => {
     skills,
     weapons: [
       {
-        name: "Desarmado",
+        name: unarmedName, // USAR NOMBRE PASADO
         normal: 25,
         difficult: 12,
         extreme: 5,

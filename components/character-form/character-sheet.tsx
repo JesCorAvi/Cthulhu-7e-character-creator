@@ -23,28 +23,16 @@ import { useTheme } from "next-themes"
 import { OccupationDetailsModal } from "./occupation-details-modal"
 import { DiceRoller } from "@/components/dice-roller"
 import { SkillImprovementModal } from "@/components/skill-improvement-modal"
+import { useLanguage } from "@/components/language-provider"
+import { getTranslatedSkillName } from "@/lib/skills-data"
 
 interface CharacterSheetProps {
   character: Character
   onChange: (character: Character) => void
 }
 
-// 1. ORDEN CORREGIDO DE LAS CARACTERÍSTICAS
 const CHAR_ORDER = ["STR", "DEX", "POW", "CON", "APP", "EDU", "SIZ", "INT"] as const
 
-const CHAR_LABELS: Record<string, string> = {
-  STR: "FUE",
-  DEX: "DES",
-  POW: "POD",
-  CON: "CON",
-  APP: "APA",
-  EDU: "EDU",
-  SIZ: "TAM",
-  INT: "INT",
-  MOV: "MOV",
-}
-
-// 2. TRACKER ESTILO GRID
 function SheetTracker({
   max = 0,
   current,
@@ -59,7 +47,7 @@ function SheetTracker({
   if (!max || max <= 0) {
     return (
       <div className="h-full min-h-[4rem] flex items-center justify-center text-[10px] text-stone-400 italic text-center w-full px-4 border-2 border-dashed border-stone-200 rounded">
-        Introduce un valor inicial para ver el marcador
+        -
       </div>
     )
   }
@@ -77,9 +65,7 @@ function SheetTracker({
         return (
           <div key={rIdx} className="flex justify-between gap-1">
             {numbers.map((num) => {
-              if (num > max) {
-                return <div key={num} className="flex-1 aspect-square" />
-              }
+              if (num > max) return <div key={num} className="flex-1 aspect-square" />
               return (
                 <div
                   key={num}
@@ -104,6 +90,7 @@ function SheetTracker({
 }
 
 export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
+  const { t, language } = useLanguage()
   const [skillSearch, setSkillSearch] = useState("")
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -114,11 +101,9 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
   useEffect(() => {
     setMounted(true)
-    // Check if any characteristic has a non-default value (not 50)
     const hasNonDefaultValues = Object.keys(character.characteristics).some((key) => {
       if (key === "MOV") return false
       const char = character.characteristics[key as keyof typeof character.characteristics] as CharacteristicValue
-      // Consider rolled if value is not the default 50
       return char && char.value !== 50
     })
     setHasRolledCharacteristics(hasNonDefaultValues)
@@ -132,18 +117,16 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     onChange({ ...character, [field]: value })
   }
 
-  // Helper para manejar cambios parciales desde el modal
   const handleModalChange = (updates: Partial<Character>) => {
     onChange({ ...character, ...updates })
   }
 
-  // Lógica para cambiar Ocupación (Select)
   const handleOccupationChange = (value: string) => {
     if (value === "custom") {
       onChange({
         ...character,
         occupation: "Personalizada",
-        occupationLabel: "Nueva Profesión",
+        occupationLabel: t("custom_occupation"),
         occupationFormula: "EDU*4",
         occupationalSkills: [],
       })
@@ -214,24 +197,18 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
   const handleDiceRollComplete = (results: Record<string, number>) => {
     const newCharacteristics = { ...character.characteristics }
-
-    // Apply all rolled values
     Object.entries(results).forEach(([key, value]) => {
       if (key === "LUCK") {
         onChange({
           ...character,
-          luck: {
-            ...character.luck,
-            max: value,
-            current: value,
-          },
+          luck: { ...character.luck, max: value, current: value },
         })
       } else if (key !== "MOV") {
         ;(newCharacteristics as any)[key] = createCharacteristicValue(value)
       }
     })
-
-    // Recalculate derived values
+    
+    // Recalcular valores derivados
     const str = (newCharacteristics.STR as CharacteristicValue).value
     const dex = (newCharacteristics.DEX as CharacteristicValue).value
     const siz = (newCharacteristics.SIZ as CharacteristicValue).value
@@ -244,39 +221,38 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const mov = calculateMovement(dex, str, siz, character.age)
 
     const newSanity = {
-      ...character.sanity,
-      starting: pow,
-      current: pow,
-      limit: pow,
+        ...character.sanity,
+        starting: pow,
+        current: pow,
+        limit: pow,
     }
 
     const updatedSkills = character.skills.map((skill) => {
-      if (skill.name === "Esquivar" && !skill.isFieldSlot) {
+        if (skill.name === "Esquivar" && !skill.isFieldSlot) {
         return { ...skill, baseValue: Math.floor(dex / 2), value: Math.floor(dex / 2) }
-      }
-      if (skill.name === "Lengua propia" && !skill.isFieldSlot) {
+        }
+        if (skill.name === "Lengua propia" && !skill.isFieldSlot) {
         return { ...skill, baseValue: edu, value: edu }
-      }
-      return skill
+        }
+        return skill
     })
 
     onChange({
-      ...character,
-      characteristics: { ...newCharacteristics, MOV: mov },
-      hitPoints: { ...character.hitPoints, max: hp, current: hp },
-      sanity: newSanity,
-      magicPoints: { ...character.magicPoints, max: magic, current: magic },
-      damageBonus: calculateDamageBonus(str, siz),
-      build: calculateBuild(str, siz),
-      dodge: Math.floor(dex / 2),
-      skills: updatedSkills,
+        ...character,
+        characteristics: { ...newCharacteristics, MOV: mov },
+        hitPoints: { ...character.hitPoints, max: hp, current: hp },
+        sanity: newSanity,
+        magicPoints: { ...character.magicPoints, max: magic, current: magic },
+        damageBonus: calculateDamageBonus(str, siz),
+        build: calculateBuild(str, siz),
+        dodge: Math.floor(dex / 2),
+        skills: updatedSkills,
     })
 
     setShowDiceRoller(false)
     setHasRolledCharacteristics(true)
   }
 
-  // --- Lógica de Habilidades ---
   const updateSkill = (index: number, updates: Partial<Skill>) => {
     const newSkills = [...character.skills]
     newSkills[index] = { ...newSkills[index], ...updates }
@@ -342,21 +318,17 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     )
   })
 
-  // Determinar si mostrar el botón de gestión
   const showOccupationButton = character.occupation && character.occupation !== "Personalizada"
 
   const handleSkillImprovement = (index: number, amount: number) => {
     const updatedSkills = [...character.skills]
     const skill = updatedSkills[index]
-
     skill.improvementChecked = true
     skill.improvementSuccess = amount > 0
-
     if (amount > 0) {
       skill.value += amount
       skill.improvementAmount = amount
     }
-
     onChange({ ...character, skills: updatedSkills })
     setImprovingSkill(null)
   }
@@ -366,6 +338,9 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const half = Math.floor(skill.value / 2)
     const fifth = Math.floor(skill.value / 5)
 
+    // TRADUCCIÓN DE HABILIDAD
+    const translatedName = skill.customName || getTranslatedSkillName(skill.name, language)
+
     if (skill.isFieldHeader) {
       return (
         <div
@@ -373,14 +348,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           className="flex items-center justify-between py-1 mt-3 mb-1 border-b border-stone-300 dark:border-stone-700"
         >
           <span className="font-bold text-[11px] uppercase tracking-wider text-stone-600 dark:text-stone-400">
-            {skill.name} {skill.baseValue > 0 ? `(${skill.baseValue}%)` : ""}
+            {translatedName} {skill.baseValue > 0 ? `(${skill.baseValue}%)` : ""}
           </span>
           <Button
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-stone-200 dark:hover:bg-stone-800"
             onClick={() => addFieldSlot(actualIndex)}
-            title={`Añadir especialidad a ${skill.name}`}
+            title={t("add_skill")}
           >
             <Plus className="h-3 w-3" />
           </Button>
@@ -390,9 +365,11 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
     const isHardcodedSubSkill = skill.name.includes(":")
     const isSlot = skill.isFieldSlot || isHardcodedSubSkill
-    let displayName = skill.customName || skill.name
-    if (isHardcodedSubSkill) {
-      displayName = skill.name.split(":")[1].trim()
+    
+    let displayName = translatedName
+    // Si es una sub-habilidad fija (ej: "Armas de fuego: Arma corta"), mostramos solo la parte específica
+    if (isHardcodedSubSkill && translatedName.includes(":")) {
+      displayName = translatedName.split(":")[1].trim()
     }
 
     return (
@@ -417,7 +394,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               ? "bg-emerald-500 border-emerald-500"
               : "bg-transparent border-stone-400 dark:border-stone-600 hover:border-emerald-500",
           )}
-          title="Marcar para mejora (acerté el control)"
         >
           {skill.markedForImprovement && (
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -429,10 +405,8 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         <button
           onClick={() => {
             if (!skill.markedForImprovement) {
-              // Primera vez: marcar
               updateSkill(actualIndex, { markedForImprovement: true })
             } else {
-              // Segunda vez: abrir modal
               setImprovingSkill({ skill, index: actualIndex })
             }
           }}
@@ -442,7 +416,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               ? "bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
               : "bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-500 dark:text-stone-400",
           )}
-          title={skill.markedForImprovement ? "Comprobar mejora" : "Marcar para mejora"}
         >
           <Dices className="h-3 w-3" />
         </button>
@@ -453,7 +426,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               value={skill.customName}
               onChange={(e) => updateSkill(actualIndex, { customName: e.target.value })}
               className="h-5 p-1 text-[11px] border-none bg-transparent w-full focus-visible:ring-0 font-serif placeholder:text-stone-400 italic"
-              placeholder={isSlot ? `.......................` : "Nombre..."}
+              placeholder={isSlot ? `.......................` : t("filter_skills")}
             />
           ) : (
             <span
@@ -490,7 +463,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           <button
             onClick={() => removeSkill(actualIndex)}
             className="text-stone-300 hover:text-red-500 transition-colors px-0.5 opacity-0 group-hover:opacity-100"
-            title="Eliminar habilidad"
           >
             <Trash2 className="h-3 w-3" />
           </button>
@@ -528,16 +500,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         <div className="flex flex-col lg:flex-row gap-6 mb-6">
           <div className="lg:w-1/4 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-stone-300 dark:border-stone-800 pb-4 lg:pb-0 lg:pr-4">
             <h1 className="text-3xl lg:text-4xl font-serif font-black text-center leading-none tracking-tighter text-stone-900 dark:text-stone-100">
-              LA LLAMADA DE
-              <br />
-              <span className="text-4xl lg:text-5xl">CTHULHU</span>
+              {t("app_title")}
             </h1>
-            <span className="text-xs tracking-[0.5em] text-stone-500 mt-2 font-bold">7ª EDICIÓN</span>
+            <span className="text-xs tracking-[0.5em] text-stone-500 mt-2 font-bold">7E</span>
           </div>
 
           <div className="lg:w-3/4 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
             <div className="col-span-2 space-y-1">
-              <Label className="text-[9px] uppercase font-bold text-stone-500">Nombre del Investigador</Label>
+              <Label className="text-[9px] uppercase font-bold text-stone-500">{t("name")}</Label>
               <Input
                 value={character.name}
                 onChange={(e) => handleBasicChange("name", e.target.value)}
@@ -547,7 +517,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
             {/* --- SECCIÓN DE OCUPACIÓN --- */}
             <div className="col-span-2 space-y-1">
-              <Label className="text-[9px] uppercase font-bold text-stone-500">Ocupación</Label>
+              <Label className="text-[9px] uppercase font-bold text-stone-500">{t("occupation")}</Label>
               <div className="relative">
                 <Select
                   value={
@@ -560,21 +530,20 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                   onValueChange={handleOccupationChange}
                 >
                   <SelectTrigger className="w-full h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus:ring-0 bg-transparent text-left font-serif text-base font-medium p-0">
-                    <SelectValue placeholder="Selecciona..." />
+                    <SelectValue placeholder={t("select_occupation")} />
                   </SelectTrigger>
                   <SelectContent>
                     {PRESET_OCCUPATIONS.map((occ) => (
                       <SelectItem key={occ.name} value={occ.name}>
-                        {occ.name}
+                        {language === 'en' ? occ.nameEn : occ.name}
                       </SelectItem>
                     ))}
                     <SelectItem value="custom" className="font-semibold text-primary">
-                      Personalizada / Otra...
+                      {t("custom_occupation")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
 
-                {/* Input manual si es "custom" */}
                 {character.occupation !== "" &&
                   (!PRESET_OCCUPATIONS.some((p) => p.name === character.occupation) ||
                     character.occupation === "Personalizada") && (
@@ -582,7 +551,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                       value={character.occupation === "Personalizada" ? "" : character.occupation}
                       onChange={(e) => handleBasicChange("occupation", e.target.value)}
                       className="h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus-visible:ring-0 bg-transparent mt-1 placeholder:italic"
-                      placeholder="Escribe el nombre de la profesión..."
+                      placeholder={t("new_occupation_placeholder")}
                     />
                   )}
 
@@ -594,14 +563,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                     onClick={() => setIsOccupationModalOpen(true)}
                   >
                     <Settings2 className="mr-1 h-3 w-3" />
-                    Gestionar Habilidades
+                    {t("manage_skills")}
                   </Button>
                 )}
               </div>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[9px] uppercase font-bold text-stone-500">Edad</Label>
+              <Label className="text-[9px] uppercase font-bold text-stone-500">{t("age")}</Label>
               <Input
                 type="number"
                 value={character.age}
@@ -610,7 +579,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[9px] uppercase font-bold text-stone-500">Género</Label>
+              <Label className="text-[9px] uppercase font-bold text-stone-500">{t("gender")}</Label>
               <Input
                 value={character.gender}
                 onChange={(e) => handleBasicChange("gender", e.target.value)}
@@ -618,7 +587,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               />
             </div>
             <div className="col-span-2 space-y-1">
-              <Label className="text-[9px] uppercase font-bold text-stone-500">Residencia</Label>
+              <Label className="text-[9px] uppercase font-bold text-stone-500">{t("residence")}</Label>
               <Input
                 value={character.residence}
                 onChange={(e) => handleBasicChange("residence", e.target.value)}
@@ -626,7 +595,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               />
             </div>
             <div className="col-span-2 space-y-1">
-              <Label className="text-[9px] uppercase font-bold text-stone-500">Lugar de Nacimiento</Label>
+              <Label className="text-[9px] uppercase font-bold text-stone-500">{t("birthplace")}</Label>
               <Input
                 value={character.birthplace}
                 onChange={(e) => handleBasicChange("birthplace", e.target.value)}
@@ -640,14 +609,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           <div className="mb-4 p-4 bg-primary/10 border border-primary/30 rounded-lg">
             <div className="flex flex-col md:flex-row items-center justify-between gap-3">
               <div className="text-center md:text-left">
-                <h3 className="font-bold text-foreground mb-1">Tiradas Automáticas de Características</h3>
+                <h3 className="font-bold text-foreground mb-1">{t("roll_dice")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Genera todas las características automáticamente según las reglas de Cthulhu 7e
+                  {t("auto_roll_desc")}
                 </p>
               </div>
               <Button onClick={() => setShowDiceRoller(true)} className="gap-2 whitespace-nowrap">
                 <Dices className="h-4 w-4" />
-                Tirar Dados
+                {t("roll_dice")}
               </Button>
             </div>
           </div>
@@ -665,7 +634,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                   key={key}
                   className="flex-1 min-w-[70px] flex flex-col items-center bg-white dark:bg-stone-950 p-1.5 rounded shadow-sm border border-stone-200 dark:border-stone-800"
                 >
-                  <span className="text-[10px] font-black text-stone-500 mb-1">{CHAR_LABELS[key]}</span>
+                  <span className="text-[10px] font-black text-stone-500 mb-1">{t(key.toLowerCase())}</span>
                   <Input
                     type="number"
                     value={char.value}
@@ -673,18 +642,17 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                     className="h-10 w-full text-center text-2xl font-black border-stone-200 dark:border-stone-700 bg-transparent p-0 focus-visible:ring-1"
                   />
                   <div className="flex w-full justify-between px-1 mt-1 text-[10px] text-stone-500 font-mono font-bold">
-                    <span title="Mitad">{char.half}</span>
-                    <span title="Quinto">{char.fifth}</span>
+                    <span title={t("half")}>{char.half}</span>
+                    <span title={t("fifth")}>{char.fifth}</span>
                   </div>
                 </div>
               )
             })}
             <div className="flex-1 min-w-[70px] flex flex-col items-center bg-stone-100 dark:bg-stone-900 p-1.5 rounded border border-stone-200 dark:border-stone-800">
-              <span className="text-[10px] font-black text-stone-500 mb-1">MOV</span>
+              <span className="text-[10px] font-black text-stone-500 mb-1">{t("mov")}</span>
               <div className="h-10 w-full flex items-center justify-center text-2xl font-black">
                 {character.characteristics.MOV}
               </div>
-              <div className="mt-1 text-[10px] opacity-0">.</div>
             </div>
           </div>
         </div>
@@ -694,7 +662,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {/* PUNTOS DE VIDA */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-          <Label className="font-serif font-bold text-sm uppercase block mb-2">Puntos de Vida</Label>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">{t("hp")}</Label>
           <div className="flex gap-2 mb-3 items-end">
             <div className="flex-1">
               <Input
@@ -708,13 +676,13 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 }
                 className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
               />
-              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">{t("current")}</Label>
             </div>
             <div className="w-14">
               <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-dashed border-stone-300 rounded bg-stone-100 dark:bg-stone-950">
                 {character.hitPoints.max}
               </div>
-              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Máx</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">{t("max")}</Label>
             </div>
           </div>
           <div className="flex justify-between gap-1 mb-3">
@@ -728,7 +696,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 }
               />
               <Label htmlFor="mw" className="text-[10px] cursor-pointer">
-                Grave
+                {t("major_wound")}
               </Label>
             </div>
             <div className="flex items-center gap-1">
@@ -739,7 +707,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 onCheckedChange={(c) => onChange({ ...character, hitPoints: { ...character.hitPoints, dying: !!c } })}
               />
               <Label htmlFor="dy" className="text-[10px] cursor-pointer">
-                Moribundo
+                {t("dying")}
               </Label>
             </div>
           </div>
@@ -752,7 +720,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
         {/* CORDURA */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-          <Label className="font-serif font-bold text-sm uppercase block mb-2">Cordura (SAN)</Label>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">{t("sanity")} (SAN)</Label>
           <div className="flex gap-2 mb-3 items-end">
             <div className="flex-1">
               <Input
@@ -767,14 +735,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300"
                 placeholder="0"
               />
-              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Inicial (POD)</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">{t("start")} ({t("pow")})</Label>
             </div>
 
             <div className="w-14">
               <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-stone-200 rounded mb-1 bg-stone-50 dark:bg-stone-900">
                 {maxSanityCalc}
               </div>
-              <Label className="text-[8px] uppercase text-stone-400 block text-center">Máx</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center">{t("max")}</Label>
             </div>
           </div>
 
@@ -789,7 +757,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 }
               />
               <Label htmlFor="ti" className="text-[10px] cursor-pointer">
-                Temp.
+                {t("temp_insanity")}
               </Label>
             </div>
             <div className="flex items-center gap-1">
@@ -802,7 +770,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 }
               />
               <Label htmlFor="ii" className="text-[10px] cursor-pointer">
-                Indef.
+                {t("indef_insanity")}
               </Label>
             </div>
           </div>
@@ -812,14 +780,11 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             max={character.sanity.limit || 0}
             onChange={(v) => onChange({ ...character, sanity: { ...character.sanity, current: v } })}
           />
-          {character.sanity.limit ? (
-            <div className="text-[9px] text-center text-stone-400 mt-1">Actual: {character.sanity.current}</div>
-          ) : null}
         </div>
 
         {/* SUERTE */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-          <Label className="font-serif font-bold text-sm uppercase block mb-2">Suerte</Label>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">{t("luck")}</Label>
           <div className="flex gap-2 mb-6 items-end justify-center">
             <div className="w-2/3">
               <Input
@@ -831,7 +796,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 }
                 className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600 placeholder:text-stone-300 text-stone-900 dark:text-stone-100"
               />
-              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Valor Inicial</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">{t("start")}</Label>
             </div>
           </div>
           <SheetTracker
@@ -839,14 +804,11 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             max={character.luck.limit || 0}
             onChange={(v) => onChange({ ...character, luck: { ...character.luck, current: v } })}
           />
-          {character.luck.limit ? (
-            <div className="text-[9px] text-center text-stone-400 mt-1">Actual: {character.luck.current}</div>
-          ) : null}
         </div>
 
         {/* PUNTOS DE MAGIA */}
         <div className="border border-stone-300 dark:border-stone-700 p-4 rounded bg-white dark:bg-stone-900 relative overflow-hidden">
-          <Label className="font-serif font-bold text-sm uppercase block mb-2">Puntos de Magia</Label>
+          <Label className="font-serif font-bold text-sm uppercase block mb-2">{t("magic_points")}</Label>
           <div className="flex gap-2 mb-6 items-end">
             <div className="flex-1">
               <Input
@@ -860,13 +822,13 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 }
                 className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
               />
-              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Actual</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">{t("current")}</Label>
             </div>
             <div className="w-14">
               <div className="h-10 flex items-center justify-center text-lg font-bold text-stone-500 border border-dashed border-stone-300 rounded bg-stone-100 dark:bg-stone-950">
                 {character.magicPoints.max}
               </div>
-              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">Máx</Label>
+              <Label className="text-[8px] uppercase text-stone-400 block text-center mt-1">{t("max")}</Label>
             </div>
           </div>
           <SheetTracker
@@ -879,7 +841,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 flex-1">
-          Habilidades del Investigador
+          {t("investigator_skills")}
         </h3>
       </div>
 
@@ -889,14 +851,14 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           <div className="relative">
             <Search className="absolute left-2 top-1.5 h-3 w-3 text-stone-400" />
             <Input
-              placeholder="Filtrar..."
+              placeholder={t("filter_skills")}
               value={skillSearch}
               onChange={(e) => setSkillSearch(e.target.value)}
               className="h-7 w-32 pl-7 text-[10px] bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700"
             />
           </div>
           <Button size="sm" variant="outline" className="h-7 text-[10px] bg-transparent" onClick={addCustomSkill}>
-            <Plus className="h-3 w-3 mr-1" /> Añadir
+            <Plus className="h-3 w-3 mr-1" /> {t("add_skill")}
           </Button>
         </div>
 
@@ -911,19 +873,19 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
       {/* COMBATE */}
       <div className="mt-8">
-        <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 mb-4">Combate</h3>
+        <h3 className="font-serif font-bold text-lg uppercase border-b-2 border-stone-800 pb-1 mb-4">{t("combat")}</h3>
 
         <div className="flex gap-4 md:gap-12 mb-6 bg-stone-100 dark:bg-stone-900 p-4 rounded border border-stone-200 dark:border-stone-800">
           <div className="text-center">
-            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Bonif. Daño</Label>
+            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">{t("db")}</Label>
             <span className="font-black text-xl font-serif">{character.damageBonus}</span>
           </div>
           <div className="text-center border-l border-stone-300 pl-4 md:pl-12">
-            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Corpulencia</Label>
+            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">{t("build")}</Label>
             <span className="font-black text-xl font-serif">{character.build}</span>
           </div>
           <div className="text-center border-l border-stone-300 pl-4 md:pl-12">
-            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">Esquivar</Label>
+            <Label className="text-[9px] uppercase font-bold text-stone-500 block mb-1">{t("dodge")}</Label>
             <span className="font-black text-xl font-serif">{character.dodge}</span>
           </div>
           <div className="flex-1"></div>
@@ -934,15 +896,15 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           <table className="w-full text-xs text-left">
             <thead>
               <tr className="bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400">
-                <th className="p-2 font-bold rounded-tl">Arma</th>
-                <th className="p-2 text-center font-bold w-16">Regular</th>
-                <th className="p-2 text-center font-bold w-16">Difícil</th>
-                <th className="p-2 text-center font-bold w-16">Extremo</th>
-                <th className="p-2 font-bold w-20">Daño</th>
-                <th className="p-2 font-bold w-16">Alcance</th>
-                <th className="p-2 text-center font-bold w-10">Atq</th>
-                <th className="p-2 font-bold w-12">Mun.</th>
-                <th className="p-2 font-bold w-12 rounded-tr">Avería</th>
+                <th className="p-2 font-bold rounded-tl">{t("weapon")}</th>
+                <th className="p-2 text-center font-bold w-16">{t("regular")}</th>
+                <th className="p-2 text-center font-bold w-16">{t("difficult")}</th>
+                <th className="p-2 text-center font-bold w-16">{t("extreme")}</th>
+                <th className="p-2 font-bold w-20">{t("damage")}</th>
+                <th className="p-2 font-bold w-16">{t("range")}</th>
+                <th className="p-2 text-center font-bold w-10">{t("attacks")}</th>
+                <th className="p-2 font-bold w-12">{t("ammo")}</th>
+                <th className="p-2 font-bold w-12 rounded-tr">{t("malfunction")}</th>
                 <th className="p-2 w-8"></th>
               </tr>
             </thead>
@@ -1033,7 +995,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             className="w-full mt-2 text-xs border border-dashed border-stone-300 text-stone-500 hover:text-stone-900"
             onClick={addWeapon}
           >
-            <Plus className="h-3.5 w-3.5 mr-2" /> Añadir Arma
+            <Plus className="h-3.5 w-3.5 mr-2" /> {t("add_weapon")}
           </Button>
         </div>
       </div>

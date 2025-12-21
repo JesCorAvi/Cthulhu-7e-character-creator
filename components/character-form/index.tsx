@@ -61,7 +61,6 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Selector de idioma añadido aquí */}
           <LanguageSelector />
           
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>

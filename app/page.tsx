@@ -12,7 +12,10 @@ import type { Character, CharacterEra } from "@/lib/character-types"
 import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorageMode, type StorageMode } from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
 import { initGoogleDrive, signInToGoogle } from "@/lib/google-drive"
-import { Plus, Users, Skull, Cloud, HardDrive, AlertCircle, RefreshCw } from "lucide-react"
+import { Plus, Users, Skull, Cloud, HardDrive, RefreshCw } from "lucide-react"
+
+import { useLanguage } from "@/components/language-provider"
+import { LanguageSelector } from "@/components/language-selector"
 
 type View = "list" | "create" | "edit" | "view"
 
@@ -25,8 +28,9 @@ export default function HomePage() {
   const [storageMode, setStorageModeState] = useState<StorageMode>("local")
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
+  
+  const { t } = useLanguage()
 
-  // 1. Inicialización de la API de Google
   useEffect(() => {
     initGoogleDrive((success) => {
         setIsGoogleReady(success)
@@ -34,7 +38,6 @@ export default function HomePage() {
     setStorageModeState(getStorageMode())
   }, [])
 
-  // 2. Función segura de carga
   const loadCharacters = useCallback(async () => {
     setLoading(true)
     setNeedsLogin(false)
@@ -47,6 +50,7 @@ export default function HomePage() {
         setLoading(false)
     }
   }, [])
+
   const refreshCharacters = async () => {
       try {
           const chars = await getCharacters()
@@ -55,7 +59,7 @@ export default function HomePage() {
           console.error("Error refrescando personajes:", error)
       }
     }
-  // 3. Lógica principal: Cuando Google está listo, decidir qué hacer
+
   useEffect(() => {
       const initializeSession = async () => {
           if (!isGoogleReady) return;
@@ -63,13 +67,9 @@ export default function HomePage() {
           const currentMode = getStorageMode();
           
           if (currentMode === 'cloud') {
-              // CORRECCIÓN: No intentamos login automático aquí.
-              // El navegador bloquearía el popup y daría error.
-              // En su lugar, pedimos al usuario que reconecte manualmente.
               setNeedsLogin(true);
               setLoading(false);
           } else {
-              // Si es local, cargamos directamente
               loadCharacters();
           }
       };
@@ -77,32 +77,28 @@ export default function HomePage() {
       initializeSession();
   }, [isGoogleReady, loadCharacters]) 
 
-  // Manejador del Switch (Aquí SÍ podemos llamar a login porque es un clic del usuario)
   const handleToggleStorage = async (checked: boolean) => {
       setLoading(true);
       if (checked) {
-          // Cambiar a Cloud
           if (!isGoogleReady) {
               alert("Google API no está lista aún.");
               setLoading(false);
               return; 
           }
           try {
-            await signInToGoogle(); // Esto abrirá el popup (permitido por ser evento click)
+            await signInToGoogle(); 
             setStorageMode("cloud");
             setStorageModeState("cloud");
             setNeedsLogin(false);
             await loadCharacters();
           } catch (e) {
               console.error("Login fallido o cancelado", e);
-              // Si cancelan el login, volvemos a local visualmente
               setStorageMode("local");
               setStorageModeState("local");
           } finally {
               setLoading(false);
           }
       } else {
-          // Cambiar a Local
           setStorageMode("local");
           setStorageModeState("local");
           setNeedsLogin(false);
@@ -112,7 +108,8 @@ export default function HomePage() {
   }
 
   const handleCreateNew = (era: CharacterEra) => {
-    const newChar = createNewCharacter(era)
+    // AQUÍ PASAMOS LA TRADUCCIÓN DE "DESARMADO"
+    const newChar = createNewCharacter(era, t("unarmed"))
     setCurrentCharacter(newChar)
     setView("edit")
   }
@@ -138,7 +135,7 @@ export default function HomePage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar este personaje?")) {
+    if (confirm(t("delete_confirm"))) {
       setLoading(true)
       await deleteCharacter(id)
       await loadCharacters()
@@ -155,7 +152,6 @@ export default function HomePage() {
       await refreshCharacters()
   }
 
-  // Este botón ahora es crucial: permite recuperar la sesión tras recargar
   const handleManualLogin = async () => {
       try {
           await signInToGoogle();
@@ -173,12 +169,14 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <Skull className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-xl font-bold text-foreground">Call of Cthulhu 7e</h1>
-              <p className="text-xs text-muted-foreground">Creador de Personajes</p>
+              <h1 className="text-xl font-bold text-foreground">{t("app_title")}</h1>
+              <p className="text-xs text-muted-foreground">{t("app_subtitle")}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+             <LanguageSelector />
+
              {view === "list" && (
                  <div className="flex items-center gap-2 border p-2 rounded-lg bg-background/50">
                     {storageMode === 'local' ? <HardDrive className="h-4 w-4" /> : <Cloud className="h-4 w-4 text-blue-500" />}
@@ -187,8 +185,8 @@ export default function HomePage() {
                         onCheckedChange={handleToggleStorage}
                         id="storage-mode"
                     />
-                    <Label htmlFor="storage-mode" className="text-xs cursor-pointer">
-                        {storageMode === 'cloud' ? 'Google Drive' : 'Local Storage'}
+                    <Label htmlFor="storage-mode" className="text-xs cursor-pointer hidden sm:inline-block">
+                        {storageMode === 'cloud' ? t("storage_cloud") : t("storage_local")}
                     </Label>
                  </div>
              )}
@@ -196,7 +194,7 @@ export default function HomePage() {
             {view === "list" && (
                 <Button onClick={() => setView("create")}>
                 <Plus className="h-4 w-4 mr-2" />
-                Nuevo
+                {t("new")}
                 </Button>
             )}
           </div>
@@ -207,19 +205,18 @@ export default function HomePage() {
         {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                <p className="text-muted-foreground">Conectando...</p>
+                <p className="text-muted-foreground">{t("connecting")}</p>
             </div>
         ) : needsLogin && storageMode === 'cloud' ? (
-            // Pantalla de Login Requerido
             <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-card/50">
                 <Cloud className="h-16 w-16 text-blue-500 mb-4" />
-                <h2 className="text-xl font-bold text-foreground mb-2">Conectar con Google Drive</h2>
+                <h2 className="text-xl font-bold text-foreground mb-2">{t("login_required")}</h2>
                 <p className="text-muted-foreground mb-6 max-w-md">
-                    Para ver y guardar tus personajes en la nube, necesitamos reconectar con tu cuenta de Google.
+                    {t("login_msg")}
                 </p>
                 <Button onClick={handleManualLogin} size="lg" className="gap-2">
                     <RefreshCw className="h-4 w-4" />
-                    Sincronizar ahora
+                    {t("sync_now")}
                 </Button>
             </div>
         ) : (
@@ -229,21 +226,23 @@ export default function HomePage() {
                     {characters.length === 0 ? (
                     <div className="text-center py-16">
                         <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-foreground mb-2">No hay personajes</h2>
+                        <h2 className="text-xl font-bold text-foreground mb-2">{t("no_characters")}</h2>
                         <p className="text-muted-foreground mb-6">
                             {storageMode === 'cloud' 
-                                ? "No se encontraron personajes en tu Drive." 
-                                : "Crea tu primer investigador para comenzar tu aventura"}
+                                ? t("no_characters_cloud") 
+                                : t("no_characters_local")}
                         </p>
                         <Button onClick={() => setView("create")}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Crear Personaje
+                        {t("create_char_button")}
                         </Button>
                     </div>
                     ) : (
                     <>
                         <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-foreground">Tus Investigadores ({storageMode === 'cloud' ? 'Nube' : 'Local'})</h2>
+                        <h2 className="text-lg font-bold text-foreground">
+                            {t("your_investigators")} ({storageMode === 'cloud' ? t("storage_cloud") : t("storage_local")})
+                        </h2>
                         <span className="text-sm text-muted-foreground">{characters.length} personaje(s)</span>
                         </div>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -265,13 +264,13 @@ export default function HomePage() {
                 {view === "create" && (
                 <div className="space-y-6">
                     <div className="text-center">
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Nuevo Investigador</h2>
-                    <p className="text-muted-foreground">Selecciona la época para tu personaje</p>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">{t("new_investigator")}</h2>
+                    <p className="text-muted-foreground">{t("select_era")}</p>
                     </div>
                     <EraSelector onSelect={handleCreateNew} />
                     <div className="text-center">
                     <Button variant="ghost" onClick={handleBack}>
-                        Cancelar
+                        {t("cancel")}
                     </Button>
                     </div>
                 </div>
@@ -293,7 +292,7 @@ export default function HomePage() {
       </main>
       <footer className="border-t bg-card mt-auto">
         <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
-          Call of Cthulhu es una marca registrada de Chaosium Inc.
+          {t("footer_text")}
         </div>
       </footer>
     </div>

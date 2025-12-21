@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Character } from "@/lib/character-types"
+import { useLanguage } from "@/components/language-provider"
 
 interface BackstoryEquipmentModalProps {
   character: Character
@@ -12,6 +13,8 @@ interface BackstoryEquipmentModalProps {
 }
 
 export function BackstoryEquipmentModal({ character, onChange }: BackstoryEquipmentModalProps) {
+  const { t } = useLanguage()
+
   const updateBackground = (field: keyof typeof character.background, value: string) => {
     onChange({
       ...character,
@@ -22,111 +25,111 @@ export function BackstoryEquipmentModal({ character, onChange }: BackstoryEquipm
   return (
     <Tabs defaultValue="backstory" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="backstory">Trasfondo</TabsTrigger>
-        <TabsTrigger value="equipment">Equipo y Dinero</TabsTrigger>
-        <TabsTrigger value="notes">Notas</TabsTrigger>
+        <TabsTrigger value="backstory">{t("tab_backstory")}</TabsTrigger>
+        <TabsTrigger value="equipment">{t("tab_equipment")}</TabsTrigger>
+        <TabsTrigger value="notes">{t("tab_notes")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="backstory" className="mt-4 space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="personalDescription">Descripción Personal</Label>
+            <Label htmlFor="personalDescription">{t("personal_desc_label")}</Label>
             <Textarea
               id="personalDescription"
               value={character.background.personalDescription}
               onChange={(e) => updateBackground("personalDescription", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Apariencia física, forma de vestir..."
+              placeholder={t("personal_desc_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ideology">Ideología / Creencias</Label>
+            <Label htmlFor="ideology">{t("ideology_label")}</Label>
             <Textarea
               id="ideology"
               value={character.background.ideology}
               onChange={(e) => updateBackground("ideology", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Creencias religiosas, políticas, morales..."
+              placeholder={t("ideology_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="significantPeople">Personas Significativas</Label>
+            <Label htmlFor="significantPeople">{t("significant_people_label")}</Label>
             <Textarea
               id="significantPeople"
               value={character.background.significantPeople}
               onChange={(e) => updateBackground("significantPeople", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Familiares, amigos, enemigos..."
+              placeholder={t("significant_people_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="significantPlaces">Lugares Significativos</Label>
+            <Label htmlFor="significantPlaces">{t("significant_places_label")}</Label>
             <Textarea
               id="significantPlaces"
               value={character.background.significantPlaces}
               onChange={(e) => updateBackground("significantPlaces", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Lugares importantes para el personaje..."
+              placeholder={t("significant_places_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="preciousPossessions">Posesiones Preciadas</Label>
+            <Label htmlFor="preciousPossessions">{t("precious_possessions_label")}</Label>
             <Textarea
               id="preciousPossessions"
               value={character.background.preciousPossessions}
               onChange={(e) => updateBackground("preciousPossessions", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Objetos de valor sentimental..."
+              placeholder={t("precious_possessions_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="traits">Rasgos</Label>
+            <Label htmlFor="traits">{t("traits_label")}</Label>
             <Textarea
               id="traits"
               value={character.background.traits}
               onChange={(e) => updateBackground("traits", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Personalidad, manías, hábitos..."
+              placeholder={t("traits_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="injuriesScars">Heridas y Cicatrices</Label>
+            <Label htmlFor="injuriesScars">{t("injuries_label")}</Label>
             <Textarea
               id="injuriesScars"
               value={character.background.injuriesScars}
               onChange={(e) => updateBackground("injuriesScars", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Marcas físicas permanentes..."
+              placeholder={t("injuries_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phobiasManias">Fobias y Manías</Label>
+            <Label htmlFor="phobiasManias">{t("phobias_label")}</Label>
             <Textarea
               id="phobiasManias"
               value={character.background.phobiasManias}
               onChange={(e) => updateBackground("phobiasManias", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Miedos irracionales, obsesiones..."
+              placeholder={t("phobias_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="arcaneTomes">Tomos Arcanos</Label>
+            <Label htmlFor="arcaneTomes">{t("arcane_tomes_label")}</Label>
             <Textarea
               id="arcaneTomes"
               value={character.background.arcaneTomes}
               onChange={(e) => updateBackground("arcaneTomes", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Libros de los Mitos leídos..."
+              placeholder={t("arcane_tomes_ph")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="strangeEncounters">Encuentros con lo Extraño</Label>
+            <Label htmlFor="strangeEncounters">{t("strange_encounters_label")}</Label>
             <Textarea
               id="strangeEncounters"
               value={character.background.strangeEncounters}
               onChange={(e) => updateBackground("strangeEncounters", e.target.value)}
               className="min-h-[80px]"
-              placeholder="Experiencias sobrenaturales..."
+              placeholder={t("strange_encounters_ph")}
             />
           </div>
         </div>
@@ -136,70 +139,70 @@ export function BackstoryEquipmentModal({ character, onChange }: BackstoryEquipm
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="equipment">Equipo y Posesiones</Label>
+              <Label htmlFor="equipment">{t("equipment_possessions_label")}</Label>
               <Textarea
                 id="equipment"
                 value={character.equipment}
                 onChange={(e) => onChange({ ...character, equipment: e.target.value })}
                 className="min-h-[200px]"
-                placeholder="Lista de objetos que lleva el personaje..."
+                placeholder={t("equipment_ph")}
               />
             </div>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="spendingLevel">Nivel de Gasto</Label>
+              <Label htmlFor="spendingLevel">{t("spending_level_label")}</Label>
               <Input
                 id="spendingLevel"
                 value={character.money.spendingLevel}
                 onChange={(e) =>
                   onChange({ ...character, money: { ...character.money, spendingLevel: e.target.value } })
                 }
-                placeholder="Nivel de gasto semanal"
+                placeholder={t("spending_level_ph")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cash">Dinero en Efectivo</Label>
+              <Label htmlFor="cash">{t("cash_label")}</Label>
               <Input
                 id="cash"
                 value={character.money.cash}
                 onChange={(e) => onChange({ ...character, money: { ...character.money, cash: e.target.value } })}
-                placeholder="Dinero disponible"
+                placeholder={t("cash_ph")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assets">Bienes y Propiedades</Label>
+              <Label htmlFor="assets">{t("assets_label")}</Label>
               <Textarea
                 id="assets"
                 value={character.money.assets}
                 onChange={(e) => onChange({ ...character, money: { ...character.money, assets: e.target.value } })}
                 className="min-h-[100px]"
-                placeholder="Propiedades, inversiones, vehículos..."
+                placeholder={t("assets_ph")}
               />
             </div>
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="fellowInvestigators">Compañeros Investigadores</Label>
+          <Label htmlFor="fellowInvestigators">{t("fellow_investigators_label")}</Label>
           <Textarea
             id="fellowInvestigators"
             value={character.fellowInvestigators}
             onChange={(e) => onChange({ ...character, fellowInvestigators: e.target.value })}
             className="min-h-[100px]"
-            placeholder="Otros investigadores del grupo..."
+            placeholder={t("fellow_investigators_ph")}
           />
         </div>
       </TabsContent>
 
       <TabsContent value="notes" className="mt-4">
         <div className="space-y-2">
-          <Label htmlFor="notes">Notas del Personaje</Label>
+          <Label htmlFor="notes">{t("notes_label")}</Label>
           <Textarea
             id="notes"
             value={character.notes}
             onChange={(e) => onChange({ ...character, notes: e.target.value })}
             className="min-h-[300px]"
-            placeholder="Notas adicionales, pistas, eventos importantes..."
+            placeholder={t("notes_ph")}
           />
         </div>
       </TabsContent>

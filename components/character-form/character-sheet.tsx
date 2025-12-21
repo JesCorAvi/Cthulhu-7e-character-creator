@@ -790,7 +790,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               <Input
                 type="number"
                 value={character.luck.limit || ""}
-                placeholder="Valor Inicial"
                 onChange={(e) =>
                   onChange({ ...character, luck: { ...character.luck, limit: Number.parseInt(e.target.value) || 0 } })
                 }

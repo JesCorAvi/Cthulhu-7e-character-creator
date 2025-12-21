@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useMemo, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -11,11 +10,69 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Trash2, Settings2, Plus, X } from "lucide-react"
+import { Trash2, Settings2, Plus, X, Check, ChevronsUpDown } from "lucide-react"
 import type { Character, CharacteristicValue } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS, type SkillRequirement, type FieldRequirement } from "@/lib/occupations-data"
 import { calculateSpentPoints } from "@/lib/occupation-utils"
-import { useLanguage } from "@/components/language-provider" // Importar hook
+import { useLanguage } from "@/components/language-provider"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+
+// --- DICCIONARIO DE TRADUCCIÓN DE HABILIDADES ---
+const SKILL_TRANSLATIONS: Record<string, string> = {
+  "Antropología": "Anthropology",
+  "Arqueología": "Archaeology",
+  "Charlatanería": "Fast Talk",
+  "Conducir automóvil": "Drive Auto",
+  "Derecho": "Law",
+  "Descubrir": "Spot Hidden",
+  "Disfrazarse": "Disguise",
+  "Electricidad": "Electrical Repair",
+  "Encanto": "Charm",
+  "Equitación": "Ride",
+  "Escuchar": "Listen",
+  "Esquivar": "Dodge",
+  "Historia": "History",
+  "Intimidar": "Intimidate",
+  "Lanzar": "Throw",
+  "Mecánica": "Mechanical Repair",
+  "Medicina": "Medicine",
+  "Mitos de Cthulhu": "Cthulhu Mythos",
+  "Nadar": "Swim",
+  "Ocultismo": "Occult",
+  "Orientarse": "Navigate",
+  "Persuasión": "Persuade",
+  "Primeros auxilios": "First Aid",
+  "Psicoanálisis": "Psychoanalysis",
+  "Psicología": "Psychology",
+  "Saltar": "Jump",
+  "Sigilo": "Stealth",
+  "Seguir rastros": "Track",
+  "Trepar": "Climb",
+  "Buscar libros": "Library Use",
+  "Tasación": "Appraise",
+  "Contabilidad": "Accounting",
+  "Ciencia": "Science",
+  "Arte/Artesanía": "Art/Craft",
+  "Otras lenguas": "Language (Other)",
+  "Armas de fuego": "Firearms",
+  "Combatir": "Fighting",
+  "Supervivencia": "Survival",
+  "Lengua propia": "Language (Own)",
+  "Pilotar": "Pilot"
+}
 
 function PointsInput({
   value = 0,
@@ -152,6 +209,79 @@ function BaseValueInput({
   )
 }
 
+// --- COMPONENTE COMBOBOX BUSCABLE ---
+function SkillCombobox({
+  fields,
+  commonSkills,
+  onSelect,
+  t,
+  tSkill,
+  placeholder
+}: {
+  fields: string[]
+  commonSkills: string[]
+  onSelect: (value: string) => void
+  t: any
+  tSkill: (s: string) => string
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          {placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={t("filter_skills") || "Buscar..."} />
+          <CommandList>
+            <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+            <CommandGroup heading={t("specialties")}>
+              {fields.map((f) => (
+                <CommandItem
+                  key={f}
+                  value={tSkill(f)}
+                  onSelect={() => {
+                    onSelect(f)
+                    setOpen(false)
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4 opacity-0")} />
+                  {tSkill(f)}...
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandGroup heading="Habilidades Comunes">
+              {commonSkills.map((sk) => (
+                <CommandItem
+                  key={sk}
+                  value={tSkill(sk)}
+                  onSelect={() => {
+                    onSelect(sk)
+                    setOpen(false)
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4 opacity-0")} />
+                  {tSkill(sk)}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 const COMMON_SKILLS = [
   "Antropología",
   "Arqueología",
@@ -214,7 +344,7 @@ interface OccupationDetailsModalProps {
 }
 
 export function OccupationDetailsModal({ isOpen, onClose, character, onChange }: OccupationDetailsModalProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const currentOccupation = PRESET_OCCUPATIONS.find((occ) => occ.name === character.occupation)
   const isCustomOccupation = character.occupation === "Otra"
 
@@ -224,6 +354,20 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const [tempBaseValue, setTempBaseValue] = useState("")
   const [customStat1, setCustomStat1] = useState<string>("EDU")
   const [customStat2, setCustomStat2] = useState<string>("DEX")
+
+  // Helper to translate skill names
+  const tSkill = (name: string) => {
+    if (language === "es") return name
+    
+    // Handle specializations e.g. "Ciencia: Biología"
+    if (name.includes(": ")) {
+      const [field, spec] = name.split(": ")
+      const translatedField = SKILL_TRANSLATIONS[field] || field
+      return `${translatedField}: ${spec}`
+    }
+    
+    return SKILL_TRANSLATIONS[name] || name
+  }
 
   const getCharacteristicVal = (key: string): number => {
     const map: Record<string, string> = { FUE: "STR", DES: "DEX", POD: "POW", APA: "APP", TAM: "SIZ", INT: "INT" }
@@ -269,8 +413,16 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
   if (!currentOccupation && !isCustomOccupation) return null
 
-  const updateSkillPoints = (name: string, pts: number, customBaseValue?: number) => {
-    // ... Lógica idéntica al original ...
+  // Helper to get localized properties
+  const loc = (obj: any, key: string = "label") => {
+    if (!obj) return ""
+    if (language === "en" && obj[key + "En"]) {
+      return obj[key + "En"]
+    }
+    return obj[key]
+  }
+
+  const updateSkillPoints = (name: string, pts: number, customBaseValue?: number, remove: boolean = false) => {
     const newSkills = [...character.skills]
     const isFieldSpecialization = name.includes(": ")
 
@@ -283,7 +435,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
       if (existingSpecIndex >= 0) {
         const skill = newSkills[existingSpecIndex]
-        if (pts === 0) {
+        if (remove) {
           if (skill.isFieldSlot) {
             newSkills[existingSpecIndex] = {
               ...skill,
@@ -305,7 +457,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             isOccupational: true,
           }
         }
-      } else if (pts > 0) {
+      } else if (!remove) {
         const emptySlotIndex = newSkills.findIndex(
           (s) => s.isFieldSlot && s.name === fieldName && (!s.customName || s.customName === ""),
         )
@@ -338,17 +490,26 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       const existingIndex = newSkills.findIndex((s) => s.name === name)
       if (existingIndex >= 0) {
         const skill = newSkills[existingIndex]
-        if (pts === 0 && skill.isCustom) {
-          newSkills.splice(existingIndex, 1)
+        if (remove) {
+          if (skill.isCustom) {
+            newSkills.splice(existingIndex, 1)
+          } else {
+            newSkills[existingIndex] = {
+              ...skill,
+              occupationalPoints: 0,
+              value: skill.baseValue + (skill.personalPoints || 0),
+              isOccupational: false,
+            }
+          }
         } else {
           newSkills[existingIndex] = {
             ...skill,
             occupationalPoints: pts,
             value: skill.baseValue + pts + (skill.personalPoints || 0),
-            isOccupational: pts > 0,
+            isOccupational: true,
           }
         }
-      } else if (pts > 0) {
+      } else if (!remove) {
         newSkills.push({
           name: name,
           baseValue: 0,
@@ -382,7 +543,8 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       if (specName) {
         const fullName = `${req.field}: ${specName}`
         const baseVal = needsBaseValue ? Number.parseInt(tempBaseValue) || 0 : undefined
-        updateSkillPoints(fullName, 10, baseVal)
+        // Empieza con 0 puntos
+        updateSkillPoints(fullName, 0, baseVal)
         setTempSpecValue("")
         setTempBaseValue("")
         setActiveFieldKey(null)
@@ -391,9 +553,9 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
     const getDisplayName = (s: (typeof character.skills)[0]) => {
       if (s.customName && s.name === req.field) {
-        return `${req.field}: ${s.customName}`
+        return `${tSkill(req.field)}: ${s.customName}`
       }
-      return s.name
+      return tSkill(s.name)
     }
 
     const getSkillKey = (s: (typeof character.skills)[0]) => {
@@ -403,11 +565,16 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       return s.name
     }
 
+    const label = loc(req, "label") || tSkill(req.field)
+    const placeholderText = language === "en" 
+        ? (needsBaseValue ? "Ex: Brawl, Sword..." : "Ex: Biology, Photography...") 
+        : (needsBaseValue ? "Ej: Pelea, Espada..." : "Ej: Biología, Fotografía...")
+
     return (
       <div className={`space-y-2 ${!isInsideChoice ? "mb-4 p-3 border rounded bg-slate-50 dark:bg-slate-900/40" : ""}`}>
         {!isInsideChoice && (
           <div className="flex justify-between mb-1">
-            <Label className="font-bold">{req.label || req.field}</Label>
+            <Label className="font-bold">{label}</Label>
             <span className="text-xs font-bold">
               {added.length} / {req.count}
             </span>
@@ -423,7 +590,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-red-400"
-                onClick={() => updateSkillPoints(getSkillKey(s), 0)}
+                onClick={() => updateSkillPoints(getSkillKey(s), 0, undefined, true)}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
@@ -449,7 +616,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 setTempBaseValue("")
               }}
             >
-              <Plus className="w-3 h-3 mr-1" /> {t("define")} {req.field}
+              <Plus className="w-3 h-3 mr-1" /> {t("define")} {label}
             </Button>
           )}
 
@@ -458,7 +625,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
               <div className="flex gap-1">
                 <TextInput
                   autoFocus
-                  placeholder={needsBaseValue ? "Ej: Pelea, Espada..." : "Ej: Biología, Fotografía..."}
+                  placeholder={placeholderText}
                   className="h-8 text-xs flex-1"
                   value={tempSpecValue}
                   onChange={setTempSpecValue}
@@ -525,7 +692,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       const skill = character.skills.find((s) => s.name === req)
       return (
         <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900 border rounded mb-2">
-          <div className="flex-1 font-medium text-sm">{req}</div>
+          <div className="flex-1 font-medium text-sm">{tSkill(req)}</div>
           <PointsInput
             className="w-20 text-right h-9"
             value={skill?.occupationalPoints || 0}
@@ -542,10 +709,12 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       const selectedCount = req.options.filter((opt) => {
         if (typeof opt === "string") {
           const s = character.skills.find((sk) => sk.name === opt)
-          return s && s.isOccupational && (s.occupationalPoints || 0) > 0
+          return s && s.isOccupational 
         }
         return character.skills.some((s) => s.isOccupational && s.name.startsWith(`${opt.field}: `))
       }).length
+
+      const label = loc(req, "label")
 
       return (
         <div
@@ -553,7 +722,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           className="mb-4 p-3 border rounded bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900"
         >
           <div className="flex justify-between mb-2">
-            <Label className="font-bold text-blue-800 dark:text-blue-300">{req.label}</Label>
+            <Label className="font-bold text-blue-800 dark:text-blue-300">{label}</Label>
             <span className="text-xs font-bold">
               {selectedCount} / {req.count}
             </span>
@@ -562,17 +731,19 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             {req.options.map((opt, i) => {
               if (typeof opt === "string") {
                 const skill = character.skills.find((s) => s.name === opt)
-                const isSelected = !!(skill?.isOccupational && (skill.occupationalPoints || 0) > 0)
+                const isSelected = !!(skill?.isOccupational)
                 return (
                   <div key={i} className="flex items-center gap-2 p-2 rounded border bg-white dark:bg-slate-950">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(c) =>
-                        c ? selectedCount < req.count && updateSkillPoints(opt, 10) : updateSkillPoints(opt, 0)
+                        c 
+                        ? selectedCount < req.count && updateSkillPoints(opt, 0) 
+                        : updateSkillPoints(opt, 0, undefined, true)
                       }
                       disabled={!isSelected && selectedCount >= req.count}
                     />
-                    <span className="text-sm flex-1">{opt}</span>
+                    <span className="text-sm flex-1">{tSkill(opt)}</span>
                     {isSelected && (
                       <PointsInput
                         className="w-16 h-7 text-right"
@@ -586,7 +757,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 return (
                   <div key={i} className="p-2 rounded border bg-white dark:bg-slate-950">
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary">{opt.field}</Badge>
+                      <Badge variant="secondary">{loc(opt, "field") || tSkill(opt.field)}</Badge>
                       <span className="text-xs text-muted-foreground">{t("specialization")}</span>
                     </div>
                     <FieldSelector req={opt} uniqueId={`choice-${index}-${i}`} isInsideChoice={true} />
@@ -600,19 +771,43 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     }
 
     if (req.type === "any") {
-      const baseSkillNames = (currentOccupation?.skills.filter((r) => typeof r === "string") as string[]) || []
+      // Recopilamos todas las habilidades que ya están siendo usadas en otras secciones
+      // (fijas o como opción en un 'choice') para EXCLUIRLAS de 'any'
+      const reservedSkills = new Set<string>()
+      
+      // Habilidades fijas (strings directos en skills[])
+      currentOccupation?.skills.forEach((r) => {
+        if (typeof r === "string") {
+          reservedSkills.add(r)
+        } else if (typeof r === "object" && r.type === "choice") {
+          // Opciones dentro de un 'choice'
+          r.options.forEach((opt) => {
+            if (typeof opt === "string") {
+              reservedSkills.add(opt)
+            }
+          })
+        }
+      })
+
       const added = character.skills.filter(
         (s) =>
           s.isOccupational &&
-          (s.occupationalPoints || 0) > 0 &&
-          !baseSkillNames.includes(s.name) &&
+          !reservedSkills.has(s.name) && // Excluir si ya está reservada/usada por otra regla
           !FIELDS.some((f) => s.name.startsWith(`${f}: `)),
+      )
+      
+      const label = loc(req, "label")
+      const placeholderSpec = language === "en" ? "Enter specialization..." : "Escribe la especialidad..."
+
+      // Skills available to pick (not already picked as occupational)
+      const availableCommonSkills = COMMON_SKILLS.filter(
+        (n) => !character.skills.some((s) => s.name === n && s.isOccupational)
       )
 
       return (
         <div key={index} className="mb-4 p-3 border rounded bg-amber-50/50 dark:bg-amber-900/10 border-amber-100">
           <div className="flex justify-between mb-2">
-            <Label className="font-bold">{req.label}</Label>
+            <Label className="font-bold">{label}</Label>
             <span className="text-xs font-bold">
               {added.length} / {req.count}
             </span>
@@ -629,7 +824,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             return (
               <div key={f} className="mb-2 p-2 border rounded bg-white/30">
                 <Badge variant="outline" className="mb-1">
-                  {f}
+                  {tSkill(f)}
                 </Badge>
                 {fieldSkills.map((s) => (
                   <div
@@ -640,11 +835,11 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-red-400"
-                      onClick={() => updateSkillPoints(s.name, 0)}
+                      onClick={() => updateSkillPoints(s.name, 0, undefined, true)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                    <span className="flex-1 text-sm">{s.name}</span>
+                    <span className="flex-1 text-sm">{tSkill(s.name)}</span>
                     <PointsInput
                       className="w-20 text-right h-8"
                       value={s.occupationalPoints}
@@ -662,11 +857,11 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-red-400"
-                onClick={() => updateSkillPoints(s.name, 0)}
+                onClick={() => updateSkillPoints(s.name, 0, undefined, true)}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
-              <span className="flex-1 text-sm">{s.name}</span>
+              <span className="flex-1 text-sm">{tSkill(s.name)}</span>
               <PointsInput
                 className="w-20 text-right h-8"
                 value={s.occupationalPoints}
@@ -677,47 +872,38 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
           {added.length < req.count && (
             <div className="flex gap-2 mt-2">
-              <Select
-                onValueChange={(v) => (FIELDS.includes(v) ? setActiveFieldKey(`any-${v}`) : updateSkillPoints(v, 10))}
-              >
-                <SelectTrigger className="h-9 bg-white dark:bg-slate-950">
-                  <SelectValue placeholder={t("add_custom")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <div className="text-xs font-bold p-2 text-muted-foreground">{t("specialties")}</div>
-                  {FIELDS.map((f) => (
-                    <SelectItem key={f} value={f}>
-                      {f}...
-                    </SelectItem>
-                  ))}
-                  <div className="border-t my-1"></div>
-                  {COMMON_SKILLS.filter((n) => !character.skills.some((s) => s.name === n && s.isOccupational)).map(
-                    (sk) => (
-                      <SelectItem key={sk} value={sk}>
-                        {sk}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
+              <SkillCombobox 
+                fields={FIELDS}
+                commonSkills={availableCommonSkills}
+                t={t}
+                tSkill={tSkill}
+                placeholder={t("add_custom")}
+                onSelect={(v) => {
+                  if (FIELDS.includes(v)) {
+                    setActiveFieldKey(`any-${v}`)
+                  } else {
+                    updateSkillPoints(v, 0)
+                  }
+                }}
+              />
             </div>
           )}
 
           {activeFieldKey?.startsWith("any-") && (
             <div className="mt-2 flex gap-1 bg-white dark:bg-slate-950 p-2 rounded border border-amber-200">
               <Badge variant="outline" className="h-8">
-                {activeFieldKey.split("-")[1]}:
+                {tSkill(activeFieldKey.split("-")[1])}:
               </Badge>
               <TextInput
                 autoFocus
-                placeholder="Escribe la especialidad..."
+                placeholder={placeholderSpec}
                 className="h-8 text-xs flex-1"
                 value={tempSpecValue}
                 onChange={setTempSpecValue}
                 onKeyDown={(e) =>
                   e.key === "Enter" &&
                   tempSpecValue &&
-                  (updateSkillPoints(`${activeFieldKey.split("-")[1]}: ${tempSpecValue}`, 10),
+                  (updateSkillPoints(`${activeFieldKey.split("-")[1]}: ${tempSpecValue}`, 0),
                   setTempSpecValue(""),
                   setActiveFieldKey(null))
                 }
@@ -726,7 +912,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                 size="sm"
                 className="h-8"
                 onClick={() => {
-                  if (tempSpecValue) updateSkillPoints(`${activeFieldKey.split("-")[1]}: ${tempSpecValue}`, 10)
+                  if (tempSpecValue) updateSkillPoints(`${activeFieldKey.split("-")[1]}: ${tempSpecValue}`, 0)
                   setTempSpecValue("")
                   setActiveFieldKey(null)
                 }}
@@ -754,7 +940,9 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 overflow-hidden bg-background">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-2xl">{currentOccupation?.name || "Otra"}</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {currentOccupation ? loc(currentOccupation, "name") : (character.occupation === "Otra" ? t("custom_occupation") : character.occupation)}
+          </DialogTitle>
           <div className="flex gap-2 text-sm mt-1">
             <Badge variant="outline">{t("credit_rating")}: {currentOccupation?.creditRating.join("-") || "0-99"}</Badge>
             <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
@@ -788,7 +976,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                   <SelectContent>
                     {STAT_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.value.toLowerCase())} {language === "es" ? `(${o.value})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -801,7 +989,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                   <SelectContent>
                     {STAT_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.value.toLowerCase())} {language === "es" ? `(${o.value})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

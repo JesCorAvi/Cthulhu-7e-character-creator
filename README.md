@@ -77,7 +77,6 @@ Follow these steps to run the project locally:
 3.  **Configure Environment Variables:**
     Create a `.env.local` file in the root directory. You will need to configure Google credentials if you want to test cloud sync:
     ```env
-    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
     NEXT_PUBLIC_GOOGLE_API_KEY=your_google_api_key
     ```
 
@@ -172,7 +171,6 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina local:
 3.  **Configurar Variables de Entorno:**
     Crea un archivo `.env.local` en la raíz del proyecto. Necesitarás configurar las credenciales de Google si quieres probar la sincronización en la nube:
     ```env
-    NEXT_PUBLIC_GOOGLE_CLIENT_ID=tu_client_id_de_google
     NEXT_PUBLIC_GOOGLE_API_KEY=tu_api_key_de_google
     ```
 

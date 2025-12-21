@@ -1,40 +1,34 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CharacterCard } from "@/components/character-card"
 import { EraSelector } from "@/components/era-selector"
 import { CharacterForm } from "@/components/character-form"
 import { CharacterViewer } from "@/components/character-viewer"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+import { Header } from "@/components/layout/header"
 import type { Character, CharacterEra } from "@/lib/character-types"
 import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorageMode, type StorageMode } from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
 import { initGoogleDrive, signInToGoogle } from "@/lib/google-drive"
-import { Plus, Users, Skull, Cloud, HardDrive, AlertCircle, RefreshCw } from "lucide-react"
+import { parseCharacterCode } from "@/lib/sharing"
+import { Plus, Users, Cloud, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
+import { useLanguage } from "@/components/language-provider"
 
-type View = "list" | "create" | "edit" | "view"
-
-export default function HomePage() {
-  const [view, setView] = useState<View>("list")
+function CharacterApp() {
+  const [view, setView] = useState<"list" | "create" | "edit" | "view">("list")
   const [characters, setCharacters] = useState<Character[]>([])
   const [currentCharacter, setCurrentCharacter] = useState<Character | null>(null)
-  
   const [loading, setLoading] = useState(true)
   const [storageMode, setStorageModeState] = useState<StorageMode>("local")
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
+  
+  const { t } = useLanguage()
+  const searchParams = useSearchParams()
 
-  // 1. Inicialización de la API de Google
-  useEffect(() => {
-    initGoogleDrive((success) => {
-        setIsGoogleReady(success)
-    })
-    setStorageModeState(getStorageMode())
-  }, [])
-
-  // 2. Función segura de carga
   const loadCharacters = useCallback(async () => {
     setLoading(true)
     setNeedsLogin(false)
@@ -47,102 +41,68 @@ export default function HomePage() {
         setLoading(false)
     }
   }, [])
-  const refreshCharacters = async () => {
-      try {
-          const chars = await getCharacters()
-          setCharacters(chars)
-      } catch (error) {
-          console.error("Error refrescando personajes:", error)
+
+  useEffect(() => {
+    initGoogleDrive((success) => setIsGoogleReady(success))
+    setStorageModeState(getStorageMode())
+  }, [])
+
+  useEffect(() => {
+    const dataParam = searchParams.get("data")
+    if (dataParam) {
+      const importedChar = parseCharacterCode(dataParam)
+      if (importedChar) {
+        setCurrentCharacter(importedChar)
+        setView("view")
+        setLoading(false)
+        toast.success(t("character_imported_url"))
+        window.history.replaceState({}, "", window.location.pathname)
       }
     }
-  // 3. Lógica principal: Cuando Google está listo, decidir qué hacer
+  }, [searchParams, t])
+
   useEffect(() => {
-      const initializeSession = async () => {
-          if (!isGoogleReady) return;
+    if (!isGoogleReady) return
+    if (searchParams.get("data")) return 
 
-          const currentMode = getStorageMode();
-          
-          if (currentMode === 'cloud') {
-              // CORRECCIÓN: No intentamos login automático aquí.
-              // El navegador bloquearía el popup y daría error.
-              // En su lugar, pedimos al usuario que reconecte manualmente.
-              setNeedsLogin(true);
-              setLoading(false);
-          } else {
-              // Si es local, cargamos directamente
-              loadCharacters();
-          }
-      };
+    const currentMode = getStorageMode()
+    if (currentMode === 'cloud') {
+        setNeedsLogin(true)
+        setLoading(false)
+    } else {
+        loadCharacters()
+    }
+  }, [isGoogleReady, loadCharacters, searchParams])
 
-      initializeSession();
-  }, [isGoogleReady, loadCharacters]) 
-
-  // Manejador del Switch (Aquí SÍ podemos llamar a login porque es un clic del usuario)
   const handleToggleStorage = async (checked: boolean) => {
-      setLoading(true);
-      if (checked) {
-          // Cambiar a Cloud
-          if (!isGoogleReady) {
-              alert("Google API no está lista aún.");
-              setLoading(false);
-              return; 
-          }
-          try {
-            await signInToGoogle(); // Esto abrirá el popup (permitido por ser evento click)
-            setStorageMode("cloud");
-            setStorageModeState("cloud");
-            setNeedsLogin(false);
-            await loadCharacters();
-          } catch (e) {
-              console.error("Login fallido o cancelado", e);
-              // Si cancelan el login, volvemos a local visualmente
-              setStorageMode("local");
-              setStorageModeState("local");
-          } finally {
-              setLoading(false);
-          }
-      } else {
-          // Cambiar a Local
-          setStorageMode("local");
-          setStorageModeState("local");
-          setNeedsLogin(false);
-          await loadCharacters();
-          setLoading(false);
+    setLoading(true)
+    if (checked) {
+      try {
+        await signInToGoogle()
+        setStorageMode("cloud")
+        setStorageModeState("cloud")
+        setNeedsLogin(false)
+        await loadCharacters()
+      } catch (e) {
+        setStorageMode("local")
+        setStorageModeState("local")
+        toast.error("Error al conectar con Google Drive")
+      } finally {
+        setLoading(false)
       }
+    } else {
+      setStorageMode("local")
+      setStorageModeState("local")
+      setNeedsLogin(false)
+      await loadCharacters()
+      setLoading(false)
+    }
   }
 
   const handleCreateNew = (era: CharacterEra) => {
-    const newChar = createNewCharacter(era)
+    const newChar = createNewCharacter(era, t("unarmed"))
     setCurrentCharacter(newChar)
     setView("edit")
-  }
-
-  const handleView = async (id: string) => {
-    setLoading(true)
-    const char = await getCharacter(id)
-    setLoading(false)
-    if (char) {
-      setCurrentCharacter(char)
-      setView("view")
-    }
-  }
-
-  const handleEdit = async (id: string) => {
-    setLoading(true)
-    const char = await getCharacter(id)
-    setLoading(false)
-    if (char) {
-      setCurrentCharacter(char)
-      setView("edit")
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar este personaje?")) {
-      setLoading(true)
-      await deleteCharacter(id)
-      await loadCharacters()
-    }
   }
 
   const handleBack = () => {
@@ -151,151 +111,99 @@ export default function HomePage() {
     loadCharacters()
   }
 
-  const handleSaveCallback = async () => {
-      await refreshCharacters()
-  }
-
-  // Este botón ahora es crucial: permite recuperar la sesión tras recargar
-  const handleManualLogin = async () => {
-      try {
-          await signInToGoogle();
-          setNeedsLogin(false);
-          loadCharacters();
-      } catch(e) {
-          console.error("Error en login manual:", e);
-      }
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Skull className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Call of Cthulhu 7e</h1>
-              <p className="text-xs text-muted-foreground">Creador de Personajes</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-             {view === "list" && (
-                 <div className="flex items-center gap-2 border p-2 rounded-lg bg-background/50">
-                    {storageMode === 'local' ? <HardDrive className="h-4 w-4" /> : <Cloud className="h-4 w-4 text-blue-500" />}
-                    <Switch 
-                        checked={storageMode === 'cloud'}
-                        onCheckedChange={handleToggleStorage}
-                        id="storage-mode"
-                    />
-                    <Label htmlFor="storage-mode" className="text-xs cursor-pointer">
-                        {storageMode === 'cloud' ? 'Google Drive' : 'Local Storage'}
-                    </Label>
-                 </div>
-             )}
-
-            {view === "list" && (
-                <Button onClick={() => setView("create")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo
-                </Button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        {loading ? (
+    <div className="min-h-screen bg-background flex flex-col transition-colors duration-300">
+      <Header 
+        character={currentCharacter} 
+        showShare={view === "edit" || view === "view"} 
+        storageMode={storageMode}
+        onStorageChange={handleToggleStorage}
+        isGoogleReady={isGoogleReady}
+      />
+      
+      <main className="container mx-auto px-4 py-8 flex-1">
+        {loading && !currentCharacter ? (
             <div className="flex flex-col items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-                <p className="text-muted-foreground">Conectando...</p>
+                <RefreshCw className="h-10 w-10 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground font-medium">{t("connecting")}</p>
             </div>
-        ) : needsLogin && storageMode === 'cloud' ? (
-            // Pantalla de Login Requerido
+        ) : needsLogin && storageMode === 'cloud' && !currentCharacter ? (
             <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-card/50">
                 <Cloud className="h-16 w-16 text-blue-500 mb-4" />
-                <h2 className="text-xl font-bold text-foreground mb-2">Conectar con Google Drive</h2>
-                <p className="text-muted-foreground mb-6 max-w-md">
-                    Para ver y guardar tus personajes en la nube, necesitamos reconectar con tu cuenta de Google.
-                </p>
-                <Button onClick={handleManualLogin} size="lg" className="gap-2">
-                    <RefreshCw className="h-4 w-4" />
-                    Sincronizar ahora
+                <h2 className="text-xl font-bold mb-2">{t("login_required")}</h2>
+                <Button onClick={() => signInToGoogle().then(loadCharacters)} className="gap-2">
+                    <RefreshCw className="h-4 w-4" /> {t("sync_now")}
                 </Button>
             </div>
         ) : (
             <>
                 {view === "list" && (
                 <div className="space-y-6">
-                    {characters.length === 0 ? (
-                    <div className="text-center py-16">
-                        <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-foreground mb-2">No hay personajes</h2>
-                        <p className="text-muted-foreground mb-6">
-                            {storageMode === 'cloud' 
-                                ? "No se encontraron personajes en tu Drive." 
-                                : "Crea tu primer investigador para comenzar tu aventura"}
-                        </p>
-                        <Button onClick={() => setView("create")}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Crear Personaje
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-serif font-bold text-foreground">
+                            {t("your_investigators")}
+                        </h2>
+                        <Button onClick={() => setView("create")} size="sm" className="shadow-md">
+                            <Plus className="h-4 w-4 mr-2" /> {t("new")}
                         </Button>
                     </div>
+
+                    {characters.length === 0 ? (
+                        <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-stone-50/50 dark:bg-stone-900/20">
+                            <Users className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+                            <h2 className="text-xl font-bold mb-2">{t("no_characters")}</h2>
+                            <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
+                                {storageMode === 'cloud' ? t("no_characters_cloud") : t("no_characters_local")}
+                            </p>
+                            <Button onClick={() => setView("create")} variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all">
+                              <Plus className="h-4 w-4 mr-2" /> {t("create_char_button")}
+                            </Button>
+                        </div>
                     ) : (
-                    <>
-                        <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-foreground">Tus Investigadores ({storageMode === 'cloud' ? 'Nube' : 'Local'})</h2>
-                        <span className="text-sm text-muted-foreground">{characters.length} personaje(s)</span>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {characters.map((char) => (
+                                <CharacterCard key={char.id} character={char} 
+                                  onView={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("view")})}
+                                  onEdit={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("edit")})}
+                                  onDelete={(id) => {if(confirm(t("delete_confirm"))) deleteCharacter(id).then(loadCharacters)}}
+                                />
+                            ))}
                         </div>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {characters.map((char) => (
-                            <CharacterCard
-                            key={char.id}
-                            character={char}
-                            onView={handleView}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            />
-                        ))}
-                        </div>
-                    </>
                     )}
                 </div>
                 )}
-                
+
                 {view === "create" && (
-                <div className="space-y-6">
-                    <div className="text-center">
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Nuevo Investigador</h2>
-                    <p className="text-muted-foreground">Selecciona la época para tu personaje</p>
+                    <div className="max-w-4xl mx-auto space-y-8">
+                        <div className="text-center">
+                            <h2 className="text-3xl font-serif font-bold mb-2">{t("new_investigator")}</h2>
+                            <p className="text-muted-foreground">{t("select_era")}</p>
+                        </div>
+                        <EraSelector onSelect={handleCreateNew} />
+                        <div className="text-center">
+                          <Button variant="ghost" onClick={handleBack} className="text-muted-foreground underline">{t("cancel")}</Button>
+                        </div>
                     </div>
-                    <EraSelector onSelect={handleCreateNew} />
-                    <div className="text-center">
-                    <Button variant="ghost" onClick={handleBack}>
-                        Cancelar
-                    </Button>
-                    </div>
-                </div>
                 )}
 
                 {view === "edit" && currentCharacter && (
-                <CharacterForm 
-                    character={currentCharacter} 
-                    onBack={handleBack} 
-                    onSave={handleSaveCallback} 
-                />
+                    <CharacterForm character={currentCharacter} onBack={handleBack} onSave={loadCharacters} />
                 )}
 
                 {view === "view" && currentCharacter && (
-                <CharacterViewer character={currentCharacter} onBack={handleBack} onEdit={() => setView("edit")} />
+                    <CharacterViewer character={currentCharacter} onBack={handleBack} onEdit={() => setView("edit")} />
                 )}
             </>
         )}
       </main>
-      <footer className="border-t bg-card mt-auto">
-        <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
-          Call of Cthulhu es una marca registrada de Chaosium Inc.
-        </div>
-      </footer>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin" /></div>}>
+      <CharacterApp />
+    </Suspense>
   )
 }

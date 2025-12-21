@@ -6,6 +6,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Script from "next/script"
 import { PwaRegister } from "@/components/pwa-register"
+import { LanguageProvider } from "@/components/language-provider"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -46,16 +47,18 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground min-h-screen">
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-          {children}
-          <Analytics />
-          <PwaRegister />
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+            {children}
+            <Analytics />
+            <PwaRegister />
+          </ThemeProvider>
+        </LanguageProvider>
         
         <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
         <Script src="https://apis.google.com/js/api.js" strategy="beforeInteractive" />

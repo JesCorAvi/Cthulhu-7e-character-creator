@@ -10,6 +10,8 @@ import { CharacterSheet } from "./character-sheet"
 import { BackstoryEquipmentModal } from "./backstory-equipment-modal"
 import { saveCharacter } from "@/lib/character-storage"
 import { Save, ArrowLeft, BookOpen, Loader2 } from "lucide-react"
+import { useLanguage } from "@/components/language-provider"
+import { LanguageSelector } from "@/components/language-selector"
 
 interface CharacterFormProps {
   character: Character
@@ -22,6 +24,8 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
   const [saved, setSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  
+  const { t } = useLanguage()
 
   useEffect(() => {
     setSaved(false)
@@ -32,10 +36,10 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
     try {
       await saveCharacter(character)
       setSaved(true)
-      onSave() // Notifica al padre (page.tsx) para que refresque la lista
+      onSave() 
     } catch (error) {
       console.error("Error al guardar:", error)
-      alert("Hubo un error al guardar el personaje.")
+      alert(t("error_save"))
     } finally {
       setIsSaving(false)
     }
@@ -47,10 +51,10 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack} disabled={isSaving}>
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Volver
+            {t("back")}
           </Button>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-foreground">{character.name || "Nuevo Investigador"}</h2>
+            <h2 className="text-lg font-bold text-foreground">{character.name || t("new_investigator")}</h2>
             <Badge variant="outline" className="text-xs">
               {ERA_LABELS[character.era]}
             </Badge>
@@ -61,12 +65,12 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" disabled={isSaving}>
                 <BookOpen className="h-4 w-4 mr-1" />
-                Trasfondo y Equipo
+                {t("backstory_equipment")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Trasfondo y Equipo</DialogTitle>
+                <DialogTitle>{t("backstory_equipment")}</DialogTitle>
               </DialogHeader>
               <BackstoryEquipmentModal character={character} onChange={setCharacter} />
             </DialogContent>
@@ -78,7 +82,7 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
             ) : (
               <Save className="h-4 w-4" />
             )}
-            {isSaving ? "Guardando..." : saved ? "Guardado" : "Guardar"}
+            {isSaving ? t("saving") : saved ? t("saved") : t("save")}
           </Button>
         </div>
       </div>

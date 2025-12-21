@@ -1,0 +1,202 @@
+# Call of Cthulhu 7e Character Creator / Creador de Personajes CoC 7e 🐙
+
+<div align="center">
+
+[![Status](https://img.shields.io/badge/Status-In_Development-green)]()
+[![Tech](https://img.shields.io/badge/Built_with-Next.js-black)]()
+[![License](https://img.shields.io/badge/License-Fan_Content-blue)]()
+
+**[ 🇺🇸 English Version ](#english) | [ 🇪🇸 Versión en Español ](#español)**
+
+</div>
+
+---
+
+<a id="english"></a>
+
+## 🇺🇸 Call of Cthulhu 7th Edition Character Creator
+
+A modern, interactive, and Progressive Web App (PWA) designed to facilitate the creation and management of investigators for the tabletop role-playing game **Call of Cthulhu 7th Edition**.
+
+### ✨ Key Features
+
+#### 📝 Character Management
+- **Guided Creation:** Generate characteristics (STR, DEX, POW, etc.) manually or via integrated dice rolls.
+- **Auto Calculation:** Derived stats like Hit Points, Sanity, Magic Points, Build, and Damage Bonus are calculated automatically.
+- **Occupation System:**
+  - Complete database of occupations (1920s, Modern, etc.).
+  - Automatic calculation of occupation points based on characteristics formulas.
+  - Interactive modal for selecting occupational skills, specializations, and point distribution.
+  - Support for custom occupations.
+- **Game Eras:** Support for 1920s, Modern, and Dark Ages settings.
+
+#### 🎲 Integrated Tools
+- **Interactive 3D Dice:** Real physics engine (`@3d-dice/dice-box`) to roll dice directly within the UI.
+- **Improvement Rolls:** Guided system for investigator development phases (experience rolls).
+- **Inventory Management:** Track equipment, cash, and assets.
+
+#### 💾 Storage & Sync
+- **Local Mode:** Characters are saved in the browser's LocalStorage by default.
+- **Google Drive Sync:** Optional integration to save and synchronize your sheets across devices using your Google account.
+
+#### 🌍 Accessibility & UX
+- **Bilingual:** Fully translated interface in **English 🇺🇸** and **Spanish 🇪🇸**.
+- **Dark/Light Mode:** Adapts to system preferences or user toggle.
+- **PWA (Progressive Web App):** Installable as a native-like app on desktop and mobile.
+- **Responsive Design:** Optimized for phones, tablets, and desktops.
+
+### 🛠️ Tech Stack
+
+This project is built using the latest web development technologies:
+
+- **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components:** [Shadcn/ui](https://ui.shadcn.com/) (based on Radix UI)
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **3D Dice:** [@3d-dice/dice-box](https://github.com/3d-dice/dice-box)
+- **State & Forms:** Native React Hooks.
+
+### 🚀 Installation & Local Deployment
+
+Follow these steps to run the project locally:
+
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/your-username/cthulhu-7e-character-creator.git](https://github.com/your-username/cthulhu-7e-character-creator.git)
+    cd cthulhu-7e-character-creator
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # or if using pnpm
+    pnpm install
+    ```
+
+3.  **Configure Environment Variables:**
+    Create a `.env.local` file in the root directory. You will need to configure Google credentials if you want to test cloud sync:
+    ```env
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+    NEXT_PUBLIC_GOOGLE_API_KEY=your_google_api_key
+    ```
+
+4.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
+
+5.  **Open in browser:**
+    Visit `http://localhost:3000` to see the app.
+
+### ⚖️ License & Disclaimer
+
+This project is a tool created by fans for fans.
+
+**Call of Cthulhu** is a registered trademark of **Chaosium Inc.** This project is not affiliated with, endorsed, or sponsored by Chaosium Inc.
+
+The use of specific game mechanics, names, and terms is done under the principle of "Fair Use" for non-profit game aids or under community content licenses that Chaosium may provide.
+
+---
+
+[Go to Spanish Version / Ir a la versión en Español](#español)
+
+<br>
+<br>
+<hr>
+<br>
+<br>
+
+<a id="español"></a>
+
+## 🇪🇸 Creador de Personajes - La Llamada de Cthulhu 7ª Edición
+
+Una aplicación web moderna, interactiva y progresiva (PWA) diseñada para facilitar la creación y gestión de investigadores para el juego de rol **La Llamada de Cthulhu 7ª Edición**.
+
+### ✨ Características Principales
+
+#### 📝 Gestión de Personajes
+- **Creación Guiada:** Generación de características (FUE, DES, POD, etc.) manual o mediante tiradas de dados integradas.
+- **Cálculo Automático:** Derivados como Puntos de Vida, Cordura, Magia, Corpulencia y Bonificador de Daño se calculan automáticamente.
+- **Sistema de Ocupaciones:**
+  - Base de datos completa de ocupaciones (Años 20, Actualidad, etc.).
+  - Cálculo automático de puntos de ocupación basados en fórmulas de características.
+  - Modal interactivo para selección de habilidades de ocupación, especialidades y distribución de puntos.
+  - Soporte para ocupaciones personalizadas.
+- **Eras de Juego:** Soporte para Años 20, Actualidad y Edad Oscura (Dark Ages).
+
+#### 🎲 Herramientas Integradas
+- **Dados 3D Interactivos:** Motor de física real (`@3d-dice/dice-box`) para lanzar dados directamente en la interfaz.
+- **Tiradas de Mejora:** Sistema guiado para las fases de desarrollo de investigadores (tiradas de experiencia).
+- **Gestión de Inventario:** Control de equipo, dinero y posesiones.
+
+#### 💾 Almacenamiento y Sincronización
+- **Modo Local:** Los personajes se guardan en el almacenamiento local del navegador (LocalStorage) por defecto.
+- **Google Drive Sync:** Integración opcional para guardar y sincronizar tus fichas en la nube a través de tu cuenta de Google.
+
+#### 🌍 Accesibilidad y UX
+- **Bilingüe:** Interfaz totalmente traducida al **Español 🇪🇸** e **Inglés 🇺🇸**.
+- **Tema Oscuro/Claro:** Adaptable a las preferencias del sistema o del usuario.
+- **PWA (Progressive Web App):** Instalable como aplicación nativa en escritorio y móviles.
+- **Diseño Responsivo:** Optimizado para funcionar en teléfonos, tablets y ordenadores.
+
+### 🛠️ Tecnologías Utilizadas
+
+Este proyecto ha sido construido utilizando las últimas tecnologías de desarrollo web:
+
+- **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
+- **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
+- **Componentes UI:** [Shadcn/ui](https://ui.shadcn.com/) (basado en Radix UI)
+- **Iconos:** [Lucide React](https://lucide.dev/)
+- **Dados 3D:** [@3d-dice/dice-box](https://github.com/3d-dice/dice-box)
+- **Estado y Formularios:** React Hooks nativos.
+
+### 🚀 Instalación y Despliegue Local
+
+Sigue estos pasos para ejecutar el proyecto en tu máquina local:
+
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone [https://github.com/tu-usuario/cthulhu-7e-character-creator.git](https://github.com/tu-usuario/cthulhu-7e-character-creator.git)
+    cd cthulhu-7e-character-creator
+    ```
+
+2.  **Instalar dependencias:**
+    ```bash
+    npm install
+    # o si usas pnpm
+    pnpm install
+    ```
+
+3.  **Configurar Variables de Entorno:**
+    Crea un archivo `.env.local` en la raíz del proyecto. Necesitarás configurar las credenciales de Google si quieres probar la sincronización en la nube:
+    ```env
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID=tu_client_id_de_google
+    NEXT_PUBLIC_GOOGLE_API_KEY=tu_api_key_de_google
+    ```
+
+4.  **Ejecutar el servidor de desarrollo:**
+    ```bash
+    npm run dev
+    ```
+
+5.  **Abrir en el navegador:**
+    Visita `http://localhost:3000` para ver la aplicación.
+
+### ⚖️ Licencia y Renuncia de Responsabilidad
+
+Este proyecto es una herramienta creada por fans y para fans.
+
+**Call of Cthulhu** (La Llamada de Cthulhu) es una marca registrada de **Chaosium Inc.** Este proyecto no está afiliado, respaldado ni patrocinado por Chaosium Inc.
+
+El uso de mecánicas, nombres y términos específicos del juego se realiza bajo el principio de "Fair Use" para herramientas de ayuda al juego sin ánimo de lucro o bajo las licencias de contenido para la comunidad que Chaosium pueda proporcionar.
+
+---
+
+[Go to English Version / Ir a la versión en Inglés](#english)
+
+<br>
+<div align="center">
+  Hecho con 🖤 y pérdida de 1d4 puntos de Cordura.
+</div>

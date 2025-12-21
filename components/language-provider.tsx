@@ -13,7 +13,7 @@ interface LanguageContextType {
 const translations = {
   es: {
     // --- HOME & UI GENERAL ---
-    "app_title": "LA LLAMADA DE CTHULHU",
+    "app_title": "Cthulhu Builder",
     "app_subtitle": "Creador de Personajes",
     "new": "Nuevo",
     "storage_local": "Almacenamiento Local",
@@ -212,7 +212,7 @@ const translations = {
   },
   en: {
     // --- HOME & UI GENERAL ---
-    "app_title": "CALL OF CTHULHU",
+    "app_title": "Cthulhu Builder",
     "app_subtitle": "Character Creator",
     "new": "New",
     "storage_local": "Local Storage",

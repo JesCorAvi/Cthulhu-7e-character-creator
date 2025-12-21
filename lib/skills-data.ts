@@ -2,134 +2,139 @@ import type { CharacterEra, Skill } from "./character-types"
 
 export interface SkillDefinition {
   name: string
+  nameEn: string // Nuevo campo para inglés
   baseValue: number | "special"
   isFieldHeader?: boolean
   fieldSlots?: number
-  subSkills?: { name: string; baseValue: number }[]
+  subSkills?: { name: string; nameEn: string; baseValue: number }[]
 }
 
 const skills1920sAndModern: SkillDefinition[] = [
-  { name: "Antropología", baseValue: 1 },
+  { name: "Antropología", nameEn: "Anthropology", baseValue: 1 },
   {
     name: "Armas de fuego",
-    baseValue: 0, // Campo base vacío
+    nameEn: "Firearms",
+    baseValue: 0, 
     isFieldHeader: true,
     fieldSlots: 1,
     subSkills: [
-      { name: "Arma corta", baseValue: 20 },
-      { name: "Fusil/Escopeta", baseValue: 25 },
+      { name: "Arma corta", nameEn: "Handgun", baseValue: 20 },
+      { name: "Fusil/Escopeta", nameEn: "Rifle/Shotgun", baseValue: 25 },
     ],
   },
-  { name: "Arqueología", baseValue: 1 },
-  { name: "Arte/Artesanía", baseValue: 5, isFieldHeader: true, fieldSlots: 3 },
-  { name: "Buscar libros", baseValue: 20 },
-  { name: "Cerrajería", baseValue: 1 },
-  { name: "Charlatanería", baseValue: 5 },
-  { name: "Ciencia", baseValue: 1, isFieldHeader: true, fieldSlots: 3 },
-  { name: "Ciencias ocultas", baseValue: 5 },
+  { name: "Arqueología", nameEn: "Archaeology", baseValue: 1 },
+  { name: "Arte/Artesanía", nameEn: "Art/Craft", baseValue: 5, isFieldHeader: true, fieldSlots: 3 },
+  { name: "Buscar libros", nameEn: "Library Use", baseValue: 20 },
+  { name: "Cerrajería", nameEn: "Locksmith", baseValue: 1 },
+  { name: "Charlatanería", nameEn: "Fast Talk", baseValue: 5 },
+  { name: "Ciencia", nameEn: "Science", baseValue: 1, isFieldHeader: true, fieldSlots: 3 },
+  { name: "Ciencias ocultas", nameEn: "Occult", baseValue: 5 },
   {
     name: "Combatir",
-    baseValue: 0, // Campo base vacío
+    nameEn: "Fighting",
+    baseValue: 0, 
     isFieldHeader: true,
     fieldSlots: 2,
-    subSkills: [{ name: "Pelea", baseValue: 25 }],
+    subSkills: [{ name: "Pelea", nameEn: "Brawl", baseValue: 25 }],
   },
-  { name: "Conducir automóvil", baseValue: 20 },
-  { name: "Conducir maquinaria", baseValue: 1 },
-  { name: "Contabilidad", baseValue: 5 },
-  { name: "Crédito", baseValue: 0 },
-  { name: "Derecho", baseValue: 5 },
-  { name: "Descubrir", baseValue: 25 },
-  { name: "Disfrazarse", baseValue: 5 },
-  { name: "Electricidad", baseValue: 10 },
-  { name: "Encanto", baseValue: 15 },
-  { name: "Equitación", baseValue: 5 },
-  { name: "Escuchar", baseValue: 20 },
-  { name: "Esquivar", baseValue: "special" },
-  { name: "Historia", baseValue: 5 },
-  { name: "Intimidar", baseValue: 15 },
-  { name: "Juego de manos", baseValue: 10 },
-  { name: "Lanzar", baseValue: 20 },
-  { name: "Lengua propia", baseValue: "special", isFieldHeader: true, fieldSlots: 1 },
-  { name: "Otras lenguas", baseValue: 1, isFieldHeader: true, fieldSlots: 3 },
-  { name: "Mecánica", baseValue: 10 },
-  { name: "Medicina", baseValue: 1 },
-  { name: "Mitos de Cthulhu", baseValue: 0 },
-  { name: "Nadar", baseValue: 20 },
-  { name: "Naturaleza", baseValue: 10 },
-  { name: "Orientarse", baseValue: 10 },
-  { name: "Persuasión", baseValue: 10 },
-  { name: "Pilotar", baseValue: 1, isFieldHeader: true, fieldSlots: 1 },
-  { name: "Primeros auxilios", baseValue: 30 },
-  { name: "Psicoanálisis", baseValue: 1 },
-  { name: "Psicología", baseValue: 10 },
-  { name: "Saltar", baseValue: 20 },
-  { name: "Seguir rastros", baseValue: 10 },
-  { name: "Sigilo", baseValue: 20 },
-  { name: "Supervivencia", baseValue: 10, isFieldHeader: true, fieldSlots: 1 },
-  { name: "Tasación", baseValue: 5 },
-  { name: "Trepar", baseValue: 20 },
+  { name: "Conducir automóvil", nameEn: "Drive Auto", baseValue: 20 },
+  { name: "Conducir maquinaria", nameEn: "Op. Hv. Machine", baseValue: 1 },
+  { name: "Contabilidad", nameEn: "Accounting", baseValue: 5 },
+  { name: "Crédito", nameEn: "Credit Rating", baseValue: 0 },
+  { name: "Derecho", nameEn: "Law", baseValue: 5 },
+  { name: "Descubrir", nameEn: "Spot Hidden", baseValue: 25 },
+  { name: "Disfrazarse", nameEn: "Disguise", baseValue: 5 },
+  { name: "Electricidad", nameEn: "Elec. Repair", baseValue: 10 },
+  { name: "Encanto", nameEn: "Charm", baseValue: 15 },
+  { name: "Equitación", nameEn: "Ride", baseValue: 5 },
+  { name: "Escuchar", nameEn: "Listen", baseValue: 20 },
+  { name: "Esquivar", nameEn: "Dodge", baseValue: "special" },
+  { name: "Historia", nameEn: "History", baseValue: 5 },
+  { name: "Intimidar", nameEn: "Intimidate", baseValue: 15 },
+  { name: "Juego de manos", nameEn: "Sleight of Hand", baseValue: 10 },
+  { name: "Lanzar", nameEn: "Throw", baseValue: 20 },
+  { name: "Lengua propia", nameEn: "Language (Own)", baseValue: "special", isFieldHeader: true, fieldSlots: 1 },
+  { name: "Otras lenguas", nameEn: "Language (Other)", baseValue: 1, isFieldHeader: true, fieldSlots: 3 },
+  { name: "Mecánica", nameEn: "Mech. Repair", baseValue: 10 },
+  { name: "Medicina", nameEn: "Medicine", baseValue: 1 },
+  { name: "Mitos de Cthulhu", nameEn: "Cthulhu Mythos", baseValue: 0 },
+  { name: "Nadar", nameEn: "Swim", baseValue: 20 },
+  { name: "Naturaleza", nameEn: "Natural World", baseValue: 10 },
+  { name: "Orientarse", nameEn: "Navigate", baseValue: 10 },
+  { name: "Persuasión", nameEn: "Persuade", baseValue: 10 },
+  { name: "Pilotar", nameEn: "Pilot", baseValue: 1, isFieldHeader: true, fieldSlots: 1 },
+  { name: "Primeros auxilios", nameEn: "First Aid", baseValue: 30 },
+  { name: "Psicoanálisis", nameEn: "Psychoanalysis", baseValue: 1 },
+  { name: "Psicología", nameEn: "Psychology", baseValue: 10 },
+  { name: "Saltar", nameEn: "Jump", baseValue: 20 },
+  { name: "Seguir rastros", nameEn: "Track", baseValue: 10 },
+  { name: "Sigilo", nameEn: "Stealth", baseValue: 20 },
+  { name: "Supervivencia", nameEn: "Survival", baseValue: 10, isFieldHeader: true, fieldSlots: 1 },
+  { name: "Tasación", nameEn: "Appraise", baseValue: 5 },
+  { name: "Trepar", nameEn: "Climb", baseValue: 20 },
 ]
 
 const modernOnlySkills: SkillDefinition[] = [
-  { name: "Electrónica", baseValue: 1 },
-  { name: "Informática", baseValue: 5 },
+  { name: "Electrónica", nameEn: "Electronics", baseValue: 1 },
+  { name: "Informática", nameEn: "Computers", baseValue: 5 },
 ]
 
 const skillsDarkAges: SkillDefinition[] = [
   {
     name: "Armas a distancia",
+    nameEn: "Ranged Weapons",
     baseValue: 0,
     isFieldHeader: true,
     fieldSlots: 2,
-    subSkills: [{ name: "Arte/Artesanía", baseValue: 5 }],
+    subSkills: [{ name: "Arte/Artesanía", nameEn: "Art/Craft", baseValue: 5 }],
   },
-  { name: "Buscar libros", baseValue: 5 },
-  { name: "Charlatanería", baseValue: 5 },
-  { name: "Ciencia", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Ciencias ocultas", baseValue: 5 },
+  { name: "Buscar libros", nameEn: "Library Use", baseValue: 5 },
+  { name: "Charlatanería", nameEn: "Fast Talk", baseValue: 5 },
+  { name: "Ciencia", nameEn: "Science", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
+  { name: "Ciencias ocultas", nameEn: "Occult", baseValue: 5 },
   {
     name: "Combatir",
+    nameEn: "Fighting",
     baseValue: 0,
     isFieldHeader: true,
     fieldSlots: 3,
-    subSkills: [{ name: "Pelea", baseValue: 25 }],
+    subSkills: [{ name: "Pelea", nameEn: "Brawl", baseValue: 25 }],
   },
-  { name: "Conducir animales de tiro", baseValue: 20 },
-  { name: "Contabilidad", baseValue: 10 },
-  { name: "Descubrir", baseValue: 25 },
-  { name: "Encanto", baseValue: 15 },
-  { name: "Equitación", baseValue: 5 },
-  { name: "Escuchar", baseValue: 25 },
-  { name: "Esquivar", baseValue: "special" },
-  { name: "Historia", baseValue: 5 },
-  { name: "Intimidar", baseValue: 15 },
-  { name: "Juego de manos", baseValue: 25 },
-  { name: "Lanzar", baseValue: 25 },
-  { name: "Leer/Escribir", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Lengua propia", baseValue: "special", isFieldHeader: true, fieldSlots: 1 },
-  { name: "Otras lenguas", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Medicina", baseValue: 1 },
-  { name: "Mitos de Cthulhu", baseValue: 0 },
-  { name: "Nadar", baseValue: 25 },
-  { name: "Naturaleza", baseValue: 20, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Orientarse", baseValue: 10 },
-  { name: "Otros reinos", baseValue: 10, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Perspicacia", baseValue: 5 },
-  { name: "Pilotar (Embarcación)", baseValue: 1 },
-  { name: "Posición social", baseValue: 0 },
-  { name: "Primeros auxilios", baseValue: 30 },
-  { name: "Reino propio", baseValue: 20, isFieldHeader: true, fieldSlots: 1 },
-  { name: "Religión", baseValue: 20 },
-  { name: "Reparar y construir", baseValue: 20 },
-  { name: "Saltar", baseValue: 25 },
-  { name: "Seguir rastros", baseValue: 10, isFieldHeader: true, fieldSlots: 2 },
-  { name: "Sigilo", baseValue: 20 },
-  { name: "Persuasión", baseValue: 15 },
-  { name: "Psicología", baseValue: 10 },
-  { name: "Tasación", baseValue: 5 },
-  { name: "Trato con animales", baseValue: 15 },
-  { name: "Trepar", baseValue: 20 },
+  { name: "Conducir animales de tiro", nameEn: "Drive", baseValue: 20 },
+  { name: "Contabilidad", nameEn: "Accounting", baseValue: 10 },
+  { name: "Descubrir", nameEn: "Spot Hidden", baseValue: 25 },
+  { name: "Encanto", nameEn: "Charm", baseValue: 15 },
+  { name: "Equitación", nameEn: "Ride", baseValue: 5 },
+  { name: "Escuchar", nameEn: "Listen", baseValue: 25 },
+  { name: "Esquivar", nameEn: "Dodge", baseValue: "special" },
+  { name: "Historia", nameEn: "History", baseValue: 5 },
+  { name: "Intimidar", nameEn: "Intimidate", baseValue: 15 },
+  { name: "Juego de manos", nameEn: "Sleight of Hand", baseValue: 25 },
+  { name: "Lanzar", nameEn: "Throw", baseValue: 25 },
+  { name: "Leer/Escribir", nameEn: "Read/Write", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
+  { name: "Lengua propia", nameEn: "Language (Own)", baseValue: "special", isFieldHeader: true, fieldSlots: 1 },
+  { name: "Otras lenguas", nameEn: "Language (Other)", baseValue: 1, isFieldHeader: true, fieldSlots: 2 },
+  { name: "Medicina", nameEn: "Medicine", baseValue: 1 },
+  { name: "Mitos de Cthulhu", nameEn: "Cthulhu Mythos", baseValue: 0 },
+  { name: "Nadar", nameEn: "Swim", baseValue: 25 },
+  { name: "Naturaleza", nameEn: "Natural World", baseValue: 20, isFieldHeader: true, fieldSlots: 2 },
+  { name: "Orientarse", nameEn: "Navigate", baseValue: 10 },
+  { name: "Otros reinos", nameEn: "Other Kingdoms", baseValue: 10, isFieldHeader: true, fieldSlots: 2 },
+  { name: "Perspicacia", nameEn: "Insight", baseValue: 5 },
+  { name: "Pilotar (Embarcación)", nameEn: "Pilot (Boat)", baseValue: 1 },
+  { name: "Posición social", nameEn: "Status", baseValue: 0 },
+  { name: "Primeros auxilios", nameEn: "First Aid", baseValue: 30 },
+  { name: "Reino propio", nameEn: "Kingdom (Own)", baseValue: 20, isFieldHeader: true, fieldSlots: 1 },
+  { name: "Religión", nameEn: "Religion", baseValue: 20 },
+  { name: "Reparar y construir", nameEn: "Craft/Repair", baseValue: 20 },
+  { name: "Saltar", nameEn: "Jump", baseValue: 25 },
+  { name: "Seguir rastros", nameEn: "Track", baseValue: 10, isFieldHeader: true, fieldSlots: 2 },
+  { name: "Sigilo", nameEn: "Stealth", baseValue: 20 },
+  { name: "Persuasión", nameEn: "Persuade", baseValue: 15 },
+  { name: "Psicología", nameEn: "Psychology", baseValue: 10 },
+  { name: "Tasación", nameEn: "Appraise", baseValue: 5 },
+  { name: "Trato con animales", nameEn: "Animal Handling", baseValue: 15 },
+  { name: "Trepar", nameEn: "Climb", baseValue: 20 },
 ]
 
 export const getSkillDefinitionsForEra = (era: CharacterEra): SkillDefinition[] => {
@@ -138,22 +143,24 @@ export const getSkillDefinitionsForEra = (era: CharacterEra): SkillDefinition[] 
   } else if (era === "modern") {
     const skills = [...skills1920sAndModern]
     const elecIndex = skills.findIndex((s) => s.name === "Electricidad")
-    skills.splice(elecIndex + 1, 0, modernOnlySkills[0])
+    if (elecIndex !== -1) skills.splice(elecIndex + 1, 0, modernOnlySkills[0])
     const histIndex = skills.findIndex((s) => s.name === "Historia")
-    skills.splice(histIndex + 1, 0, modernOnlySkills[1])
+    if (histIndex !== -1) skills.splice(histIndex + 1, 0, modernOnlySkills[1])
     return skills
   }
   return skills1920sAndModern
 }
 
-export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
+export const getBaseSkillsForEra = (era: CharacterEra, language: "es" | "en" = "es"): Skill[] => {
   const definitions = getSkillDefinitionsForEra(era)
   const skills: Skill[] = []
 
   for (const def of definitions) {
+    const displayName = language === "en" ? def.nameEn : def.name
+
     if (def.isFieldHeader) {
       skills.push({
-        name: def.name,
+        name: displayName,
         baseValue: typeof def.baseValue === "number" ? def.baseValue : 0,
         value: typeof def.baseValue === "number" ? def.baseValue : 0,
         isOccupational: false,
@@ -161,8 +168,9 @@ export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
       })
       if (def.subSkills) {
         for (const sub of def.subSkills) {
+          const subDisplayName = language === "en" ? sub.nameEn : sub.name
           skills.push({
-            name: `${def.name}: ${sub.name}`,
+            name: `${displayName}: ${subDisplayName}`,
             baseValue: sub.baseValue,
             value: sub.baseValue,
             isOccupational: false,
@@ -174,7 +182,7 @@ export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
         const initialValue = typeof def.baseValue === "number" ? def.baseValue : 1
         
         skills.push({
-          name: def.name,
+          name: displayName,
           baseValue: initialValue,
           value: initialValue,
           isOccupational: false,
@@ -186,7 +194,7 @@ export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
       }
     } else {
       skills.push({
-        name: def.name,
+        name: displayName,
         baseValue: typeof def.baseValue === "number" ? def.baseValue : 0,
         value: typeof def.baseValue === "number" ? def.baseValue : 0,
         isOccupational: false,
@@ -196,9 +204,10 @@ export const getBaseSkillsForEra = (era: CharacterEra): Skill[] => {
   }
 
   // Añadir 6 habilidades personalizadas vacías
+  const customLabel = language === "en" ? "Custom Skill" : "Habilidad personalizada"
   for (let i = 0; i < 6; i++) {
     skills.push({
-      name: "Habilidad personalizada",
+      name: customLabel,
       baseValue: 0,
       value: 0,
       isOccupational: false,

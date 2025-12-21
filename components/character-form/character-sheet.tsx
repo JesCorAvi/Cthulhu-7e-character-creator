@@ -453,7 +453,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               value={skill.customName}
               onChange={(e) => updateSkill(actualIndex, { customName: e.target.value })}
               className="h-5 p-1 text-[11px] border-none bg-transparent w-full focus-visible:ring-0 font-serif placeholder:text-stone-400 italic"
-              placeholder={isSlot ? `......................` : "Nombre..."}
+              placeholder={isSlot ? `.......................` : "Nombre..."}
             />
           ) : (
             <span

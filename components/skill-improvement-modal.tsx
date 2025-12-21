@@ -22,33 +22,28 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
   const [manualResult, setManualResult] = useState("")
 
   const handleD100Complete = (values: number[]) => {
-    // values[0] viene del d100.
-    // values[1] viene del d10.
-    
-    // Cálculo:
-    // Si d100 sale 10 (se muestra 00), vale 0.
-    // Si d10 sale 10 (se muestra 0), vale 0.
-    const tens = values[0] === 10 ? 0 : values[0] * 10
-    const units = values[1] === 10 ? 0 : values[1]
-    
-    let total = tens + units
-    if (total === 0) total = 100
-
-    setD100Result(total)
+    // CORRECCIÓN: Dice3DScene ya devuelve el valor final del d100 (1-100) en la posición 0.
+    // No hace falta multiplicar por 10 ni sumar nada manualmente.
+    const result = values[0]
+    setD100Result(result)
     setStage("result-d100")
   }
 
   const handleD10Complete = (values: number[]) => {
-    const result = values[0] === 10 ? 10 : values[0] 
+    // El d10 normal devuelve 1-10, tal cual.
+    const result = values[0]
     setD10Result(result)
     setStage("final")
   }
 
   const checkSuccess = () => {
     if (d100Result === null) return false
-    if (skill.value > 95) {
-      return d100Result >= 96 && d100Result <= 100
+    // Reglas de mejora de Cthulhu 7e:
+    // Si la habilidad es > 95, necesitas sacar 96-100 para mejorar.
+    if (skill.value >= 95) {
+      return d100Result >= 96
     }
+    // Si no, necesitas sacar MÁS que tu habilidad actual.
     return d100Result > skill.value
   }
 
@@ -117,11 +112,11 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
         {stage === "roll-d100" && (
           <div className="space-y-4">
             <div className="bg-muted/30 p-4 rounded-lg">
-              <h3 className="font-semibold text-sm mb-2">Tira d100 (Decenas + Unidades)</h3>
+              <h3 className="font-semibold text-sm mb-2">Tira d100 de Comprobación</h3>
               <p className="text-xs text-muted-foreground">
-                {skill.value > 95
-                  ? "Tu habilidad es >95. Solo mejorarás si sacas 96-100."
-                  : `Necesitas sacar más de ${skill.value} para mejorar.`}
+                {skill.value >= 95
+                  ? "Tu habilidad es muy alta (>=95). Solo mejorarás si sacas entre 96 y 100."
+                  : `Necesitas sacar más de ${skill.value} en el d100 para mejorar.`}
               </p>
             </div>
 
@@ -135,14 +130,13 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
                 </div>
               }
             >
-              {/* AQUÍ SE APLICA LA MEZCLA DE DADOS */}
+              {/* CORRECCIÓN: Solo pedimos "d100". Dice3DScene se encarga de mostrar 2 dados d10 */}
               <Dice3DScene 
-                diceConfig={["d100", "d10"]} 
+                diceConfig={["d100"]} 
                 onRollComplete={handleD100Complete} 
               />
             </Suspense>
 
-            <p className="text-xs text-center text-muted-foreground">Arrastra los dados sobre la mesa para lanzarlos</p>
           </div>
         )}
 
@@ -168,15 +162,15 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
             {checkSuccess() ? (
               <Button onClick={() => setStage("roll-d10")} className="w-full gap-2">
                 <Dices className="h-4 w-4" />
-                Tirar d10 para determinar mejora
+                Tirar 1d10 para ver cuánto mejoras
               </Button>
             ) : (
               <div className="flex gap-3">
                 <Button variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
-                  Cancelar
+                  Cerrar
                 </Button>
                 <Button onClick={() => onComplete(0)} className="flex-1">
-                  Confirmar (sin mejora)
+                  Continuar (sin cambios)
                 </Button>
               </div>
             )}
@@ -186,8 +180,8 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
         {stage === "roll-d10" && (
           <div className="space-y-4">
             <div className="bg-muted/30 p-4 rounded-lg">
-              <h3 className="font-semibold text-sm mb-2">Tira d10 para la mejora</h3>
-              <p className="text-xs text-muted-foreground">El resultado determinará cuántos puntos sube tu habilidad</p>
+              <h3 className="font-semibold text-sm mb-2">Tira 1d10 de Mejora</h3>
+              <p className="text-xs text-muted-foreground">El resultado se sumará a tu habilidad actual.</p>
             </div>
 
             <Suspense
@@ -200,10 +194,9 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
                 </div>
               }
             >
-              <Dice3DScene diceCount={1} onRollComplete={handleD10Complete} diceType="d10" />
+              <Dice3DScene diceCount={1} diceType="d10" onRollComplete={handleD10Complete} />
             </Suspense>
 
-            <p className="text-xs text-center text-muted-foreground">Arrastra el dado sobre la mesa para lanzarlo</p>
           </div>
         )}
 

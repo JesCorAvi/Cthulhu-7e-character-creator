@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, Suspense, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dices, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -262,7 +262,7 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
                 <Label htmlFor="3d-dice" className="text-sm font-normal text-left flex-1 cursor-pointer">
                   <div className="font-semibold">Dados 3D Interactivos</div>
                   <div className="text-xs text-muted-foreground">
-                    Lanza los dados tu mismo arrastrando sobre la mesa
+                    Lanza los dados tu mismo
                   </div>
                 </Label>
                 <Switch id="3d-dice" checked={use3DDice} onCheckedChange={setUse3DDice} />
@@ -343,18 +343,12 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
 
         {!isComplete && use3DDice && !waitingForNextRoll && (
           <div className="mb-6">
-            <Suspense
-              fallback={
-                <div className="w-full h-[450px] bg-slate-900 rounded-xl flex items-center justify-center">
-                  <div className="text-white flex items-center gap-3">
-                    <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
-                    Cargando dados 3D...
-                  </div>
-                </div>
-              }
-            >
-              <Dice3DScene key={currentIndex} diceCount={getDiceCount()} onRollComplete={handle3DRollComplete} />
-            </Suspense>
+              <Dice3DScene 
+                key={currentIndex} 
+                diceCount={getDiceCount()} 
+                diceType="d6"
+                onRollComplete={handle3DRollComplete} 
+              />
           </div>
         )}
 
@@ -424,7 +418,6 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
                       key={i}
                       className={cn(
                         "inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold",
-                        // CORRECCIÓN: Usar indexOf para asegurar que solo se tacha la primera ocurrencia
                         roll.droppedValue !== undefined &&
                           v === roll.droppedValue &&
                           roll.diceValues.indexOf(roll.droppedValue) === i

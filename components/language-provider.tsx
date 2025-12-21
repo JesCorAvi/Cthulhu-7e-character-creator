@@ -44,6 +44,8 @@ const translations = {
     "delete_confirm": "¿Estás seguro de eliminar este personaje?",
     "backstory_equipment": "Trasfondo y Equipo",
     "close": "Cerrar",
+    "share": "Compartir",
+    "character_imported_url": "Personaje importado",
 
     // --- DADOS 3D ---
     "loading_physics": "Cargando motor físico...",
@@ -100,6 +102,7 @@ const translations = {
     "gender": "Género",
     "residence": "Residencia",
     "birthplace": "Lugar de Nacimiento",
+    "unnamed": "Sin nombre",
     "manage_skills": "Gestionar Habilidades",
     "select_occupation": "Selecciona...",
     "custom_occupation": "Personalizada / Otra...",
@@ -124,9 +127,14 @@ const translations = {
     "filter_skills": "Filtrar...",
     "add_skill": "Añadir",
     "total_skills": "Total Habilidades",
-    "occupation_points": "P. Ocupación",
+    "occupation_points": "Puntos de Ocupación",
     "personal_points": "P. Personales",
     "spent": "gastados",
+    "available": "disponibles",
+    "specialization": "Especialización",
+    "specialties": "Especialidades",
+    "add_custom": "Añadir...",
+    "skills_choice": "Habilidades a elección",
     
     // --- COMBATE ---
     "combat": "Combate",
@@ -192,19 +200,15 @@ const translations = {
 
     // --- OCCUPATION MODAL ---
     "occupation_choose_stat": "Elige característica:",
-    "occupation_points": "Puntos de Ocupación",
-    "available": "disponibles",
     "configuration": "Configuración",
-    "skills_choice": "Habilidades a elección",
     "save_and_close": "Guardar y Cerrar",
     "define": "Definir",
     "base_value_label": "Valor base (%):",
     "base_value_hint": "El valor base no se resta de tus puntos de ocupación.",
-    "specialization": "Especialización",
-    "add_custom": "Añadir...",
     "credit_rating": "Crédito",
     "formula": "Fórmula",
-    "specialties": "Especialidades"
+    "print": "Imprimir",
+    "backstory": "Trasfondo"
   },
   en: {
     // --- HOME & UI GENERAL ---
@@ -218,7 +222,7 @@ const translations = {
     "login_required": "Connect with Google Drive",
     "login_msg": "To view and save your characters in the cloud, we need to reconnect with your Google account.",
     "no_characters": "No characters found",
-    "no_characters_cloud": "No characters found in your Drive.",
+    "no_characters_cloud": "No investigators found in your Google Drive.",
     "no_characters_local": "Create your first investigator to start your adventure",
     "your_investigators": "Your Investigators",
     "create_char_button": "Create Character",
@@ -239,6 +243,8 @@ const translations = {
     "delete_confirm": "Are you sure you want to delete this character?",
     "backstory_equipment": "Backstory & Equipment",
     "close": "Close",
+    "share": "Share",
+    "character_imported_url": "Character imported",
 
     // --- 3D DICE ---
     "loading_physics": "Loading physics engine...",
@@ -295,6 +301,7 @@ const translations = {
     "gender": "Gender",
     "residence": "Residence",
     "birthplace": "Birthplace",
+    "unnamed": "Unnamed",
     "manage_skills": "Manage Skills",
     "select_occupation": "Select...",
     "custom_occupation": "Custom / Other...",
@@ -319,9 +326,14 @@ const translations = {
     "filter_skills": "Filter...",
     "add_skill": "Add",
     "total_skills": "Total Skills",
-    "occupation_points": "Occ. Points",
+    "occupation_points": "Occupation Points",
     "personal_points": "Pers. Points",
     "spent": "spent",
+    "available": "available",
+    "specialization": "Specialization",
+    "specialties": "Specialties",
+    "add_custom": "Add...",
+    "skills_choice": "Skills of your choice",
 
     // --- COMBATE ---
     "combat": "Combat",
@@ -387,19 +399,15 @@ const translations = {
 
     // --- OCCUPATION MODAL ---
     "occupation_choose_stat": "Choose characteristic:",
-    "occupation_points": "Occupation Points",
-    "available": "available",
     "configuration": "Configuration",
-    "skills_choice": "Skills of your choice",
     "save_and_close": "Save and Close",
     "define": "Define",
     "base_value_label": "Base value (%):",
     "base_value_hint": "Base value is not subtracted from your occupation points.",
-    "specialization": "Specialization",
-    "add_custom": "Add...",
     "credit_rating": "Credit Rating",
     "formula": "Formula",
-    "specialties": "Specialties"
+    "print": "Print",
+    "backstory": "Backstory"
   }
 }
 
@@ -409,7 +417,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>("es")
 
   const t = (key: string, params?: Record<string, string | number>) => {
-    let text = translations[language][key as keyof typeof translations["es"]] || key
+    // @ts-ignore
+    let text = translations[language][key] || key
     
     if (params) {
       Object.entries(params).forEach(([k, v]) => {

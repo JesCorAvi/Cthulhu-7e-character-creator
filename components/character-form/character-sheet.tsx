@@ -25,7 +25,8 @@ import { DiceRoller } from "@/components/dice-roller"
 import { SkillImprovementModal } from "@/components/skill-improvement-modal"
 import { useLanguage } from "@/components/language-provider"
 import { getTranslatedSkillName } from "@/lib/skills-data"
-
+import { ShareCharacterModal } from "@/components/share-character-modal" // <--- Importar modal
+import { Share2 } from "lucide-react" // <--- Importar icono
 interface CharacterSheetProps {
   character: Character
   onChange: (character: Character) => void
@@ -98,7 +99,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const [showDiceRoller, setShowDiceRoller] = useState(false)
   const [hasRolledCharacteristics, setHasRolledCharacteristics] = useState(false)
   const [improvingSkill, setImprovingSkill] = useState<{ skill: Skill; index: number } | null>(null)
-
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false) // <--- Nuevo estado
   useEffect(() => {
     setMounted(true)
     const hasNonDefaultValues = Object.keys(character.characteristics).some((key) => {
@@ -483,18 +484,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         />
       )}
 
-      {mounted && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed top-4 right-4 z-50 rounded-full shadow-lg bg-white dark:bg-stone-900 border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
-          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
-        </Button>
-      )}
-
+   
       {/* CABECERA (DATOS PERSONALES) */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row gap-6 mb-6">
@@ -638,7 +628,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                   <Input
                     type="number"
                     value={char.value}
-                    onChange={(e) => handleCharChange(key as any, Number.parseInt(e.target.value))}
+                    onChange={(e) => handleCharChange(key as any, Number.parseInt(e.target.value) || 0)}
                     className="h-10 w-full text-center text-2xl font-black border-stone-200 dark:border-stone-700 bg-transparent p-0 focus-visible:ring-1"
                   />
                   <div className="flex w-full justify-between px-1 mt-1 text-[10px] text-stone-500 font-mono font-bold">
@@ -671,7 +661,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 onChange={(e) =>
                   onChange({
                     ...character,
-                    hitPoints: { ...character.hitPoints, current: Number.parseInt(e.target.value) },
+                    hitPoints: { ...character.hitPoints, current: Number.parseInt(e.target.value) || 0 },
                   })
                 }
                 className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
@@ -790,6 +780,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
               <Input
                 type="number"
                 value={character.luck.limit || ""}
+                placeholder="Valor Inicial"
                 onChange={(e) =>
                   onChange({ ...character, luck: { ...character.luck, limit: Number.parseInt(e.target.value) || 0 } })
                 }
@@ -816,7 +807,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
                 onChange={(e) =>
                   onChange({
                     ...character,
-                    magicPoints: { ...character.magicPoints, current: Number.parseInt(e.target.value) },
+                    magicPoints: { ...character.magicPoints, current: Number.parseInt(e.target.value) || 0 },
                   })
                 }
                 className="h-14 text-center text-3xl font-bold border-stone-300 bg-stone-50 dark:bg-stone-800 dark:border-stone-600"
@@ -998,7 +989,15 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           </Button>
         </div>
       </div>
-
+      <ShareCharacterModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        character={character}
+        onImport={(importedChar) => {
+          onChange(importedChar) // Reemplaza el personaje actual
+          setIsShareModalOpen(false)
+        }}
+      />
       <OccupationDetailsModal
         isOpen={isOccupationModalOpen}
         onClose={() => setIsOccupationModalOpen(false)}

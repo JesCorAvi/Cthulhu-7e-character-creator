@@ -61,8 +61,6 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave }: C
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <LanguageSelector />
-          
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" disabled={isSaving}>

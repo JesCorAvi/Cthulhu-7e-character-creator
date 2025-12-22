@@ -5,16 +5,14 @@ export function PwaRegister() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/Cthulhu-7e-character-creator/sw.js", {
-          scope: "/Cthulhu-7e-character-creator/",
+        .register("/sw.js", {
+          scope: "/",
         }) 
         .then((reg) => {
             console.log("SW registrado:", reg.scope);
         })
         .catch((err) => console.error("Error SW:", err));
 
-      // Escuchar cambios de controlador (ocurre cuando el SW se actualiza y toma el control)
-      // Esto recarga la página automáticamente para evitar errores de chunks rotos
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {

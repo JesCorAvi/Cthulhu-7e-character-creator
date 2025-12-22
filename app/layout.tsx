@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: "CthulhuBuilder",
   description: "Crea y gestiona tus fichas de investigador para Call of Cthulhu 7ª Edición",
   generator: "v0.app",
-  manifest: "/Cthulhu-7e-character-creator/manifest.json",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -31,11 +31,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/Cthulhu-7e-character-creator/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
-      { url: "/Cthulhu-7e-character-creator/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/Cthulhu-7e-character-creator/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
-    apple: "/Cthulhu-7e-character-creator/apple-icon.png",
+    apple: "/apple-icon.png",
   },
 }
 

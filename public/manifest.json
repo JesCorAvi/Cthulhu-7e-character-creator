@@ -1,24 +1,53 @@
 {
-  "name": "CthulhuBuilder",
-  "short_name": "CthulhuBuilder",
-  "start_url": "/Cthulhu-7e-character-creator/",
+  "name": "Cthulhu 7e Character Creator",
+  "short_name": "Cthulhu7e",
+  "description": "Creador y gestor de fichas de personajes para La Llamada de Cthulhu 7ª Edición.",
+  "id": "/?source=pwa",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#051109",
-  "theme_color": "#1a472a",
-  "description": "Gestor de hojas de personaje para Call of Cthulhu 7ª Edición.",
-  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["games", "utilities", "entertainment"],
   "icons": [
     {
-      "src": "/Cthulhu-7e-character-creator/icons/icon-192.png",
-      "type": "image/png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/Cthulhu-7e-character-creator/icons/icon-512.png",
-      "type": "image/png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1899x954",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vista de escritorio del creador de personajes"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "391x855",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vista móvil de la ficha del investigador"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nuevo Investigador",
+      "url": "/?view=create",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
 }

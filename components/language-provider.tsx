@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState } from "react"
+import React, { createContext, useContext, useState, useEffect } from "react"
 
 type Language = "es" | "en"
 
@@ -413,8 +413,37 @@ const translations = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
+const STORAGE_KEY = "cthulhu-builder-lang"
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  // Inicializamos estado por defecto
   const [language, setLanguage] = useState<Language>("es")
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Cargar preferencia al montar
+  useEffect(() => {
+    try {
+      const savedLanguage = localStorage.getItem(STORAGE_KEY) as Language
+      if (savedLanguage && (savedLanguage === "es" || savedLanguage === "en")) {
+        setLanguage(savedLanguage)
+      }
+    } catch (e) {
+      console.error("Error loading language from storage", e)
+    } finally {
+      setIsInitialized(true)
+    }
+  }, [])
+
+  // Guardar preferencia cuando cambie
+  useEffect(() => {
+    if (isInitialized) {
+      try {
+        localStorage.setItem(STORAGE_KEY, language)
+      } catch (e) {
+        console.error("Error saving language to storage", e)
+      }
+    }
+  }, [language, isInitialized])
 
   const t = (key: string, params?: Record<string, string | number>) => {
     // @ts-ignore
@@ -426,6 +455,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       })
     }
     return text
+  }
+
+  // Evitar desajustes de hidratación en Next.js
+  if (!isInitialized) {
+    return <div className="invisible">{children}</div>
   }
 
   return (

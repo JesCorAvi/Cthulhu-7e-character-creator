@@ -122,7 +122,112 @@ If you wish to learn more about Chaosium or *Call of Cthulhu*, visit
 
 ---
 
-### 🇪🇸 Español
+### 📄 Full License Text (English)
+
+**Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**
+
+You are free to:
+- **Share** — copy and redistribute the material in any medium or format  
+- **Adapt** — remix, transform, and build upon the material  
+
+Under the following terms:
+- **Attribution** — You must give appropriate credit.  
+- **NonCommercial** — You may not use the material for commercial purposes.  
+- **ShareAlike** — If you remix, transform, or build upon the material, you must distribute your contributions under the same license.  
+
+No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+Full legal text: [https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode)  
+© **CthulhuBuilder**
+
+---
+
+<a id="español"></a>
+
+## 🇪🇸 Creador de Personajes - La Llamada de Cthulhu 7ª Edición
+
+Una aplicación web moderna, interactiva y progresiva (PWA) diseñada para facilitar la creación y gestión de investigadores para el juego de rol **La Llamada de Cthulhu 7ª Edición**.
+
+### ✨ Características Principales
+
+#### 📝 Gestión de Personajes
+- **Creación Guiada:** Generación de características (FUE, DES, POD, etc.) manual o mediante tiradas de dados integradas.
+- **Cálculo Automático:** Derivados como Puntos de Vida, Cordura, Magia, Corpulencia y Bonificador de Daño se calculan automáticamente.
+- **Sistema de Ocupaciones:**
+  - Base de datos completa de ocupaciones (Años 20, Actualidad, etc.).
+  - Cálculo automático de puntos de ocupación basados en fórmulas de características.
+  - Modal interactivo para selección de habilidades de ocupación, especialidades y distribución de puntos.
+  - Soporte para ocupaciones personalizadas.
+- **Eras de Juego:** Soporte para Años 20, Actualidad y Edad Oscura (Dark Ages).
+
+#### 🎲 Herramientas Integradas
+- **Dados 3D Interactivos:** Motor de física real (`@3d-dice/dice-box`) para lanzar dados directamente en la interfaz.
+- **Tiradas de Mejora:** Sistema guiado para las fases de desarrollo de investigadores (tiradas de experiencia).
+- **Gestión de Inventario:** Control de equipo, dinero y posesiones.
+
+#### 💾 Almacenamiento y Sincronización
+- **Modo Local:** Los personajes se guardan en el almacenamiento local del navegador (LocalStorage) por defecto.
+- **Google Drive Sync:** Integración opcional para guardar y sincronizar tus fichas en la nube a través de tu cuenta de Google.
+
+#### 🌍 Accesibilidad y UX
+- **Bilingüe:** Interfaz totalmente traducida al **Español 🇪🇸** e **Inglés 🇺🇸**.
+- **Tema Oscuro/Claro:** Adaptable a las preferencias del sistema o del usuario.
+- **PWA (Progressive Web App):** Instalable como aplicación nativa en escritorio y móviles.
+- **Diseño Responsivo:** Optimizado para funcionar en teléfonos, tablets y ordenadores.
+
+### 🛠️ Tecnologías Utilizadas
+
+Este proyecto ha sido construido utilizando las últimas tecnologías de desarrollo web:
+
+- **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
+- **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
+- **Componentes UI:** [Shadcn/ui](https://ui.shadcn.com/) (basado en Radix UI)
+- **Iconos:** [Lucide React](https://lucide.dev/)
+- **Dados 3D:** [@3d-dice/dice-box](https://github.com/3d-dice/dice-box)
+- **Estado y Formularios:** React Hooks nativos.
+
+### 🚀 Instalación y Despliegue Local
+
+Sigue estos pasos para ejecutar el proyecto en tu máquina local:
+
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone https://github.com/tu-usuario/cthulhu-7e-character-creator.git
+    cd cthulhu-7e-character-creator
+    ```
+
+2.  **Instalar dependencias:**
+    ```bash
+    npm install
+    # o si usas pnpm
+    pnpm install
+    ```
+
+3.  **Configurar Variables de Entorno:**
+    Crea un archivo `.env.local` en la raíz del proyecto. Necesitarás configurar las credenciales de Google si quieres probar la sincronización en la nube:
+    ```env
+    NEXT_PUBLIC_GOOGLE_API_KEY=tu_api_key_de_google
+    ```
+
+4.  **Ejecutar el servidor de desarrollo:**
+    ```bash
+    npm run dev
+    ```
+
+5.  **Abrir en el navegador:**
+    Visita `http://localhost:3000` para ver la aplicación.
+
+---
+
+## ⚖️ Licencia y Renuncia de Responsabilidad
+
+<div align="center">
+
+[![License](https://img.shields.io/badge/Licencia-CC_BY--NC--SA_4.0-blue)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es)
+[![Trademark](https://img.shields.io/badge/Marca_Registrada-Chaosium_Inc.-red)]()
+
+</div>
 
 Esta es una **herramienta no oficial creada por fans** para ayudar a los jugadores de *La Llamada de Cthulhu® 7ª Edición*.
 
@@ -145,22 +250,32 @@ Para más información sobre Chaosium o *La Llamada de Cthulhu*, visita
 
 ---
 
-> **Optional notice / Aviso opcional:**  
-> Portions of this software use mechanics covered under the **BRP Open Game License**, © Chaosium Inc.
+### 📄 Texto Completo de la Licencia (Español)
+
+**Licencia Creative Commons Atribución-NoComercial-CompartirIgual 4.0 Internacional (CC BY-NC-SA 4.0)**
+
+Usted es libre de:
+- **Compartir** — copiar y redistribuir el material en cualquier medio o formato.  
+- **Adaptar** — remezclar, transformar y crear a partir del material.  
+
+Bajo los siguientes términos:
+- **Atribución** — Debe otorgar el crédito apropiado.  
+- **NoComercial** — No puede utilizar el material con fines comerciales.  
+- **CompartirIgual** — Si remezcla, transforma o crea a partir del material, debe distribuir su contribución bajo la misma licencia.
+
+Sin restricciones adicionales — No puede aplicar términos legales o medidas tecnológicas que restrinjan legalmente a otros de hacer algo que la licencia permita.
+
+Texto legal completo: [https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.es](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.es)  
+© **CthulhuBuilder**
 
 ---
 
-[Go to Spanish Version / Ir a la versión en Español](#español)
+> **Aviso opcional:**  
+> Algunas partes de este software utilizan mecánicas cubiertas por la **BRP Open Game License**, © Chaosium Inc.
+
+---
+
+[Go to English Version / Ir a la versión en Inglés](#english)
 
 <br>
-<br>
-<hr>
-<br>
-<br>
-
-<a id="español"></a>
-
-## 🇪🇸 Creador de Personajes - La Llamada de Cthulhu 7ª Edición
-
-*(Contenido igual que arriba, mantenido bilingüe para coherencia.)*
-
+</div>

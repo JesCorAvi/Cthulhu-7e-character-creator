@@ -1,4 +1,4 @@
-# Call of Cthulhu 7e Character Creator / Creador de Personajes CoC 7e 
+#Cthulhu 7e Character Creator / Creador de Personajes CoC 7e 
 
 <div align="center">
 
@@ -14,9 +14,9 @@
 
 <a id="english"></a>
 
-## 🇺🇸 Call of Cthulhu 7th Edition Character Creator
+## 🇺🇸 Cthulhu 7th Edition Character Creator
 
-A modern, interactive, and Progressive Web App (PWA) designed to facilitate the creation and management of investigators for the tabletop role-playing game **Call of Cthulhu 7th Edition**.
+A modern, interactive, and Progressive Web App (PWA) designed to facilitate the creation and management of investigators for the tabletop role-playing game **Cthulhu 7th Edition**.
 
 ### ✨ Key Features
 

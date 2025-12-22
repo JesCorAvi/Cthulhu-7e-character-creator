@@ -5,6 +5,7 @@
   "id": "/?source=pwa",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#000000",
   "orientation": "portrait",
@@ -12,6 +13,12 @@
   "lang": "es",
   "dir": "ltr",
   "categories": ["games", "utilities", "entertainment"],
+  "iarc_rating_id": "", 
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -29,25 +36,51 @@
   "screenshots": [
     {
       "src": "/screenshots/desktop.png",
-      "sizes": "1899x954",
+      "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Vista de escritorio del creador de personajes"
+      "label": "Vista de escritorio"
     },
     {
       "src": "/screenshots/mobile.png",
-      "sizes": "391x855",
+      "sizes": "750x1334",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Vista móvil de la ficha del investigador"
+      "label": "Vista móvil"
     }
   ],
+  "share_target": {
+    "action": "/?import=true",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/?file-open=true",
+      "accept": {
+        "application/x-cthulhu-char": [".ct7"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+cthulhu",
+      "url": "/?code=%s"
+    }
+  ],
+  "note_taking": {
+    "new_note_url": "/?view=create"
+  },
+  "widgets": [],
   "shortcuts": [
     {
       "name": "Nuevo Investigador",
       "url": "/?view=create",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
-  ],
-  "prefer_related_applications": false
+  ]
 }

@@ -14,6 +14,7 @@ export function PwaRegister() {
         .catch((err) => console.error("Error SW:", err));
 
       let refreshing = false;
+      
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
           refreshing = true;

@@ -6,10 +6,11 @@
 [![Tech](https://img.shields.io/badge/Built_with-Next.js-black)]()
 [![License](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-blue)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
+🌐 **Live Demo:** [https://cthulhubuilder.pages.dev/](https://cthulhubuilder.pages.dev/)
+
 **[ 🇺🇸 English Version ](#english) | [ 🇪🇸 Versión en Español ](#español)**
 
 </div>
-
 ---
 
 <a id="english"></a>

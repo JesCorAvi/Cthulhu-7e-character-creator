@@ -38,8 +38,23 @@ export function Header({
     <header className="border-b bg-card sticky top-0 z-50 print:hidden">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Skull className="h-7 w-7 text-primary" />
-          <div className="hidden md:block">
+<svg xmlns="http://www.w3.org/2000/svg" width="37" height="37" viewBox="0 0 24 24" fill="none" stroke="#338634" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <path d="M12 2c-4.5 0-8 3-8 7 0 3.5 2.5 6 4 7.5" />
+  <path d="M12 2c4.5 0 8 3 8 7 0 3.5-2.5 6-4 7.5" />
+  
+  <circle cx="8.5" cy="9" r="1.2" fill="#338634" />
+  <circle cx="15.5" cy="9" r="1.2" fill="#338634" />
+  
+  <path d="M12 14v7c0 1.5-1 2.5-2.5 2.5" />
+  <path d="M12 14v5c0 2 1.5 3.5 3 3.5" />
+  
+  <path d="M8 15.5c-2 2-4 2.5-5.5 1" />
+  <path d="M16 15.5c2 2 4 2.5 5.5 1" />
+  
+  <path d="M10 16c-1 3-2.5 4-4 4" />
+  <path d="M14 16c1 3 2.5 4 4 4" />
+</svg>
+  <div className="hidden md:block">
             <h1 className="text-lg font-bold text-foreground leading-none">{t("app_title")}</h1>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("app_subtitle")}</p>
           </div>

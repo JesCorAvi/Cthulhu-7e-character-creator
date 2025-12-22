@@ -144,7 +144,7 @@ Full legal text: [https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode](h
 
 <a id="español"></a>
 
-## 🇪🇸 Creador de Personajes - La Llamada de Cthulhu 7ª Edición
+## 🇪🇸 Creador de Personajes - Cthulhu 7ª Edición
 
 Una aplicación web moderna, interactiva y progresiva (PWA) diseñada para facilitar la creación y gestión de investigadores para el juego de rol **La Llamada de Cthulhu 7ª Edición**.
 

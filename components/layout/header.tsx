@@ -15,7 +15,7 @@ interface HeaderProps {
   character?: Character | null;
   showShare?: boolean;
   storageMode?: StorageMode;
-  onStorageChange?: (isCloud: boolean) => void;
+  onStorageChange?: (checked: boolean) => void;
   isGoogleReady?: boolean;
 }
 
@@ -71,9 +71,9 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Selector de Almacenamiento con Textos Claros */}
+          {/* Selector de Almacenamiento con Texto Directo */}
           {onStorageChange && (
-            <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 border rounded-lg p-1 bg-muted/30">
               <ToggleGroup
                 type="single"
                 value={storageMode}
@@ -82,7 +82,7 @@ export function Header({
                 }}
                 className="flex gap-1"
               >
-                {/* BOTÓN LOCAL (Navegador) */}
+                {/* OPCIÓN LOCAL */}
                 <ToggleGroupItem 
                   value="local" 
                   className="h-10 px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
@@ -94,7 +94,7 @@ export function Header({
                   </div>
                 </ToggleGroupItem>
 
-                {/* BOTÓN CLOUD (Google Drive / Nube) */}
+                {/* OPCIÓN GOOGLE DRIVE */}
                 <ToggleGroupItem 
                   value="cloud" 
                   className="h-10 px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
@@ -107,7 +107,9 @@ export function Header({
                     </span>
                   </div>
                   {!isGoogleReady && (
-                    <Info className="h-3 w-3 text-amber-500 ml-1" />
+                    <div className="ml-1" title={t("login_msg")}>
+                      <Info className="h-3 w-3 text-amber-500" />
+                    </div>
                   )}
                 </ToggleGroupItem>
               </ToggleGroup>

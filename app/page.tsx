@@ -190,12 +190,7 @@ function CharacterApp() {
                 )}
 
                 {view === "edit" && currentCharacter && (
-                    <CharacterForm 
-                      character={currentCharacter} 
-                      onBack={handleBack} 
-                      onSave={loadCharacters} 
-                      onChange={setCurrentCharacter}
-                    />
+                    <CharacterForm character={currentCharacter} onBack={handleBack} onSave={loadCharacters} />
                 )}
 
                 {view === "view" && currentCharacter && (

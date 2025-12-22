@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -9,107 +9,47 @@ import { ERA_LABELS } from "@/lib/character-types"
 import { CharacterSheet } from "./character-sheet"
 import { BackstoryEquipmentModal } from "./backstory-equipment-modal"
 import { saveCharacter } from "@/lib/character-storage"
-import { ArrowLeft, BookOpen, Loader2, Cloud } from "lucide-react"
+import { Save, ArrowLeft, BookOpen, Loader2 } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
+import { LanguageSelector } from "@/components/language-selector"
 
 interface CharacterFormProps {
   character: Character
   onBack: () => void
   onSave: () => void
-  onChange?: (updatedCharacter: Character) => void
 }
 
-export function CharacterForm({ character: initialCharacter, onBack, onSave, onChange }: CharacterFormProps) {
+export function CharacterForm({ character: initialCharacter, onBack, onSave }: CharacterFormProps) {
   const [character, setCharacter] = useState<Character>(initialCharacter)
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('saved')
+  const [saved, setSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   
-  // Usamos useRef para tener acceso INSTANTÁNEO al estado 'saving' 
-  // sin esperar a que React renderice el componente.
-  const statusRef = useRef<'idle' | 'saving' | 'saved'>('saved')
-  const isFirstRender = useRef(true)
-
   const { t } = useLanguage()
 
-  // Helper para actualizar estado visual y referencia lógica al mismo tiempo
-  const updateStatus = (newStatus: 'idle' | 'saving' | 'saved') => {
-    setStatus(newStatus)
-    statusRef.current = newStatus
-  }
-
-  // Wrapper para cualquier cambio en el personaje
-  // Esto asegura que en el milisegundo que tocas una tecla, ya conste como "saving"
-  const handleCharacterChange = useCallback((newCharacter: Character) => {
-    setCharacter(newCharacter)
-    if (statusRef.current !== 'saving') {
-      updateStatus('saving')
-    }
-  }, []) // No dependencias para que sea estable
-
-  // 1. Sincronización hacia arriba (Header)
   useEffect(() => {
-    if (onChange) {
-      onChange(character)
+    setSaved(false)
+  }, [character])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await saveCharacter(character)
+      setSaved(true)
+      onSave() 
+    } catch (error) {
+      console.error("Error al guardar:", error)
+      alert(t("error_save"))
+    } finally {
+      setIsSaving(false)
     }
-  }, [character, onChange])
-
-  // 2. Auto-guardado (Debounce 500ms)
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
-    }
-
-    // Aseguramos que el estado sea 'saving' al entrar aquí (por si acaso)
-    if (statusRef.current !== 'saving') updateStatus('saving')
-
-    const timer = setTimeout(async () => {
-      try {
-        await saveCharacter(character)
-        updateStatus('saved') // Guardado completado
-        onSave()
-      } catch (error) {
-        console.error("Error al auto-guardar:", error)
-        updateStatus('idle')
-      }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [character, onSave])
-
-  // 3. Protección contra cierre de pestaña (SOLUCIÓN ROBUSTA)
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Verificamos directamente la referencia, que está siempre actualizada
-      if (statusRef.current === 'saving') {
-        // Estándar moderno: preventDefault + returnValue
-        e.preventDefault()
-        e.returnValue = '' // Necesario para Chrome/Edge
-      }
-    }
-
-    // Añadimos el evento a la ventana
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, []) // Se ejecuta una sola vez al montar
-
-  // 4. Protección botón "Atrás" de la app
-  const handleBackSafe = () => {
-    if (statusRef.current === 'saving') { // Usamos ref para máxima seguridad
-      const confirmLeave = window.confirm(t("unsaved_changes_warning") || "Se están guardando los cambios. ¿Seguro que quieres salir?")
-      if (!confirmLeave) return
-    }
-    onBack()
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={handleBackSafe}>
+          <Button variant="ghost" size="sm" onClick={onBack} disabled={isSaving}>
             <ArrowLeft className="h-4 w-4 mr-1" />
             {t("back")}
           </Button>
@@ -121,26 +61,9 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Indicador de Estado */}
-          <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 rounded-full select-none transition-all">
-            {status === 'saving' ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                <span>{t("saving")}...</span>
-              </>
-            ) : status === 'saved' ? (
-              <>
-                <Cloud className="h-3 w-3 text-primary" />
-                <span>{t("saved")}</span>
-              </>
-            ) : (
-              <span>...</span>
-            )}
-          </div>
-
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" disabled={isSaving}>
                 <BookOpen className="h-4 w-4 mr-1" />
                 {t("backstory_equipment")}
               </Button>
@@ -149,15 +72,22 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
               <DialogHeader>
                 <DialogTitle>{t("backstory_equipment")}</DialogTitle>
               </DialogHeader>
-              {/* IMPORTANTE: Pasamos handleCharacterChange en lugar de setCharacter directo */}
-              <BackstoryEquipmentModal character={character} onChange={handleCharacterChange} />
+              <BackstoryEquipmentModal character={character} onChange={setCharacter} />
             </DialogContent>
           </Dialog>
+          
+          <Button onClick={handleSave} size="sm" className="gap-1" disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {isSaving ? t("saving") : saved ? t("saved") : t("save")}
+          </Button>
         </div>
       </div>
 
-      {/* IMPORTANTE: Pasamos handleCharacterChange aquí también */}
-      <CharacterSheet character={character} onChange={handleCharacterChange} />
+      <CharacterSheet character={character} onChange={setCharacter} />
     </div>
   )
 }

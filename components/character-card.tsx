@@ -29,25 +29,50 @@ export function CharacterCard({ character, onView, onEdit, onDelete }: Character
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-4 gap-2 text-center mb-4">
+<div className="grid grid-cols-5 gap-2 text-center mb-4">
           <div>
-            <p className="text-xs text-muted-foreground">FUE</p>
-            <p className="font-bold text-foreground">{character.characteristics.STR.value}</p>
+            <p className="text-[10px] text-muted-foreground">FUE</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.STR.value}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">CON</p>
-            <p className="font-bold text-foreground">{character.characteristics.CON.value}</p>
+            <p className="text-[10px] text-muted-foreground">CON</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.CON.value}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">POD</p>
-            <p className="font-bold text-foreground">{character.characteristics.POW.value}</p>
+            <p className="text-[10px] text-muted-foreground">TAM</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.SIZ.value}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">COR</p>
-            <p className="font-bold text-foreground">{character.sanity.current}</p>
+            <p className="text-[10px] text-muted-foreground">DES</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.DEX.value}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">APA</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.APP.value}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">INT</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.INT.value}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">POD</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.POW.value}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">EDU</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.EDU.value}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">MOV</p>
+            <p className="font-bold text-sm text-foreground">{character.characteristics.MOV}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">COR</p>
+            <p className="font-bold text-sm text-foreground">
+              {character.sanity.current}/{character.sanity.starting}
+            </p>
           </div>
         </div>
-
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => onView(character.id)}>
             <Eye className="h-4 w-4 mr-1" />

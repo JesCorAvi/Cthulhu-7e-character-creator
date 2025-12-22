@@ -63,7 +63,7 @@ Follow these steps to run the project locally:
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/cthulhu-7e-character-creator.git](https://github.com/your-username/cthulhu-7e-character-creator.git)
+    git clone https://github.com/your-username/cthulhu-7e-character-creator.git
     cd cthulhu-7e-character-creator
     ```
 
@@ -88,19 +88,66 @@ Follow these steps to run the project locally:
 5.  **Open in browser:**
     Visit `http://localhost:3000` to see the app.
 
-### ⚖️ License & Disclaimer
+---
 
-This is an unofficial fan-made tool created to assist players of the tabletop role-playing game Call of Cthulhu® 7th Edition.
+## ⚖️ License & Legal Disclaimer
 
-Call of Cthulhu and the Chaosium logo are registered trademarks of Chaosium Inc. All rights to those names, game systems, and related intellectual property belong to Chaosium Inc.
+<div align="center">
 
-This project is not affiliated with, endorsed, or sponsored by Chaosium Inc.
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Trademark](https://img.shields.io/badge/Trademark-Chaosium_Inc.-red)]()
 
-The software and its code are © [CthulhuBuilder], released under [MIT/GPL/Custom license].
+</div>
 
-This tool does not distribute or reproduce any copyrighted game content (text, art, or rules excerpts). It only references publicly known mechanics for compatibility purposes.
+### 🇺🇸 English
 
-Any premium access offered refers exclusively to technical features (such as data storage, user accounts, or extended app functionality), not to licensed Chaosium content.
+This is an **unofficial fan-made tool** created to assist players of the tabletop role-playing game *Call of Cthulhu® 7th Edition*.
+
+*Call of Cthulhu* and the *Chaosium* logo are registered trademarks of **Chaosium Inc.**  
+All rights to those names, systems, and related intellectual property belong to Chaosium Inc.
+
+This project is **not affiliated with, endorsed, or sponsored** by Chaosium Inc.
+
+The software and its code are © **CthulhuBuilder**, released under the [MIT License](LICENSE).
+
+This tool does **not distribute or reproduce any copyrighted game content**
+(text, art, or rule excerpts).  
+It only references publicly known mechanics for compatibility purposes.
+
+Any premium access refers **exclusively to technical features** (data storage, cloud sync, or extended app functionality),
+**not to licensed Chaosium content**.
+
+If you wish to learn more about Chaosium or *Call of Cthulhu*, visit  
+🔗 [https://www.chaosium.com](https://www.chaosium.com)
+
+---
+
+### 🇪🇸 Español
+
+Esta es una **herramienta no oficial creada por fans** para ayudar a los jugadores de *La Llamada de Cthulhu® 7ª Edición*.
+
+*La Llamada de Cthulhu* y el logotipo de *Chaosium* son marcas registradas de **Chaosium Inc.**  
+Todos los derechos sobre dichos nombres, sistemas y propiedad intelectual pertenecen a Chaosium Inc.
+
+Este proyecto **no está afiliado, respaldado ni patrocinado** por Chaosium Inc.
+
+El software y su código son © **CthulhuBuilder**, publicados bajo la [Licencia MIT](LICENSE).
+
+Esta herramienta **no distribuye ni reproduce contenido con copyright**
+del juego (texto, arte o reglas).  
+Solo hace referencia a mecánicas conocidas públicamente con fines de compatibilidad.
+
+Cualquier acceso premium ofrecido se refiere **únicamente a funcionalidades técnicas**
+(como almacenamiento de datos, sincronización en la nube o características ampliadas),
+**no a contenido licenciado de Chaosium**.
+
+Para más información sobre Chaosium o *La Llamada de Cthulhu*, visita  
+🔗 [https://www.chaosium.com](https://www.chaosium.com)
+
+---
+
+> **Optional notice / Aviso opcional:**  
+> Portions of this software use mechanics covered under the **BRP Open Game License**, © Chaosium Inc.
 
 ---
 
@@ -163,7 +210,7 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina local:
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone [https://github.com/tu-usuario/cthulhu-7e-character-creator.git](https://github.com/tu-usuario/cthulhu-7e-character-creator.git)
+    git clone https://github.com/tu-usuario/cthulhu-7e-character-creator.git
     cd cthulhu-7e-character-creator
     ```
 
@@ -188,19 +235,41 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina local:
 5.  **Abrir en el navegador:**
     Visita `http://localhost:3000` para ver la aplicación.
 
-### ⚖️ Licencia y Renuncia de Responsabilidad
+---
 
-Esta es una herramienta no oficial creada por fans para ayudar a los jugadores de La Llamada de Cthulhu® 7ª Edición.
+## ⚖️ Licencia y Renuncia de Responsabilidad
 
-La Llamada de Cthulhu y el logotipo de Chaosium son marcas registradas de Chaosium Inc. Todos los derechos sobre dichos nombres, sistemas de juego y propiedad intelectual pertenecen a Chaosium Inc.
+<div align="center">
 
-Este proyecto no está afiliado, respaldado ni patrocinado por Chaosium Inc.
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Trademark](https://img.shields.io/badge/Trademark-Chaosium_Inc.-red)]()
 
-El software y su código son © [CthulhuBuilder], publicados bajo la licencia [MIT/GPL/Personalizada].
+</div>
 
-Esta herramienta no distribuye ni reproduce contenido con copyright del juego (texto, arte o reglas). Solo hace referencia a mecánicas conocidas públicamente para fines de compatibilidad.
+Esta es una **herramienta no oficial creada por fans** para ayudar a los jugadores de *La Llamada de Cthulhu® 7ª Edición*.
 
-Cualquier acceso premium ofrecido se refiere únicamente a funcionalidades técnicas (como almacenamiento de datos, cuentas de usuario o características ampliadas), no a contenido licenciado de Chaosium.
+*La Llamada de Cthulhu* y el logotipo de *Chaosium* son marcas registradas de **Chaosium Inc.**  
+Todos los derechos sobre dichos nombres, sistemas y propiedad intelectual pertenecen a Chaosium Inc.
+
+Este proyecto **no está afiliado, respaldado ni patrocinado** por Chaosium Inc.
+
+El software y su código son © **CthulhuBuilder**, publicados bajo la [Licencia MIT](LICENSE).
+
+Esta herramienta **no distribuye ni reproduce contenido con copyright**
+del juego (texto, arte o reglas).  
+Solo hace referencia a mecánicas conocidas públicamente con fines de compatibilidad.
+
+Cualquier acceso premium ofrecido se refiere **únicamente a funcionalidades técnicas**
+(como almacenamiento de datos, sincronización en la nube o características ampliadas),
+**no a contenido licenciado de Chaosium**.
+
+Para más información sobre Chaosium o *La Llamada de Cthulhu*, visita  
+🔗 [https://www.chaosium.com](https://www.chaosium.com)
+
+---
+
+> **Aviso opcional:**  
+> Algunas partes de este software utilizan mecánicas cubiertas por la **BRP Open Game License**, © Chaosium Inc.
 
 ---
 

@@ -90,11 +90,17 @@ Follow these steps to run the project locally:
 
 ### ⚖️ License & Disclaimer
 
-This project is a tool created by fans for fans.
+This is an unofficial fan-made tool created to assist players of the tabletop role-playing game Call of Cthulhu® 7th Edition.
 
-**Call of Cthulhu** is a registered trademark of **Chaosium Inc.** This project is not affiliated with, endorsed, or sponsored by Chaosium Inc.
+Call of Cthulhu and the Chaosium logo are registered trademarks of Chaosium Inc. All rights to those names, game systems, and related intellectual property belong to Chaosium Inc.
 
-The use of specific game mechanics, names, and terms is done under the principle of "Fair Use" for non-profit game aids or under community content licenses that Chaosium may provide.
+This project is not affiliated with, endorsed, or sponsored by Chaosium Inc.
+
+The software and its code are © [CthulhuBuilder], released under [MIT/GPL/Custom license].
+
+This tool does not distribute or reproduce any copyrighted game content (text, art, or rules excerpts). It only references publicly known mechanics for compatibility purposes.
+
+Any premium access offered refers exclusively to technical features (such as data storage, user accounts, or extended app functionality), not to licensed Chaosium content.
 
 ---
 
@@ -184,11 +190,17 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina local:
 
 ### ⚖️ Licencia y Renuncia de Responsabilidad
 
-Este proyecto es una herramienta creada por fans y para fans.
+Esta es una herramienta no oficial creada por fans para ayudar a los jugadores de La Llamada de Cthulhu® 7ª Edición.
 
-**Call of Cthulhu** (La Llamada de Cthulhu) es una marca registrada de **Chaosium Inc.** Este proyecto no está afiliado, respaldado ni patrocinado por Chaosium Inc.
+La Llamada de Cthulhu y el logotipo de Chaosium son marcas registradas de Chaosium Inc. Todos los derechos sobre dichos nombres, sistemas de juego y propiedad intelectual pertenecen a Chaosium Inc.
 
-El uso de mecánicas, nombres y términos específicos del juego se realiza bajo el principio de "Fair Use" para herramientas de ayuda al juego sin ánimo de lucro o bajo las licencias de contenido para la comunidad que Chaosium pueda proporcionar.
+Este proyecto no está afiliado, respaldado ni patrocinado por Chaosium Inc.
+
+El software y su código son © [CthulhuBuilder], publicados bajo la licencia [MIT/GPL/Personalizada].
+
+Esta herramienta no distribuye ni reproduce contenido con copyright del juego (texto, arte o reglas). Solo hace referencia a mecánicas conocidas públicamente para fines de compatibilidad.
+
+Cualquier acceso premium ofrecido se refiere únicamente a funcionalidades técnicas (como almacenamiento de datos, cuentas de usuario o características ampliadas), no a contenido licenciado de Chaosium.
 
 ---
 

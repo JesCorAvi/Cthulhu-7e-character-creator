@@ -1,6 +1,6 @@
 "use client";
 
-import { Skull, Share2, Sun, Moon, HardDrive, Cloud } from "lucide-react";
+import { Share2, Sun, Moon, HardDrive, Cloud, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/language-selector";
 import { useLanguage } from "@/components/language-provider";
@@ -8,15 +8,14 @@ import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 import { Character } from "@/lib/character-types";
 import { ShareCharacterModal } from "@/components/share-character-modal";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { StorageMode } from "@/lib/character-storage";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface HeaderProps {
   character?: Character | null;
   showShare?: boolean;
   storageMode?: StorageMode;
-  onStorageChange?: (checked: boolean) => void;
+  onStorageChange?: (isCloud: boolean) => void;
   isGoogleReady?: boolean;
 }
 
@@ -38,6 +37,7 @@ export function Header({
     <header className="border-b bg-card sticky top-0 z-50 print:hidden">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          {/* Logo SVG */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="37"
@@ -51,16 +51,12 @@ export function Header({
           >
             <path d="M12 2c-4.5 0-8 3-8 7 0 3.5 2.5 6 4 7.5" />
             <path d="M12 2c4.5 0 8 3 8 7 0 3.5-2.5 6-4 7.5" />
-
             <circle cx="8.5" cy="9" r="1.2" fill="#338634" />
             <circle cx="15.5" cy="9" r="1.2" fill="#338634" />
-
             <path d="M12 14v7c0 1.5-1 2.5-2.5 2.5" />
             <path d="M12 14v5c0 2 1.5 3.5 3 3.5" />
-
             <path d="M8 15.5c-2 2-4 2.5-5.5 1" />
             <path d="M16 15.5c2 2 4 2.5 5.5 1" />
-
             <path d="M10 16c-1 3-2.5 4-4 4" />
             <path d="M14 16c1 3 2.5 4 4 4" />
           </svg>
@@ -75,33 +71,50 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Selector de Almacenamiento (Nuevo en Header) */}
+          {/* Selector de Almacenamiento con Textos Claros */}
           {onStorageChange && (
-            <div className="flex items-center gap-2 border px-2 py-1 rounded-md bg-background/50 h-9">
-              {storageMode === "local" ? (
-                <HardDrive className="h-3.5 w-3.5 text-stone-500" />
-              ) : (
-                <Cloud className="h-3.5 w-3.5 text-blue-500" />
-              )}
-              <Switch
-                checked={storageMode === "cloud"}
-                onCheckedChange={onStorageChange}
-                id="header-storage-mode"
-                className="scale-75"
-              />
-              <Label
-                htmlFor="header-storage-mode"
-                className="text-[10px] font-bold cursor-pointer hidden lg:inline-block"
+            <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+              <ToggleGroup
+                type="single"
+                value={storageMode}
+                onValueChange={(val) => {
+                  if (val) onStorageChange(val === "cloud");
+                }}
+                className="flex gap-1"
               >
-                {storageMode === "cloud"
-                  ? t("storage_cloud")
-                  : t("storage_local")}
-              </Label>
+                {/* BOTÓN LOCAL (Navegador) */}
+                <ToggleGroupItem 
+                  value="local" 
+                  className="h-10 px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+                >
+                  <HardDrive className={`h-4 w-4 ${storageMode === 'local' ? 'text-foreground' : 'text-muted-foreground'}`} />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-[11px] font-bold">{t("storage_local")}</span>
+                    <span className="text-[9px] text-muted-foreground uppercase">{t("storage_local_desc")}</span>
+                  </div>
+                </ToggleGroupItem>
+
+                {/* BOTÓN CLOUD (Google Drive / Nube) */}
+                <ToggleGroupItem 
+                  value="cloud" 
+                  className="h-10 px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+                >
+                  <Cloud className={`h-4 w-4 ${storageMode === 'cloud' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-[11px] font-bold">{t("storage_cloud")}</span>
+                    <span className={`text-[9px] uppercase ${!isGoogleReady && storageMode === 'cloud' ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                      {t("storage_cloud_desc")}
+                    </span>
+                  </div>
+                  {!isGoogleReady && (
+                    <Info className="h-3 w-3 text-amber-500 ml-1" />
+                  )}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           )}
 
           <div className="flex items-center gap-1.5">
-            {/* Compartir */}
             {showShare && character && (
               <>
                 <Button
@@ -109,7 +122,6 @@ export function Header({
                   size="icon"
                   className="h-9 w-9"
                   onClick={() => setIsShareModalOpen(true)}
-                  title={t("share")}
                 >
                   <Share2 className="h-4 w-4" />
                 </Button>

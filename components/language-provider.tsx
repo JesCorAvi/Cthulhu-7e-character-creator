@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react"
 
+// Definimos los tipos
 type Language = "es" | "en"
 
 interface LanguageContextType {
@@ -10,14 +11,21 @@ interface LanguageContextType {
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
+// Diccionario de traducciones
 const translations = {
   es: {
-    // --- HOME & UI GENERAL ---
+    // --- STORAGE ---
+    "storage_local": "Local",
+    "storage_local_desc": "Navegador",
+    "storage_cloud": "Google Drive",
+    "storage_cloud_desc": "Nube",
+    "storage_local_help": "Los personajes se guardan solo en este navegador. Si borras el historial o cambias de dispositivo, los perderás.",
+    "storage_cloud_help": "Tus personajes se sincronizan con tu cuenta de Google Drive. Podrás acceder a ellos desde cualquier dispositivo.",
+
+    // --- GENERAL UI ---
     "app_title": "Cthulhu Builder",
     "app_subtitle": "Creador de Personajes",
     "new": "Nuevo",
-    "storage_local": "Almacenamiento Local",
-    "storage_cloud": "Google Drive",
     "connecting": "Conectando...",
     "sync_now": "Sincronizar ahora",
     "login_required": "Conectar con Google Drive",
@@ -47,12 +55,12 @@ const translations = {
     "share": "Compartir",
     "character_imported_url": "Personaje importado",
 
-    // --- DADOS 3D ---
+    // --- DADOS ---
     "loading_physics": "Cargando motor físico...",
     "launch_dice": "Lanzar Dados",
     "rolling": "Rodando...",
 
-    // --- TRASFONDO Y EQUIPO (MODAL) ---
+    // --- TABS & FORMULARIOS ---
     "tab_backstory": "Trasfondo",
     "tab_equipment": "Equipo y Dinero",
     "tab_notes": "Notas",
@@ -89,7 +97,7 @@ const translations = {
     "notes_label": "Notas del Personaje",
     "notes_ph": "Notas adicionales, pistas, eventos importantes...",
 
-    // --- STATS BASE ---
+    // --- CARACTERÍSTICAS ---
     "str": "FUE", "dex": "DES", "pow": "POD", "con": "CON", "app": "APA", "edu": "EDU", "siz": "TAM", "int": "INT",
     "mov": "MOV", "db": "Bon. Daño", "build": "Corpulencia", "dodge": "Esquivar",
     "half": "½", "fifth": "⅕",
@@ -108,7 +116,7 @@ const translations = {
     "custom_occupation": "Personalizada / Otra...",
     "new_occupation_placeholder": "Escribe el nombre de la profesión...",
     
-    // --- ESTADOS DERIVADOS ---
+    // --- ESTADOS ---
     "hp": "Puntos de Vida",
     "sanity": "Cordura",
     "luck": "Suerte",
@@ -159,7 +167,7 @@ const translations = {
     "desc_darkAges": "Superstición medieval y antiguos males.",
     "coming_soon": "Próximamente",
 
-    // --- DICE ROLLER ---
+    // --- GENERADOR ---
     "dice_roller_title": "Tiradas de Características",
     "dice_roller_desc": "Lanza los dados para determinar las características de tu investigador según las reglas de Call of Cthulhu 7e",
     "heroic_method": "Método Heroico",
@@ -173,7 +181,7 @@ const translations = {
     "apply_results": "Aplicar Resultados",
     "click_to_roll": "Haz clic para lanzar los dados",
     
-    // --- SKILL IMPROVEMENT ---
+    // --- MEJORA ---
     "improve_title": "Mejorar Habilidad",
     "current_value": "Valor actual",
     "how_to_proceed": "¿Cómo quieres proceder?",
@@ -198,7 +206,7 @@ const translations = {
     "apply_improvement": "Aplicar mejora",
     "continue_no_change": "Continuar (sin cambios)",
 
-    // --- OCCUPATION MODAL ---
+    // --- OCUPACIÓN ---
     "occupation_choose_stat": "Elige característica:",
     "configuration": "Configuración",
     "save_and_close": "Guardar y Cerrar",
@@ -211,12 +219,18 @@ const translations = {
     "backstory": "Trasfondo"
   },
   en: {
-    // --- HOME & UI GENERAL ---
+    // --- STORAGE ---
+    "storage_local": "Local",
+    "storage_local_desc": "Browser",
+    "storage_cloud": "Google Drive",
+    "storage_cloud_desc": "Cloud",
+    "storage_local_help": "Characters are saved only in this browser. If you clear history or change devices, you will lose them.",
+    "storage_cloud_help": "Your characters are synced with your Google Drive account. You can access them from any device.",
+
+    // --- GENERAL UI ---
     "app_title": "Cthulhu Builder",
     "app_subtitle": "Character Creator",
     "new": "New",
-    "storage_local": "Local Storage",
-    "storage_cloud": "Google Drive",
     "connecting": "Connecting...",
     "sync_now": "Sync Now",
     "login_required": "Connect with Google Drive",
@@ -246,12 +260,12 @@ const translations = {
     "share": "Share",
     "character_imported_url": "Character imported",
 
-    // --- 3D DICE ---
+    // --- DICE ---
     "loading_physics": "Loading physics engine...",
     "launch_dice": "Roll Dice",
     "rolling": "Rolling...",
 
-    // --- BACKSTORY & EQUIPMENT (MODAL) ---
+    // --- TABS & FORM ---
     "tab_backstory": "Backstory",
     "tab_equipment": "Equipment & Cash",
     "tab_notes": "Notes",
@@ -288,7 +302,7 @@ const translations = {
     "notes_label": "Character Notes",
     "notes_ph": "Additional notes, clues, important events...",
 
-    // --- STATS BASE ---
+    // --- STATS ---
     "str": "STR", "dex": "DEX", "pow": "POW", "con": "CON", "app": "APP", "edu": "EDU", "siz": "SIZ", "int": "INT",
     "mov": "MOV", "db": "Damage Bonus", "build": "Build", "dodge": "Dodge",
     "half": "½", "fifth": "⅕",
@@ -307,7 +321,7 @@ const translations = {
     "custom_occupation": "Custom / Other...",
     "new_occupation_placeholder": "Enter profession name...",
     
-    // --- DERIVED STATS ---
+    // --- DERIVED ---
     "hp": "Hit Points",
     "sanity": "Sanity",
     "luck": "Luck",
@@ -335,7 +349,7 @@ const translations = {
     "add_custom": "Add...",
     "skills_choice": "Skills of your choice",
 
-    // --- COMBATE ---
+    // --- COMBAT ---
     "combat": "Combat",
     "weapon": "Weapon",
     "unarmed": "Unarmed",
@@ -358,7 +372,7 @@ const translations = {
     "desc_darkAges": "Medieval superstition and ancient evils.",
     "coming_soon": "Coming Soon",
 
-    // --- DICE ROLLER ---
+    // --- ROLLER ---
     "dice_roller_title": "Characteristic Rolls",
     "dice_roller_desc": "Roll the dice to determine your investigator's characteristics according to Call of Cthulhu 7e rules",
     "heroic_method": "Heroic Method",
@@ -372,7 +386,7 @@ const translations = {
     "apply_results": "Apply Results",
     "click_to_roll": "Click to roll dice",
     
-    // --- SKILL IMPROVEMENT ---
+    // --- IMPROVEMENT ---
     "improve_title": "Improve Skill",
     "current_value": "Current value",
     "how_to_proceed": "How do you want to proceed?",
@@ -397,7 +411,7 @@ const translations = {
     "apply_improvement": "Apply improvement",
     "continue_no_change": "Continue (no changes)",
 
-    // --- OCCUPATION MODAL ---
+    // --- OCCUPATION ---
     "occupation_choose_stat": "Choose characteristic:",
     "configuration": "Configuration",
     "save_and_close": "Save and Close",
@@ -411,16 +425,17 @@ const translations = {
   }
 }
 
+// 1. Creamos el contexto. Inicialmente undefined.
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 const STORAGE_KEY = "cthulhu-builder-lang"
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Inicializamos estado por defecto
+  // 2. Estado del idioma. 'es' por defecto.
   const [language, setLanguage] = useState<Language>("es")
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
-  // Cargar preferencia al montar
+  // 3. Efecto para cargar desde localStorage SOLO en el cliente (una vez)
   useEffect(() => {
     try {
       const savedLanguage = localStorage.getItem(STORAGE_KEY) as Language
@@ -428,22 +443,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         setLanguage(savedLanguage)
       }
     } catch (e) {
-      console.error("Error loading language from storage", e)
+      console.error("Error cargando idioma", e)
     } finally {
-      setIsInitialized(true)
+      setIsMounted(true)
     }
   }, [])
 
-  // Guardar preferencia cuando cambie
+  // 4. Efecto para guardar cambios en localStorage
   useEffect(() => {
-    if (isInitialized) {
-      try {
-        localStorage.setItem(STORAGE_KEY, language)
-      } catch (e) {
-        console.error("Error saving language to storage", e)
-      }
+    if (isMounted) {
+      localStorage.setItem(STORAGE_KEY, language)
     }
-  }, [language, isInitialized])
+  }, [language, isMounted])
 
   const t = (key: string, params?: Record<string, string | number>) => {
     // @ts-ignore
@@ -457,11 +468,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return text
   }
 
-  // Evitar desajustes de hidratación en Next.js
-  if (!isInitialized) {
-    return <div className="invisible">{children}</div>
-  }
-
+  // 5. Renderizado: IMPORTANTE -> Siempre renderizamos children.
+  // No hay condiciones de retorno nulo ni divs extraños.
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
@@ -469,8 +477,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// 6. Hook personalizado
 export const useLanguage = () => {
   const context = useContext(LanguageContext)
-  if (!context) throw new Error("useLanguage must be used within a LanguageProvider")
+  if (!context) {
+    throw new Error("useLanguage must be used within a LanguageProvider")
+  }
   return context
 }

@@ -4,6 +4,7 @@ const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
 const SCOPES = "https://www.googleapis.com/auth/drive.file"
 
+
 // Boundary constante para multipart
 const BOUNDARY = "-------314159265358979323846"
 

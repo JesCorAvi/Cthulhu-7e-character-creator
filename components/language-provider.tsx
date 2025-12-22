@@ -16,9 +16,9 @@ const translations = {
   es: {
     // --- STORAGE ---
     "storage_local": "Local",
-    "storage_local_desc": "Personajes en el dispositivo",
+    "storage_local_desc": "En Dispositivo",
     "storage_cloud": "Google Drive",
-    "storage_cloud_desc": "Nube",
+    "storage_cloud_desc": "En Nube",
     "storage_local_help": "Los personajes se guardan solo en este navegador. Si borras el historial o cambias de dispositivo, los perderás.",
     "storage_cloud_help": "Tus personajes se sincronizan con tu cuenta de Google Drive. Podrás acceder a ellos desde cualquier dispositivo.",
 
@@ -221,9 +221,9 @@ const translations = {
   en: {
     // --- STORAGE ---
     "storage_local": "Local",
-    "storage_local_desc": "Characters on the device",
+    "storage_local_desc": "On Device",
     "storage_cloud": "Google Drive",
-    "storage_cloud_desc": "Cloud",
+    "storage_cloud_desc": "On Cloud",
     "storage_local_help": "Characters are saved only in this browser. If you clear history or change devices, you will lose them.",
     "storage_cloud_help": "Your characters are synced with your Google Drive account. You can access them from any device.",
 

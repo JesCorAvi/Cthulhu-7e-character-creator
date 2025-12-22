@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Copy, Import, Check, Link as LinkIcon } from "lucide-react"
+import { Copy, Import, Check, Link as LinkIcon, Share2 } from "lucide-react"
 import { Character } from "@/lib/character-types"
 import { generateCharacterCode, getShareUrl, parseCharacterCode } from "@/lib/sharing"
 import { toast } from "sonner" 
@@ -51,17 +51,39 @@ export function ShareCharacterModal({ isOpen, onClose, character, onImport }: Sh
     }
   }
 
+  const handleNativeShare = async () => {
+    const shareData = {
+      title: `Investigador: ${character.name || 'Sin nombre'}`,
+      text: `Mira mi personaje de La Llamada de Cthulhu: ${character.name || ''}`,
+      url: shareUrl,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        copyToClipboard(shareUrl, true)
+      }
+    } catch (err) {
+      // No mostramos error si el usuario simplemente canceló la acción de compartir
+      if ((err as Error).name !== 'AbortError') {
+        toast.error("Error al compartir")
+      }
+    }
+  }
+
   const handleImport = () => {
     if (!importCode.trim()) return
     let codeToParse = importCode.trim()
     try {
       const url = new URL(codeToParse)
-      const dataParam = url.searchParams.get("data")
+      // Buscamos el parámetro corto 'd' o el largo 'data'
+      const dataParam = url.searchParams.get("d") || url.searchParams.get("data")
       if (dataParam) {
         codeToParse = dataParam
       }
     } catch (e) {
-      // No es URL
+      // No es URL, se procesa como código directo
     }
 
     const importedChar = parseCharacterCode(codeToParse)
@@ -77,12 +99,11 @@ export function ShareCharacterModal({ isOpen, onClose, character, onImport }: Sh
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      {/* max-w-[90vw] asegura que nunca sea más ancho que la pantalla del móvil */}
       <DialogContent className="sm:max-w-md w-full max-w-[90vw] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Compartir / Importar</DialogTitle>
           <DialogDescription>
-            Copia el enlace o código para compartir tu personaje.
+            Usa el enlace corto para compartir tu investigador.
           </DialogDescription>
         </DialogHeader>
 
@@ -96,16 +117,27 @@ export function ShareCharacterModal({ isOpen, onClose, character, onImport }: Sh
             <div className="space-y-2 w-full">
               <Label>Enlace directo</Label>
               <div className="flex gap-2 w-full max-w-full">
-                {/* min-w-0 es CRUCIAL para que flex-1 funcione con inputs desbordantes */}
                 <Input 
                   value={shareUrl} 
                   readOnly 
                   className="flex-1 min-w-0 bg-muted/50 text-xs" 
                 />
+                {/* Botón de compartir nativo (Share2) */}
                 <Button 
                   size="icon" 
                   className="shrink-0"
+                  onClick={handleNativeShare}
+                  title="Compartir"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+                {/* Botón de copiar tradicional */}
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  className="shrink-0"
                   onClick={() => copyToClipboard(shareUrl, true)}
+                  title="Copiar enlace"
                 >
                   {copiedLink ? <Check className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
                 </Button>
@@ -115,7 +147,6 @@ export function ShareCharacterModal({ isOpen, onClose, character, onImport }: Sh
             <div className="space-y-2 w-full">
               <Label>Código de texto</Label>
               <div className="flex gap-2 w-full max-w-full">
-                {/* break-all fuerza a romper la cadena larga base64 para que no estire el contenedor */}
                 <Textarea 
                   value={code} 
                   readOnly 
@@ -136,18 +167,17 @@ export function ShareCharacterModal({ isOpen, onClose, character, onImport }: Sh
             <div className="space-y-2 w-full">
               <Label>Pegar código o enlace</Label>
               <Textarea
-                placeholder="Pega aquí..."
+                placeholder="Pega aquí el enlace o código..."
                 value={importCode}
                 onChange={(e) => setImportCode(e.target.value)}
-                // break-all aquí también para prevenir expansión al pegar
                 className="h-32 font-mono text-xs resize-none break-all"
               />
             </div>
             <Button onClick={handleImport} className="w-full" disabled={!importCode}>
-              <Import className="mr-2 h-4 w-4" /> Cargar
+              <Import className="mr-2 h-4 w-4" /> Cargar Investigador
             </Button>
             <p className="text-xs text-red-500 font-bold text-center mt-2">
-              Esto reemplazará tu personaje actual.
+              Esto reemplazará tu personaje actual en la vista.
             </p>
           </TabsContent>
         </Tabs>

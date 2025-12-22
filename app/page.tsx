@@ -47,15 +47,17 @@ function CharacterApp() {
     setStorageModeState(getStorageMode())
   }, [])
 
+  // Efecto para procesar la importación por URL (Corto 'd' o Largo 'data')
   useEffect(() => {
-    const dataParam = searchParams.get("data")
-    if (dataParam) {
-      const importedChar = parseCharacterCode(dataParam)
+    const code = searchParams.get("d") || searchParams.get("data")
+    if (code) {
+      const importedChar = parseCharacterCode(code)
       if (importedChar) {
         setCurrentCharacter(importedChar)
         setView("view")
         setLoading(false)
         toast.success(t("character_imported_url"))
+        // Limpiar la URL para evitar re-importaciones al recargar
         window.history.replaceState({}, "", window.location.pathname)
       }
     }
@@ -63,7 +65,8 @@ function CharacterApp() {
 
   useEffect(() => {
     if (!isGoogleReady) return
-    if (searchParams.get("data")) return 
+    // Si estamos importando desde URL, no disparamos la carga de lista inicial
+    if (searchParams.get("d") || searchParams.get("data")) return 
 
     const currentMode = getStorageMode()
     if (currentMode === 'cloud') {

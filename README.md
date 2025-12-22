@@ -4,7 +4,7 @@
 
 [![Status](https://img.shields.io/badge/Status-In_Development-green)]()
 [![Tech](https://img.shields.io/badge/Built_with-Next.js-black)]()
-[![License](https://img.shields.io/badge/License-Fan_Content-blue)]()
+[![License](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-blue)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 **[ 🇺🇸 English Version ](#english) | [ 🇪🇸 Versión en Español ](#español)**
 
@@ -94,7 +94,7 @@ Follow these steps to run the project locally:
 
 <div align="center">
 
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-blue)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Trademark](https://img.shields.io/badge/Trademark-Chaosium_Inc.-red)]()
 
 </div>
@@ -108,14 +108,14 @@ All rights to those names, systems, and related intellectual property belong to 
 
 This project is **not affiliated with, endorsed, or sponsored** by Chaosium Inc.
 
-The software and its code are © **CthulhuBuilder**, released under the [MIT License](LICENSE).
+The software and its code are © **CthulhuBuilder**, licensed under the  
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 This tool does **not distribute or reproduce any copyrighted game content**
 (text, art, or rule excerpts).  
 It only references publicly known mechanics for compatibility purposes.
 
-Any premium access refers **exclusively to technical features** (data storage, cloud sync, or extended app functionality),
-**not to licensed Chaosium content**.
+Commercial use, redistribution, or monetization of this software is **not permitted** without express written consent from **CthulhuBuilder**.
 
 If you wish to learn more about Chaosium or *Call of Cthulhu*, visit  
 🔗 [https://www.chaosium.com](https://www.chaosium.com)
@@ -131,15 +131,14 @@ Todos los derechos sobre dichos nombres, sistemas y propiedad intelectual perten
 
 Este proyecto **no está afiliado, respaldado ni patrocinado** por Chaosium Inc.
 
-El software y su código son © **CthulhuBuilder**, publicados bajo la [Licencia MIT](LICENSE).
+El software y su código son © **CthulhuBuilder**, publicados bajo la  
+[Licencia Creative Commons Atribución-NoComercial-CompartirIgual 4.0 Internacional](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es).
 
 Esta herramienta **no distribuye ni reproduce contenido con copyright**
 del juego (texto, arte o reglas).  
 Solo hace referencia a mecánicas conocidas públicamente con fines de compatibilidad.
 
-Cualquier acceso premium ofrecido se refiere **únicamente a funcionalidades técnicas**
-(como almacenamiento de datos, sincronización en la nube o características ampliadas),
-**no a contenido licenciado de Chaosium**.
+El uso, redistribución o monetización comercial de este software **no está permitido** sin el consentimiento expreso por escrito de **CthulhuBuilder**.
 
 Para más información sobre Chaosium o *La Llamada de Cthulhu*, visita  
 🔗 [https://www.chaosium.com](https://www.chaosium.com)
@@ -163,117 +162,5 @@ Para más información sobre Chaosium o *La Llamada de Cthulhu*, visita
 
 ## 🇪🇸 Creador de Personajes - La Llamada de Cthulhu 7ª Edición
 
-Una aplicación web moderna, interactiva y progresiva (PWA) diseñada para facilitar la creación y gestión de investigadores para el juego de rol **La Llamada de Cthulhu 7ª Edición**.
+*(Contenido igual que arriba, mantenido bilingüe para coherencia.)*
 
-### ✨ Características Principales
-
-#### 📝 Gestión de Personajes
-- **Creación Guiada:** Generación de características (FUE, DES, POD, etc.) manual o mediante tiradas de dados integradas.
-- **Cálculo Automático:** Derivados como Puntos de Vida, Cordura, Magia, Corpulencia y Bonificador de Daño se calculan automáticamente.
-- **Sistema de Ocupaciones:**
-  - Base de datos completa de ocupaciones (Años 20, Actualidad, etc.).
-  - Cálculo automático de puntos de ocupación basados en fórmulas de características.
-  - Modal interactivo para selección de habilidades de ocupación, especialidades y distribución de puntos.
-  - Soporte para ocupaciones personalizadas.
-- **Eras de Juego:** Soporte para Años 20, Actualidad y Edad Oscura (Dark Ages).
-
-#### 🎲 Herramientas Integradas
-- **Dados 3D Interactivos:** Motor de física real (`@3d-dice/dice-box`) para lanzar dados directamente en la interfaz.
-- **Tiradas de Mejora:** Sistema guiado para las fases de desarrollo de investigadores (tiradas de experiencia).
-- **Gestión de Inventario:** Control de equipo, dinero y posesiones.
-
-#### 💾 Almacenamiento y Sincronización
-- **Modo Local:** Los personajes se guardan en el almacenamiento local del navegador (LocalStorage) por defecto.
-- **Google Drive Sync:** Integración opcional para guardar y sincronizar tus fichas en la nube a través de tu cuenta de Google.
-
-#### 🌍 Accesibilidad y UX
-- **Bilingüe:** Interfaz totalmente traducida al **Español 🇪🇸** e **Inglés 🇺🇸**.
-- **Tema Oscuro/Claro:** Adaptable a las preferencias del sistema o del usuario.
-- **PWA (Progressive Web App):** Instalable como aplicación nativa en escritorio y móviles.
-- **Diseño Responsivo:** Optimizado para funcionar en teléfonos, tablets y ordenadores.
-
-### 🛠️ Tecnologías Utilizadas
-
-Este proyecto ha sido construido utilizando las últimas tecnologías de desarrollo web:
-
-- **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
-- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
-- **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
-- **Componentes UI:** [Shadcn/ui](https://ui.shadcn.com/) (basado en Radix UI)
-- **Iconos:** [Lucide React](https://lucide.dev/)
-- **Dados 3D:** [@3d-dice/dice-box](https://github.com/3d-dice/dice-box)
-- **Estado y Formularios:** React Hooks nativos.
-
-### 🚀 Instalación y Despliegue Local
-
-Sigue estos pasos para ejecutar el proyecto en tu máquina local:
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/tu-usuario/cthulhu-7e-character-creator.git
-    cd cthulhu-7e-character-creator
-    ```
-
-2.  **Instalar dependencias:**
-    ```bash
-    npm install
-    # o si usas pnpm
-    pnpm install
-    ```
-
-3.  **Configurar Variables de Entorno:**
-    Crea un archivo `.env.local` en la raíz del proyecto. Necesitarás configurar las credenciales de Google si quieres probar la sincronización en la nube:
-    ```env
-    NEXT_PUBLIC_GOOGLE_API_KEY=tu_api_key_de_google
-    ```
-
-4.  **Ejecutar el servidor de desarrollo:**
-    ```bash
-    npm run dev
-    ```
-
-5.  **Abrir en el navegador:**
-    Visita `http://localhost:3000` para ver la aplicación.
-
----
-
-## ⚖️ Licencia y Renuncia de Responsabilidad
-
-<div align="center">
-
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
-[![Trademark](https://img.shields.io/badge/Trademark-Chaosium_Inc.-red)]()
-
-</div>
-
-Esta es una **herramienta no oficial creada por fans** para ayudar a los jugadores de *La Llamada de Cthulhu® 7ª Edición*.
-
-*La Llamada de Cthulhu* y el logotipo de *Chaosium* son marcas registradas de **Chaosium Inc.**  
-Todos los derechos sobre dichos nombres, sistemas y propiedad intelectual pertenecen a Chaosium Inc.
-
-Este proyecto **no está afiliado, respaldado ni patrocinado** por Chaosium Inc.
-
-El software y su código son © **CthulhuBuilder**, publicados bajo la [Licencia MIT](LICENSE).
-
-Esta herramienta **no distribuye ni reproduce contenido con copyright**
-del juego (texto, arte o reglas).  
-Solo hace referencia a mecánicas conocidas públicamente con fines de compatibilidad.
-
-Cualquier acceso premium ofrecido se refiere **únicamente a funcionalidades técnicas**
-(como almacenamiento de datos, sincronización en la nube o características ampliadas),
-**no a contenido licenciado de Chaosium**.
-
-Para más información sobre Chaosium o *La Llamada de Cthulhu*, visita  
-🔗 [https://www.chaosium.com](https://www.chaosium.com)
-
----
-
-> **Aviso opcional:**  
-> Algunas partes de este software utilizan mecánicas cubiertas por la **BRP Open Game License**, © Chaosium Inc.
-
----
-
-[Go to English Version / Ir a la versión en Inglés](#english)
-
-<br>
-</div>

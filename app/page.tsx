@@ -11,13 +11,13 @@ import { Header } from "@/components/layout/header"
 import type { Character, CharacterEra } from "@/lib/character-types"
 import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorageMode, type StorageMode } from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
-import { initGoogleDrive, signInToGoogle } from "@/lib/google-drive"
+// IMPORTANTE: Importamos checkSessionActive
+import { initGoogleDrive, signInToGoogle, checkSessionActive } from "@/lib/google-drive"
 import { parseCharacterCode } from "@/lib/sharing"
 import { Plus, Users, Cloud, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
 
-// IMPORTAR COMPONENTES DE ALERTA MODAL
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,6 @@ function CharacterApp() {
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
   
-  // ESTADOS PARA CONTROLAR EL MODAL DE BORRADO
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
   
@@ -58,11 +57,22 @@ function CharacterApp() {
     }
   }, [])
 
+  // 1. Inicialización
   useEffect(() => {
     initGoogleDrive((success) => setIsGoogleReady(success))
-    setStorageModeState(getStorageMode())
-  }, [])
+    
+    const savedMode = getStorageMode()
+    setStorageModeState(savedMode)
 
+    if (searchParams.get("d") || searchParams.get("data")) return 
+
+    // Si es local, cargar inmediatamente
+    if (savedMode === 'local') {
+        loadCharacters()
+    }
+  }, [loadCharacters, searchParams])
+
+  // 2. Importación URL
   useEffect(() => {
     const code = searchParams.get("d") || searchParams.get("data")
     if (code) {
@@ -77,31 +87,30 @@ function CharacterApp() {
     }
   }, [searchParams, t])
 
+  // 3. Reacción a Google Ready (CORREGIDO)
   useEffect(() => {
     if (!isGoogleReady) return
     if (searchParams.get("d") || searchParams.get("data")) return 
 
     const currentMode = getStorageMode()
+    
     if (currentMode === 'cloud') {
-        setNeedsLogin(true)
-        setLoading(false)
-    } else {
-        loadCharacters()
+        // CORRECCIÓN: Comprobamos si la sesión se restauró automáticamente
+        if (checkSessionActive()) {
+            setNeedsLogin(false)
+            loadCharacters()
+        } else {
+            // Solo si no hay sesión válida pedimos login
+            setNeedsLogin(true)
+            setLoading(false)
+        }
     }
-  }, [isGoogleReady, loadCharacters, searchParams])
+  }, [isGoogleReady, searchParams, loadCharacters])
 
-  // --- FUNCIÓN DE LOGIN CORREGIDA ---
   const handleToggleStorage = async (checked: boolean) => {
-    // IMPORTANTE: No activar setLoading(true) aquí para el caso de Google.
-    // El cambio de estado provoca un re-render que desconecta el evento de clic del usuario
-    // haciendo que el navegador bloquee el popup.
-
     if (checked) {
       try {
-        // 1. Intentamos el login INMEDIATAMENTE tras el clic
         await signInToGoogle()
-        
-        // 2. Si el login es exitoso, ahora sí podemos poner loading
         setLoading(true) 
         setStorageMode("cloud")
         setStorageModeState("cloud")
@@ -109,27 +118,17 @@ function CharacterApp() {
         await loadCharacters()
       } catch (e: any) {
         console.error("Google Login Error:", e)
-        
-        // Manejo específico del bloqueo de popup
         if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user') {
-            toast.error(t("popup_blocked_title"), {
-                description: t("popup_blocked_desc"),
-                duration: 8000,
-            })
+            toast.error(t("popup_blocked_title"), { description: t("popup_blocked_desc") })
         } else {
-            toast.error(t("error_save"), {
-                description: t("popup_error_generic") || "Error connecting to Google Drive"
-            })
+            toast.error(t("error_save"), { description: "Error connecting to Google Drive" })
         }
-
-        // Si falla, volvemos a local sin loading intermedio excesivo
         setStorageMode("local")
         setStorageModeState("local")
       } finally {
         setLoading(false)
       }
     } else {
-      // Para cambiar a local no hay popups, así que podemos mostrar loading desde el principio
       setLoading(true)
       setStorageMode("local")
       setStorageModeState("local")
@@ -139,20 +138,12 @@ function CharacterApp() {
     }
   }
 
-  // --- LOGIN MANUAL (BOTÓN SYNC NOW) ---
   const handleManualLogin = async () => {
     try {
         await signInToGoogle()
         await loadCharacters()
     } catch (e: any) {
-        if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user') {
-            toast.error(t("popup_blocked_title"), {
-                description: t("popup_blocked_desc"),
-                duration: 8000,
-            })
-        } else {
-            toast.error(t("popup_error_generic") || "Error de conexión")
-        }
+        toast.error("Error de conexión")
     }
   }
 
@@ -178,9 +169,9 @@ function CharacterApp() {
       try {
         await deleteCharacter(charToDelete)
         await loadCharacters()
-        toast.success(t("character_deleted") || "Personaje eliminado")
+        toast.success(t("character_deleted"))
       } catch (error) {
-        toast.error("Error al eliminar personaje")
+        toast.error("Error al eliminar")
       } finally {
         setIsDeleteOpen(false)
         setCharToDelete(null)
@@ -280,23 +271,19 @@ function CharacterApp() {
             </>
         )}
 
-        {/* COMPONENTE VISUAL DEL MODAL DE BORRADO */}
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t("delete_confirm_title") || "Eliminar investigador"}</AlertDialogTitle>
+              <AlertDialogTitle>{t("delete_confirm_title")}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t("delete_confirm") || "¿Estás seguro de que quieres eliminar este personaje? Esta acción no se puede deshacer."}
+                {t("delete_confirm")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={confirmDelete} 
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 <Trash2 className="w-4 h-4 mr-2" />
-                {t("delete") || "Eliminar"}
+                {t("delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

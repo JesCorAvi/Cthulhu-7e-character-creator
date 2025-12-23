@@ -18,6 +18,9 @@ import { Plus, Users, Cloud, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
 
+// IMPORTAMOS EL MODAL DE ERROR
+import { PopupBlockedModal } from "@/components/popup-blocked-modal"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +43,9 @@ function CharacterApp() {
   
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
+  
+  // ESTADO PARA EL MODAL DE POPUP
+  const [isPopupBlockedOpen, setIsPopupBlockedOpen] = useState(false)
   
   const { t } = useLanguage()
   const searchParams = useSearchParams()
@@ -118,11 +124,14 @@ function CharacterApp() {
         await loadCharacters()
       } catch (e: any) {
         console.error("Google Login Error:", e)
-        if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user') {
-            toast.error(t("popup_blocked_title"), { description: t("popup_blocked_desc") })
+        
+        // DETECCIÓN DE POPUP BLOQUEADO
+        if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user' || e?.type === 'popup_failed_to_open') {
+            setIsPopupBlockedOpen(true)
         } else {
             toast.error(t("error_save"), { description: "Error connecting to Google Drive" })
         }
+        
         setStorageMode("local")
         setStorageModeState("local")
       } finally {
@@ -143,7 +152,12 @@ function CharacterApp() {
         await signInToGoogle()
         await loadCharacters()
     } catch (e: any) {
-        toast.error("Error de conexión")
+         // DETECCIÓN TAMBIÉN AQUÍ
+         if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_failed_to_open') {
+            setIsPopupBlockedOpen(true)
+        } else {
+            toast.error("Error de conexión")
+        }
     }
   }
 
@@ -288,6 +302,12 @@ function CharacterApp() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* MODAL DE AYUDA PARA POPUPS BLOQUEADOS */}
+        <PopupBlockedModal 
+            isOpen={isPopupBlockedOpen} 
+            onClose={() => setIsPopupBlockedOpen(false)} 
+        />
 
       </main>
     </div>

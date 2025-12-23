@@ -22,9 +22,32 @@ const translations = {
     "storage_local_help": "Los personajes se guardan solo en este navegador. Si borras el historial o cambias de dispositivo, los perderás.",
     "storage_cloud_help": "Tus personajes se sincronizan con tu cuenta de Google Drive. Podrás acceder a ellos desde cualquier dispositivo.",
 
+   // --- POPUP ERROR MODAL ---
+    "popup_blocked_title": "Ventana de inicio bloqueada",
+    "popup_blocked_desc": "El navegador ha bloqueado el inicio de sesión.",
+    "popup_blocked_modal_desc": "El navegador bloqueó la ventana emergente de Google necesaria para iniciar sesión. Esto es común por seguridad, pero impide la conexión.",
+    "popup_instruction_title": "Selecciona tu navegador para ver cómo desbloquearlo:",
+    
+    // BRAVE
+    "popup_brave_1": "Mira la barra de direcciones: busca el icono de 'Ventana bloqueada' (cuadradito con X roja) a la derecha, o el icono del León de Brave.",
+    "popup_brave_2": "Si ves la 'X' roja: haz clic y elige 'Permitir siempre...'. Si no, haz clic en el León y desactiva los escudos (Shields Up) momentáneamente para este sitio.",
+    "popup_brave_note": "Nota: Brave es muy estricto con los pop-ups de Google. Desactivar los escudos suele ser la solución más rápida.",
+
+    // OTROS NAVEGADORES
+    "popup_chrome_1": "En la parte derecha de la barra de direcciones (arriba), busca un icono con una 'X' roja.",
+    "popup_chrome_2": "Haz clic en él y selecciona la opción 'Permitir siempre ventanas emergentes y redirecciones de...'.",
+    "popup_chrome_3": "Haz clic en 'Hecho' y vuelve a intentar el botón de conexión.",
+    
+    "popup_firefox_1": "Busca una barra amarilla debajo de la dirección web o un icono en la barra de direcciones.",
+    "popup_firefox_2": "Haz clic en 'Opciones' y selecciona 'Permitir ventanas emergentes para este sitio'.",
+    
+    "popup_safari_1": "Safari no siempre avisa. Ve a Ajustes (Settings) > Sitios web > Ventanas emergentes.",
+    "popup_safari_2": "Busca este sitio web en la lista y cambia el selector de 'Bloquear' a 'Permitir'.",
+    
+    "popup_edge_1": "Busca el icono de 'Ventana bloqueada' (con una X roja) en la barra de direcciones.",
+    "popup_edge_2": "Haz clic y selecciona 'Permitir siempre' para este sitio.",
+
     // --- GENERAL UI ---
-    "popup_blocked_title": "Ventana emergente bloqueada",
-    "popup_blocked_desc": "El navegador ha bloqueado la ventana de inicio de sesión de Google. Por favor, busca el icono de 'ventana bloqueada' en la barra de direcciones (arriba a la derecha) y permítela para continuar.",
     "popup_error_generic": "Error al iniciar sesión con Google",
     "wait_saving": "Espere a que los datos se guarden",
     "delete_confirm_title": "Confirmar Eliminación",
@@ -234,9 +257,32 @@ const translations = {
     "storage_local_help": "Characters are saved only in this browser. If you clear history or change devices, you will lose them.",
     "storage_cloud_help": "Your characters are synced with your Google Drive account. You can access them from any device.",
 
-    // --- GENERAL UI ---
+    // --- POPUP ERROR MODAL ---
     "popup_blocked_title": "Popup Blocked",
-    "popup_blocked_desc": "The browser blocked the Google login popup. Please look for the 'blocked popup' icon in the address bar (top right) and allow it to continue.",
+    "popup_blocked_desc": "Browser blocked the Google login.",
+    "popup_blocked_modal_desc": "The browser blocked the Google sign-in popup. This is a common security feature, but it prevents you from logging in.",
+    "popup_instruction_title": "Select your browser to fix it:",
+
+    // BRAVE
+    "popup_brave_1": "Look at the address bar: find the 'Popup blocked' icon (red X) or the Brave Lion icon.",
+    "popup_brave_2": "If you see the red X: click it and select 'Always allow...'. Otherwise, click the Lion and temporarily turn 'Shields' DOWN for this site.",
+    "popup_brave_note": "Note: Brave is strict with Google popups. Turning Shields OFF for this site is often the easiest fix.",
+
+    // OTHER BROWSERS
+    "popup_chrome_1": "Look for a red 'X' icon or 'Popup blocked' icon in the address bar (right side).",
+    "popup_chrome_2": "Click it and select 'Always allow pop-ups and redirects from...'.",
+    "popup_chrome_3": "Click 'Done' and try the connect button again.",
+    
+    "popup_firefox_1": "Look for a yellow bar under the address bar or an icon inside it.",
+    "popup_firefox_2": "Click 'Options' (or the icon) and select 'Allow pop-ups for this site'.",
+    
+    "popup_safari_1": "Safari might not notify you. Go to Settings/Preferences > Websites > Pop-up Windows.",
+    "popup_safari_2": "Find this website in the list and change the dropdown from 'Block' to 'Allow'.",
+    
+    "popup_edge_1": "Look for the 'Popup blocked' icon (red X) in the address bar.",
+    "popup_edge_2": "Click it and select 'Always allow' for this site.",
+
+    // --- GENERAL UI ---
     "popup_error_generic": "Error signing in with Google",
     "app_title": "Cthulhu Builder",
     "app_subtitle": "Character Creator",
@@ -359,7 +405,7 @@ const translations = {
     "add_custom": "Add...",
     "skills_choice": "Skills of your choice",
 
-    // --- COMBAT ---
+    // --- COMBATE ---
     "combat": "Combat",
     "weapon": "Weapon",
     "unarmed": "Unarmed",

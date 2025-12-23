@@ -73,7 +73,7 @@ export function Header({
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Selector de Almacenamiento con Texto Directo */}
           {onStorageChange && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 border rounded-lg p-1 bg-muted/30">
+            <div className="flex flex-row items-center gap-1 border rounded-lg p-1 bg-muted/30">
               <ToggleGroup
                 type="single"
                 value={storageMode}
@@ -85,10 +85,10 @@ export function Header({
                 {/* OPCIÓN LOCAL */}
                 <ToggleGroupItem 
                   value="local" 
-                  className="h-10 px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+                  className="h-9 sm:h-10 px-2 sm:px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
                 >
                   <HardDrive className={`h-4 w-4 ${storageMode === 'local' ? 'text-foreground' : 'text-muted-foreground'}`} />
-                  <div className="flex flex-col items-start leading-tight">
+                  <div className="hidden sm:flex flex-col items-start leading-tight">
                     <span className="text-[11px] font-bold">{t("storage_local")}</span>
                     <span className="text-[9px] text-muted-foreground uppercase">{t("storage_local_desc")}</span>
                   </div>
@@ -97,10 +97,10 @@ export function Header({
                 {/* OPCIÓN GOOGLE DRIVE */}
                 <ToggleGroupItem 
                   value="cloud" 
-                  className="h-10 px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+                  className="h-9 sm:h-10 px-2 sm:px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
                 >
                   <Cloud className={`h-4 w-4 ${storageMode === 'cloud' ? 'text-blue-500' : 'text-muted-foreground'}`} />
-                  <div className="flex flex-col items-start leading-tight">
+                  <div className="hidden sm:flex flex-col items-start leading-tight">
                     <span className="text-[11px] font-bold">{t("storage_cloud")}</span>
                     <span className={`text-[9px] uppercase ${!isGoogleReady && storageMode === 'cloud' ? 'text-amber-500' : 'text-muted-foreground'}`}>
                       {t("storage_cloud_desc")}

@@ -39,7 +39,7 @@ const translations = {
     solution_title: "Cómo habilitarlo:",
 
     tut_brave_1:
-      "Haz clic en el icono a la izquierda de la barra de direcciones (escudo 🦁 o candado 🔒).",
+      "Haz clic en el icono a la izquierda de la barra de direcciones (dos barras paralelas con circulos a los lados).",
     tut_brave_2: 'Selecciona "Configuración del sitio" / Site Settings.',
     tut_brave_3:
       'Busca "Inicio de sesión con Google o Google Sign‑In" en la lista de permisos y cámbialo a Permitir / Allow.',
@@ -286,7 +286,7 @@ const translations = {
     solution_title: "How to enable it:",
 
     tut_brave_1:
-      "Click on the icon to the left of the address bar (shield 🦁 or lock 🔒).",
+      "Click on the icon to the left of the address bar (two parallel bars with circles on the sides).",
     tut_brave_2: 'Select "Site Settings".',
     tut_brave_3:
       'Find "Google Sign‑In" in the permissions list and change it to Allow.',

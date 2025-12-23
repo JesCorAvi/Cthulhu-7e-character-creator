@@ -23,6 +23,9 @@ const translations = {
     "storage_cloud_help": "Tus personajes se sincronizan con tu cuenta de Google Drive. Podrás acceder a ellos desde cualquier dispositivo.",
 
     // --- GENERAL UI ---
+    "popup_blocked_title": "Ventana emergente bloqueada",
+    "popup_blocked_desc": "El navegador ha bloqueado la ventana de inicio de sesión de Google. Por favor, busca el icono de 'ventana bloqueada' en la barra de direcciones (arriba a la derecha) y permítela para continuar.",
+    "popup_error_generic": "Error al iniciar sesión con Google",
     "wait_saving": "Espere a que los datos se guarden",
     "delete_confirm_title": "Confirmar Eliminación",
     "app_title": "Cthulhu Builder",
@@ -232,6 +235,9 @@ const translations = {
     "storage_cloud_help": "Your characters are synced with your Google Drive account. You can access them from any device.",
 
     // --- GENERAL UI ---
+    "popup_blocked_title": "Popup Blocked",
+    "popup_blocked_desc": "The browser blocked the Google login popup. Please look for the 'blocked popup' icon in the address bar (top right) and allow it to continue.",
+    "popup_error_generic": "Error signing in with Google",
     "app_title": "Cthulhu Builder",
     "app_subtitle": "Character Creator",
     "new": "New",

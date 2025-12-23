@@ -44,7 +44,9 @@ self.addEventListener('activate', (event) => {
 // FETCH: Estrategias de caché
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-
+  if (event.request.method !== 'GET') {
+      return;
+    }
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)

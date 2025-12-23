@@ -17,7 +17,7 @@ import { Plus, Users, Cloud, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
 
-// 1. IMPORTAR COMPONENTES DE ALERTA MODAL
+// IMPORTAR COMPONENTES DE ALERTA MODAL
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,7 @@ function CharacterApp() {
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
   
-  // 2. NUEVOS ESTADOS PARA CONTROLAR EL MODAL
+  // ESTADOS PARA CONTROLAR EL MODAL DE BORRADO
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
   
@@ -90,28 +90,69 @@ function CharacterApp() {
     }
   }, [isGoogleReady, loadCharacters, searchParams])
 
+  // --- FUNCIÓN DE LOGIN CORREGIDA ---
   const handleToggleStorage = async (checked: boolean) => {
-    setLoading(true)
+    // IMPORTANTE: No activar setLoading(true) aquí para el caso de Google.
+    // El cambio de estado provoca un re-render que desconecta el evento de clic del usuario
+    // haciendo que el navegador bloquee el popup.
+
     if (checked) {
       try {
+        // 1. Intentamos el login INMEDIATAMENTE tras el clic
         await signInToGoogle()
+        
+        // 2. Si el login es exitoso, ahora sí podemos poner loading
+        setLoading(true) 
         setStorageMode("cloud")
         setStorageModeState("cloud")
         setNeedsLogin(false)
         await loadCharacters()
-      } catch (e) {
+      } catch (e: any) {
+        console.error("Google Login Error:", e)
+        
+        // Manejo específico del bloqueo de popup
+        if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user') {
+            toast.error(t("popup_blocked_title"), {
+                description: t("popup_blocked_desc"),
+                duration: 8000,
+            })
+        } else {
+            toast.error(t("error_save"), {
+                description: t("popup_error_generic") || "Error connecting to Google Drive"
+            })
+        }
+
+        // Si falla, volvemos a local sin loading intermedio excesivo
         setStorageMode("local")
         setStorageModeState("local")
-        toast.error("Error al conectar con Google Drive")
       } finally {
         setLoading(false)
       }
     } else {
+      // Para cambiar a local no hay popups, así que podemos mostrar loading desde el principio
+      setLoading(true)
       setStorageMode("local")
       setStorageModeState("local")
       setNeedsLogin(false)
       await loadCharacters()
       setLoading(false)
+    }
+  }
+
+  // --- LOGIN MANUAL (BOTÓN SYNC NOW) ---
+  const handleManualLogin = async () => {
+    try {
+        await signInToGoogle()
+        await loadCharacters()
+    } catch (e: any) {
+        if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user') {
+            toast.error(t("popup_blocked_title"), {
+                description: t("popup_blocked_desc"),
+                duration: 8000,
+            })
+        } else {
+            toast.error(t("popup_error_generic") || "Error de conexión")
+        }
     }
   }
 
@@ -127,13 +168,11 @@ function CharacterApp() {
     loadCharacters()
   }
 
-  // 3. NUEVA FUNCIÓN PARA SOLICITAR EL BORRADO (ABRE EL MODAL)
   const requestDelete = (id: string) => {
     setCharToDelete(id)
     setIsDeleteOpen(true)
   }
 
-  // 4. NUEVA FUNCIÓN PARA EJECUTAR EL BORRADO REAL
   const confirmDelete = async () => {
     if (charToDelete) {
       try {
@@ -169,7 +208,7 @@ function CharacterApp() {
             <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-card/50">
                 <Cloud className="h-16 w-16 text-blue-500 mb-4" />
                 <h2 className="text-xl font-bold mb-2">{t("login_required")}</h2>
-                <Button onClick={() => signInToGoogle().then(loadCharacters)} className="gap-2">
+                <Button onClick={handleManualLogin} className="gap-2">
                     <RefreshCw className="h-4 w-4" /> {t("sync_now")}
                 </Button>
             </div>
@@ -205,10 +244,6 @@ function CharacterApp() {
                                   character={char} 
                                   onView={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("view")})}
                                   onEdit={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("edit")})}
-                                  
-                                  // ----------------------------------------------------
-                                  // 5. SOLUCIÓN AQUÍ: Usamos requestDelete en vez del inline confirm()
-                                  // ----------------------------------------------------
                                   onDelete={requestDelete} 
                                 />
                             ))}
@@ -245,7 +280,7 @@ function CharacterApp() {
             </>
         )}
 
-        {/* 6. COMPONENTE VISUAL DEL MODAL DE BORRADO */}
+        {/* COMPONENTE VISUAL DEL MODAL DE BORRADO */}
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -256,7 +291,6 @@ function CharacterApp() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-              {/* Botón rojo de peligro */}
               <AlertDialogAction 
                 onClick={confirmDelete} 
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

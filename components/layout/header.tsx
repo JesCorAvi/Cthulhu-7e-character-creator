@@ -78,7 +78,9 @@ export function Header({
                 type="single"
                 value={storageMode}
                 onValueChange={(val) => {
-                  if (val) onStorageChange(val === "cloud");
+                  // CORRECCIÓN: Solo manejamos 'local' aquí. 'cloud' se maneja en el onClick
+                  // para asegurar que el navegador confíe en el evento de usuario.
+                  if (val === "local") onStorageChange(false);
                 }}
                 className="flex gap-1"
               >
@@ -97,6 +99,12 @@ export function Header({
                 {/* OPCIÓN GOOGLE DRIVE */}
                 <ToggleGroupItem 
                   value="cloud" 
+                  // CORRECCIÓN: Usamos onClick directo para el login
+                  onClick={() => {
+                    if (storageMode !== 'cloud') {
+                       onStorageChange(true);
+                    }
+                  }}
                   className="h-9 sm:h-10 px-2 sm:px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
                 >
                   <Cloud className={`h-4 w-4 ${storageMode === 'cloud' ? 'text-blue-500' : 'text-muted-foreground'}`} />

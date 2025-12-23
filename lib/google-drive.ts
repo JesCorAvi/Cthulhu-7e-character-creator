@@ -12,6 +12,9 @@ let tokenClient: any
 let gapiInited = false
 let gisInited = false
 
+// Variable para capturar el rechazo de la promesa si el popup falla
+let pendingSignInReject: ((reason?: any) => void) | null = null
+
 export const initGoogleDrive = (onInit: (success: boolean) => void) => {
   if (typeof window === "undefined") return
 
@@ -44,6 +47,14 @@ export const initGoogleDrive = (onInit: (success: boolean) => void) => {
         throw resp
       }
     },
+    // Callback para errores de UX (Popup bloqueado o cerrado)
+    error_callback: (error: any) => {
+      console.error("GSI Error (Popup):", error);
+      if (pendingSignInReject) {
+        pendingSignInReject(error);
+        pendingSignInReject = null;
+      }
+    }
   })
   gisInited = true
 
@@ -56,11 +67,16 @@ export const signInToGoogle = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (!tokenClient) return reject("Google Client not initialized")
 
+    // Guardamos la referencia del reject
+    pendingSignInReject = reject;
+
     tokenClient.callback = (resp: any) => {
+      pendingSignInReject = null; // Limpiamos porque ya respondió
       if (resp.error) reject(resp)
       else resolve()
     }
 
+    // Si el navegador bloquea esto, se disparará error_callback
     tokenClient.requestAccessToken({ prompt: "" })
   })
 }
@@ -120,7 +136,7 @@ export const saveCharacterToDrive = async (character: Character): Promise<void> 
 
   const accessToken = (window as any).gapi.client.getToken().access_token
 
-  // SOLUCIÓN: Cabecera correcta para multipart
+  // Cabecera correcta para multipart
   const headers = new Headers({
     Authorization: "Bearer " + accessToken,
     "Content-Type": `multipart/related; boundary=${BOUNDARY}`,
@@ -174,14 +190,11 @@ export const getCharactersFromDrive = async (): Promise<Character[]> => {
                  char = JSON.parse(rawContent)
              }
           } catch (e) {
-             // Intento 2: Rescate de archivos "sucios" (Multipart guardado como texto)
+             // Intento 2: Rescate de archivos "sucios"
              console.warn(`Archivo ${file.id} corrupto, intentando reparar...`)
              if (typeof rawContent === 'string' && rawContent.includes(BOUNDARY)) {
-                // Buscamos el segundo bloque JSON que contiene los datos reales
                 const parts = rawContent.split(BOUNDARY)
-                // Partes esperadas: [vacío, metadatos, contenido, --]
                 if (parts.length >= 3) {
-                    // Limpiamos cabeceras del content-type del fragmento
                     const jsonPart = parts[2].substring(parts[2].indexOf('{'))
                     char = JSON.parse(jsonPart)
                 }

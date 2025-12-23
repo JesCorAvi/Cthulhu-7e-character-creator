@@ -205,7 +205,7 @@ const translations = {
     "formulas_title": "Fórmulas de tirada:",
     "rolls_complete": "Tiradas Completadas",
     "next_roll": "Continuar con la siguiente tirada",
-    "reroll_all": "Volver a tirar todo",
+    "reroll_all": "Volver a tirar",
     "apply_results": "Aplicar Resultados",
     "click_to_roll": "Haz clic para lanzar los dados",
     

@@ -3,7 +3,7 @@ import type { Character } from "./character-types"
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
 const SCOPES = "https://www.googleapis.com/auth/drive.file"
-
+const STORAGE_KEY = "cthulhu_gdrive_token" // Clave para guardar en LocalStorage
 
 // Boundary constante para multipart
 const BOUNDARY = "-------314159265358979323846"
@@ -32,12 +32,16 @@ export const initGoogleDrive = (onInit: (success: boolean) => void) => {
   }
 
   gapi.load("client", async () => {
-      await gapi.client.init({
-        discoveryDocs: DISCOVERY_DOCS,
-      })
-      gapiInited = true
-      checkAuth()
+    await gapi.client.init({
+      discoveryDocs: DISCOVERY_DOCS,
     })
+    gapiInited = true
+    
+    // Intentamos restaurar sesión automáticamente al cargar
+    tryRestoreSession()
+    
+    checkAuth()
+  })
 
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
@@ -49,12 +53,12 @@ export const initGoogleDrive = (onInit: (success: boolean) => void) => {
     },
     // Callback para errores de UX (Popup bloqueado o cerrado)
     error_callback: (error: any) => {
-      console.error("GSI Error (Popup):", error);
+      console.error("GSI Error (Popup):", error)
       if (pendingSignInReject) {
-        pendingSignInReject(error);
-        pendingSignInReject = null;
+        pendingSignInReject(error)
+        pendingSignInReject = null
       }
-    }
+    },
   })
   gisInited = true
 
@@ -63,17 +67,59 @@ export const initGoogleDrive = (onInit: (success: boolean) => void) => {
   }
 }
 
+// Función auxiliar para recuperar el token del almacenamiento local
+const tryRestoreSession = (): boolean => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const { access_token, expires_at } = JSON.parse(stored)
+      // Comprobar validez (margen de 1 minuto)
+      if (Date.now() < expires_at - 60 * 1000) {
+        const gapi = (window as any).gapi
+        // Establecer el token en el cliente GAPI para que las llamadas funcionen
+        gapi.client.setToken({ access_token })
+        console.log("Sesión de Google Drive restaurada desde caché.")
+        return true
+      }
+    }
+  } catch (e) {
+    console.warn("No se pudo restaurar la sesión:", e)
+  }
+  return false
+}
+
 export const signInToGoogle = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (!tokenClient) return reject("Google Client not initialized")
 
-    // Guardamos la referencia del reject
-    pendingSignInReject = reject;
+    // 1. Intentamos usar el token guardado primero
+    if (tryRestoreSession()) {
+      resolve()
+      return
+    }
+
+    // 2. Si no hay token válido, pedimos uno nuevo
+    pendingSignInReject = reject
 
     tokenClient.callback = (resp: any) => {
-      pendingSignInReject = null; // Limpiamos porque ya respondió
-      if (resp.error) reject(resp)
-      else resolve()
+      pendingSignInReject = null // Limpiamos porque ya respondió
+      
+      if (resp.error) {
+        reject(resp)
+      } else {
+        // Guardar token y expiración en LocalStorage
+        const expires_at = Date.now() + (resp.expires_in * 1000)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          access_token: resp.access_token,
+          expires_at
+        }))
+
+        // IMPORTANTE: Establecer el token en gapi para las siguientes llamadas
+        const gapi = (window as any).gapi
+        gapi.client.setToken(resp)
+
+        resolve()
+      }
     }
 
     // Si el navegador bloquea esto, se disparará error_callback
@@ -82,6 +128,9 @@ export const signInToGoogle = (): Promise<void> => {
 }
 
 export const signOutFromGoogle = () => {
+  // Limpiar almacenamiento local
+  localStorage.removeItem(STORAGE_KEY)
+  
   const google = (window as any).google
   const token = (window as any).gapi?.client?.getToken()?.access_token
   if (google && token) {

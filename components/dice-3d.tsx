@@ -34,7 +34,7 @@ export function Dice3DScene({
     containerRef.current.innerHTML = ""
     diceBoxRef.current = null
 
-    const BASE_PATH = "/Cthulhu-7e-character-creator"
+    const BASE_PATH = ""
     
     const boxConfig = {
       id: containerId,

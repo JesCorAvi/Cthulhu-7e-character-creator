@@ -23,6 +23,8 @@ const translations = {
     "storage_cloud_help": "Tus personajes se sincronizan con tu cuenta de Google Drive. Podrás acceder a ellos desde cualquier dispositivo.",
 
     // --- GENERAL UI ---
+    "wait_saving": "Espere a que los datos se guarden",
+    "delete_confirm_title": "Confirmar Eliminación",
     "app_title": "Cthulhu Builder",
     "app_subtitle": "Creador de Personajes",
     "new": "Nuevo",
@@ -220,6 +222,8 @@ const translations = {
   },
   en: {
     // --- STORAGE ---
+    "wait_saving": "Please wait for the data to be saved",  
+    "delete_confirm_title": "Confirm Deletion",
     "storage_local": "Local",
     "storage_local_desc": "On Device",
     "storage_cloud": "Google Drive",

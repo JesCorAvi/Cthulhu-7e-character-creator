@@ -13,9 +13,21 @@ import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorag
 import { createNewCharacter } from "@/lib/character-utils"
 import { initGoogleDrive, signInToGoogle } from "@/lib/google-drive"
 import { parseCharacterCode } from "@/lib/sharing"
-import { Plus, Users, Cloud, RefreshCw } from "lucide-react"
+import { Plus, Users, Cloud, RefreshCw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
+
+// 1. IMPORTAR COMPONENTES DE ALERTA MODAL
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 function CharacterApp() {
   const [view, setView] = useState<"list" | "create" | "edit" | "view">("list")
@@ -25,6 +37,10 @@ function CharacterApp() {
   const [storageMode, setStorageModeState] = useState<StorageMode>("local")
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
+  
+  // 2. NUEVOS ESTADOS PARA CONTROLAR EL MODAL
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [charToDelete, setCharToDelete] = useState<string | null>(null)
   
   const { t } = useLanguage()
   const searchParams = useSearchParams()
@@ -47,7 +63,6 @@ function CharacterApp() {
     setStorageModeState(getStorageMode())
   }, [])
 
-  // Efecto para procesar la importación por URL (Corto 'd' o Largo 'data')
   useEffect(() => {
     const code = searchParams.get("d") || searchParams.get("data")
     if (code) {
@@ -57,7 +72,6 @@ function CharacterApp() {
         setView("view")
         setLoading(false)
         toast.success(t("character_imported_url"))
-        // Limpiar la URL para evitar re-importaciones al recargar
         window.history.replaceState({}, "", window.location.pathname)
       }
     }
@@ -65,7 +79,6 @@ function CharacterApp() {
 
   useEffect(() => {
     if (!isGoogleReady) return
-    // Si estamos importando desde URL, no disparamos la carga de lista inicial
     if (searchParams.get("d") || searchParams.get("data")) return 
 
     const currentMode = getStorageMode()
@@ -112,6 +125,28 @@ function CharacterApp() {
     setView("list")
     setCurrentCharacter(null)
     loadCharacters()
+  }
+
+  // 3. NUEVA FUNCIÓN PARA SOLICITAR EL BORRADO (ABRE EL MODAL)
+  const requestDelete = (id: string) => {
+    setCharToDelete(id)
+    setIsDeleteOpen(true)
+  }
+
+  // 4. NUEVA FUNCIÓN PARA EJECUTAR EL BORRADO REAL
+  const confirmDelete = async () => {
+    if (charToDelete) {
+      try {
+        await deleteCharacter(charToDelete)
+        await loadCharacters()
+        toast.success(t("character_deleted") || "Personaje eliminado")
+      } catch (error) {
+        toast.error("Error al eliminar personaje")
+      } finally {
+        setIsDeleteOpen(false)
+        setCharToDelete(null)
+      }
+    }
   }
 
   return (
@@ -165,10 +200,16 @@ function CharacterApp() {
                     ) : (
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {characters.map((char) => (
-                                <CharacterCard key={char.id} character={char} 
+                                <CharacterCard 
+                                  key={char.id} 
+                                  character={char} 
                                   onView={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("view")})}
                                   onEdit={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("edit")})}
-                                  onDelete={(id) => {if(confirm(t("delete_confirm"))) deleteCharacter(id).then(loadCharacters)}}
+                                  
+                                  // ----------------------------------------------------
+                                  // 5. SOLUCIÓN AQUÍ: Usamos requestDelete en vez del inline confirm()
+                                  // ----------------------------------------------------
+                                  onDelete={requestDelete} 
                                 />
                             ))}
                         </div>
@@ -203,6 +244,30 @@ function CharacterApp() {
                 )}
             </>
         )}
+
+        {/* 6. COMPONENTE VISUAL DEL MODAL DE BORRADO */}
+        <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("delete_confirm_title") || "Eliminar investigador"}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("delete_confirm") || "¿Estás seguro de que quieres eliminar este personaje? Esta acción no se puede deshacer."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+              {/* Botón rojo de peligro */}
+              <AlertDialogAction 
+                onClick={confirmDelete} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t("delete") || "Eliminar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </main>
     </div>
   )

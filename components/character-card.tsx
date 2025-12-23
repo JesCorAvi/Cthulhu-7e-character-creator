@@ -18,18 +18,35 @@ export function CharacterCard({ character, onView, onEdit, onDelete }: Character
   return (
     <Card className="bg-card border-border hover:border-primary/50 transition-colors">
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg text-foreground">{character.name || "Sin nombre"}</CardTitle>
-            <p className="text-sm text-muted-foreground">{character.occupation || "Sin ocupación"}</p>
+        {/* CAMBIOS CLAVE:
+           1. w-full: Asegura que el flex ocupe todo el ancho disponible.
+           2. overflow-hidden: Evita desbordamientos extraños dentro del grid padre.
+        */}
+        <div className="flex items-start justify-between gap-3 w-full overflow-hidden">
+          {/* CAMBIOS CLAVE:
+             1. flex-1: Obliga a este div a ocupar el espacio sobrante.
+             2. min-w-0: CRÍTICO. Permite que el flex-item se encoja por debajo de su contenido mínimo, activando el truncate.
+          */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <CardTitle 
+              className="text-lg text-foreground truncate block" 
+              title={character.name || "Sin nombre"}
+            >
+              {character.name || "Sin nombre"}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground truncate block">
+              {character.occupation || "Sin ocupación"}
+            </p>
           </div>
-          <Badge variant="secondary" className="text-xs">
+          
+          {/* shrink-0 evita que el badge se aplaste si el nombre es muy largo */}
+          <Badge variant="secondary" className="text-xs shrink-0">
             {ERA_LABELS[character.era]}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
-<div className="grid grid-cols-5 gap-2 text-center mb-4">
+        <div className="grid grid-cols-5 gap-2 text-center mb-4">
           <div>
             <p className="text-[10px] text-muted-foreground">FUE</p>
             <p className="font-bold text-sm text-foreground">{character.characteristics.STR.value}</p>

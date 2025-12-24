@@ -188,7 +188,10 @@ function CharacterApp() {
     }
   }
 
-  const confirmMigrate = async () => {
+  // --- [MODIFICADO] Función de migración con preventDefault ---
+  const confirmMigrate = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault() // EVITA EL CIERRE AUTOMÁTICO DEL MODAL
+
     if (!currentCharacter) return;
     
     setIsMigrating(true) // 1. Mostrar carga
@@ -507,6 +510,7 @@ function CharacterApp() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                     <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                    {/* onClick ahora pasa el evento automáticamente */}
                     <AlertDialogAction onClick={confirmMigrate} className="bg-primary text-primary-foreground">
                         {storageMode === 'local' ? <Cloud className="mr-2 h-4 w-4" /> : <HardDrive className="mr-2 h-4 w-4" />}
                         {t("move")}

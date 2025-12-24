@@ -6,6 +6,9 @@ const SCOPES = "https://www.googleapis.com/auth/drive.file"
 const STORAGE_KEY = "cthulhu_gdrive_token"
 const BOUNDARY = "-------314159265358979323846"
 
+// --- CAMBIO: Nombre de la carpeta ---
+const FOLDER_NAME = "Cthulhu Builder"
+
 let tokenClient: any
 let isGapiInitializing = false
 let isGapiInitialized = false
@@ -35,10 +38,8 @@ export const initGoogleDrive = (onInit: (success: boolean) => void) => {
         await gapi.client.init({ discoveryDocs: DISCOVERY_DOCS })
         isGapiInitialized = true
         isGapiInitializing = false
-        
-        // Restaurar sesión silenciósamente
         tryRestoreSession()
-        onInit(true) // Avisamos que la librería está lista
+        onInit(true)
       } catch (error) {
         console.error("Error GAPI:", error)
         isGapiInitializing = false
@@ -87,7 +88,6 @@ const tryRestoreSession = (): boolean => {
   return false
 }
 
-// --- NUEVA FUNCIÓN PARA EXPORTAR ---
 export const checkSessionActive = (): boolean => {
     const gapi = (window as any).gapi
     return !!(isGapiInitialized && gapi?.client?.getToken())
@@ -145,15 +145,53 @@ const ensureClientReady = () => {
   if (!gapi.client.getToken()) throw new Error("No hay token")
 }
 
-// ... El resto de funciones de archivos (saveCharacterToDrive, etc) se mantienen igual ...
-// Solo asegúrate de incluir findFileByCharId, saveCharacterToDrive, getCharactersFromDrive, deleteCharacterFromDrive
-// y createMultipartBody que ya tenías en tu código original.
+// --- LÓGICA DE CARPETAS ---
 
-const findFileByCharId = async (charId: string) => {
+const getOrCreateAppFolder = async (): Promise<string> => {
+  ensureClientReady()
+  const gapi = (window as any).gapi
+
+  // 1. Buscar si la carpeta existe
+  const q = `mimeType = 'application/vnd.google-apps.folder' and name = '${FOLDER_NAME}' and trashed = false`
+  
+  try {
+    const response = await gapi.client.drive.files.list({
+      q: q,
+      fields: "files(id, name)",
+    })
+
+    if (response.result.files && response.result.files.length > 0) {
+      return response.result.files[0].id
+    }
+
+    // 2. Si no existe, crearla
+    const metadata = {
+      name: FOLDER_NAME,
+      mimeType: "application/vnd.google-apps.folder",
+    }
+    
+    const createResponse = await gapi.client.drive.files.create({
+      resource: metadata,
+      fields: "id",
+    })
+    
+    return createResponse.result.id
+
+  } catch (e) {
+    console.error("Error gestionando la carpeta de la app:", e)
+    throw e
+  }
+}
+
+// Modificado para recibir folderId
+const findFileByCharId = async (charId: string, folderId: string) => {
   ensureClientReady()
   try {
+    // Buscamos SOLO dentro de la carpeta (folderId in parents)
+    const query = `appProperties has { key='charId' and value='${charId}' } and '${folderId}' in parents and trashed = false`
+    
     const response = await (window as any).gapi.client.drive.files.list({
-      q: `appProperties has { key='charId' and value='${charId}' } and trashed = false`,
+      q: query,
       fields: "files(id, name, appProperties)",
     })
     return response.result.files[0]
@@ -164,13 +202,21 @@ const findFileByCharId = async (charId: string) => {
 
 export const saveCharacterToDrive = async (character: Character): Promise<void> => {
   ensureClientReady()
+  
+  // 1. Asegurar carpeta
+  const folderId = await getOrCreateAppFolder()
+
   const fileContent = JSON.stringify(character)
-  const existingFile = await findFileByCharId(character.id)
-  const metadata = {
+  
+  // 2. Buscar archivo existente DENTRO de esa carpeta
+  const existingFile = await findFileByCharId(character.id, folderId)
+  
+  const metadata: any = {
     name: `${character.name || "Sin Nombre"} - Cthulhu 7e.json`,
     mimeType: "application/json",
     appProperties: { charId: character.id, type: "cthulhu_character" },
   }
+
   const accessToken = (window as any).gapi.client.getToken().access_token
   const headers = new Headers({
     Authorization: "Bearer " + accessToken,
@@ -178,12 +224,16 @@ export const saveCharacterToDrive = async (character: Character): Promise<void> 
   })
 
   if (existingFile) {
+    // Actualizar archivo existente
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`, {
       method: "PATCH",
       headers: headers,
       body: createMultipartBody(metadata, fileContent),
     })
   } else {
+    // Crear archivo NUEVO dentro de la carpeta
+    metadata.parents = [folderId]
+
     await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
       method: "POST",
       headers: headers,
@@ -195,8 +245,15 @@ export const saveCharacterToDrive = async (character: Character): Promise<void> 
 export const getCharactersFromDrive = async (): Promise<Character[]> => {
   try {
     ensureClientReady()
+    
+    // 1. Obtener carpeta
+    const folderId = await getOrCreateAppFolder()
+
+    // 2. Listar SOLO archivos dentro de esa carpeta
+    const query = `appProperties has { key='type' and value='cthulhu_character' } and '${folderId}' in parents and trashed = false`
+
     const response = await (window as any).gapi.client.drive.files.list({
-      q: "appProperties has { key='type' and value='cthulhu_character' } and trashed = false",
+      q: query,
       fields: "files(id, name)",
     })
     const files = response.result.files
@@ -234,7 +291,9 @@ export const getCharactersFromDrive = async (): Promise<Character[]> => {
 
 export const deleteCharacterFromDrive = async (charId: string): Promise<void> => {
   ensureClientReady()
-  const existingFile = await findFileByCharId(charId)
+  const folderId = await getOrCreateAppFolder()
+  // Solo borramos si está dentro de nuestra carpeta
+  const existingFile = await findFileByCharId(charId, folderId)
   if (existingFile) {
     await (window as any).gapi.client.drive.files.delete({ fileId: existingFile.id })
   }

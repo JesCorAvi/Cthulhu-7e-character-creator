@@ -10,6 +10,7 @@ import { Character } from "@/lib/character-types";
 import { ShareCharacterModal } from "@/components/share-character-modal";
 import { StorageMode } from "@/lib/character-storage";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Badge } from "@/components/ui/badge"; // [NUEVO] Importamos Badge
 
 interface HeaderProps {
   character?: Character | null;
@@ -71,15 +72,13 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Selector de Almacenamiento con Texto Directo */}
-          {onStorageChange && (
+          {/* Selector de Almacenamiento */}
+          {onStorageChange ? (
             <div className="flex flex-row items-center gap-1 border rounded-lg p-1 bg-muted/30">
               <ToggleGroup
                 type="single"
                 value={storageMode}
                 onValueChange={(val) => {
-                  // CORRECCIÓN: Solo manejamos 'local' aquí. 'cloud' se maneja en el onClick
-                  // para asegurar que el navegador confíe en el evento de usuario.
                   if (val === "local") onStorageChange(false);
                 }}
                 className="flex gap-1"
@@ -99,7 +98,6 @@ export function Header({
                 {/* OPCIÓN GOOGLE DRIVE */}
                 <ToggleGroupItem 
                   value="cloud" 
-                  // CORRECCIÓN: Usamos onClick directo para el login
                   onClick={() => {
                     if (storageMode !== 'cloud') {
                        onStorageChange(true);
@@ -121,6 +119,26 @@ export function Header({
                   )}
                 </ToggleGroupItem>
               </ToggleGroup>
+            </div>
+          ) : (
+            // [MODIFICADO] Usamos Badge para el estilo de recuadro
+            <div className="hidden sm:flex items-center">
+              <Badge 
+                variant="outline" 
+                className="gap-2 font-normal text-muted-foreground py-1.5 h-9 bg-muted/20 hover:bg-muted/20 border-border/60"
+              >
+                {storageMode === 'cloud' ? (
+                    <>
+                        <Cloud className="h-3.5 w-3.5 text-blue-500/70" />
+                        <span>{t("character_cloud_indicator")}</span>
+                    </>
+                ) : (
+                    <>
+                        <HardDrive className="h-3.5 w-3.5 opacity-70" />
+                        <span>{t("character_local_indicator")}</span>
+                    </>
+                )}
+              </Badge>
             </div>
           )}
 

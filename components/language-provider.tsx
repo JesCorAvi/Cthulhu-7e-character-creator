@@ -89,6 +89,8 @@ const translations = {
     rolling: "Rodando...",
 
     // --- TABS & FORMULARIOS ---
+    character_cloud_indicator: "Personaje en la nube",
+    character_local_indicator: "Personaje local",
     tab_backstory: "Trasfondo",
     tab_equipment: "Equipo y Dinero",
     tab_notes: "Notas",
@@ -334,6 +336,8 @@ const translations = {
     rolling: "Rolling...",
 
     // --- TABS & FORM ---
+    character_cloud_indicator: "Cloud Character",
+    character_local_indicator: "Local Character",
     tab_backstory: "Backstory",
     tab_equipment: "Equipment & Cash",
     tab_notes: "Notes",

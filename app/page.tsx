@@ -22,7 +22,7 @@ import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorag
 import { createNewCharacter } from "@/lib/character-utils"
 import { initGoogleDrive, signInToGoogle, checkSessionActive } from "@/lib/google-drive"
 import { parseCharacterCode } from "@/lib/sharing"
-import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown } from "lucide-react" // [AÑADIDO: ArrowUpDown]
+import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
 import { PopupBlockedModal } from "@/components/popup-blocked-modal"
@@ -38,7 +38,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-// [NUEVO] Tipo para el orden
 type SortOrder = "newest" | "oldest" | "alpha"
 
 function CharacterApp() {
@@ -50,10 +49,9 @@ function CharacterApp() {
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
   
-  // Estados para búsqueda, filtrado y [NUEVO] orden
   const [searchQuery, setSearchQuery] = useState("")
   const [eraFilter, setEraFilter] = useState<CharacterEra | "all">("all")
-  const [sortOrder, setSortOrder] = useState<SortOrder>("newest") // [NUEVO]
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest")
   
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
@@ -75,7 +73,6 @@ function CharacterApp() {
     }
   }, [])
 
-  // [MODIFICADO] Lógica de filtrado Y ordenación
   const filteredCharacters = characters
     .filter((char) => {
       const query = searchQuery.toLowerCase()
@@ -88,7 +85,6 @@ function CharacterApp() {
       return matchesSearch && matchesEra
     })
     .sort((a, b) => {
-      // [NUEVO] Lógica de sort
       switch (sortOrder) {
         case "oldest":
           return (a.createdAt || 0) - (b.createdAt || 0)
@@ -100,7 +96,6 @@ function CharacterApp() {
       }
     })
 
-  // ... (UseEffects se mantienen igual) ...
   useEffect(() => {
     initGoogleDrive((success) => setIsGoogleReady(success))
     const savedMode = getStorageMode()
@@ -223,7 +218,7 @@ function CharacterApp() {
         character={currentCharacter} 
         showShare={view === "edit" || view === "view"} 
         storageMode={storageMode}
-        onStorageChange={handleToggleStorage}
+        onStorageChange={view === "list" ? handleToggleStorage : undefined}
         isGoogleReady={isGoogleReady}
       />
       
@@ -254,7 +249,6 @@ function CharacterApp() {
                         </Button>
                     </div>
 
-                    {/* BARRA DE BÚSQUEDA, FILTRO Y ORDEN */}
                     {characters.length > 0 && (
                       <div className="flex flex-col md:flex-row gap-3">
                         <div className="relative flex-1">
@@ -284,7 +278,6 @@ function CharacterApp() {
                               </SelectContent>
                             </Select>
 
-                            {/* [NUEVO] Selector de Orden */}
                             <Select 
                               value={sortOrder} 
                               onValueChange={(value) => setSortOrder(value as SortOrder)}
@@ -344,7 +337,6 @@ function CharacterApp() {
                 </div>
                 )}
 
-                {/* ... (Resto de vistas create, edit, view igual que antes) ... */}
                 {view === "create" && (
                     <div className="max-w-4xl mx-auto space-y-8">
                         <div className="text-center">

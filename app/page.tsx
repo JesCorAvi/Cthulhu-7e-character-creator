@@ -188,9 +188,9 @@ function CharacterApp() {
     }
   }
 
-  // --- [MODIFICADO] Función de migración con preventDefault ---
+  // --- Función de migración con preventDefault para evitar cierre automático ---
   const confirmMigrate = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault() // EVITA EL CIERRE AUTOMÁTICO DEL MODAL
+    e.preventDefault()
 
     if (!currentCharacter) return;
     
@@ -302,9 +302,7 @@ function CharacterApp() {
         character={currentCharacter} 
         showShare={view === "edit" || view === "view"} 
         storageMode={storageMode}
-        // Pasamos null/undefined en vistas no-lista para activar el modo Badge
         onStorageChange={view === "list" ? handleToggleStorage : undefined}
-        // Activamos onMigrate SOLO si NO estamos en lista y NO estamos creando (solo view/edit)
         onMigrate={view !== "list" && view !== "create" ? requestMigrate : undefined}
         isGoogleReady={isGoogleReady}
       />
@@ -409,7 +407,8 @@ function CharacterApp() {
                            </Button>
                         </div>
                     ) : (
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        // AQUI ESTA EL CAMBIO DE GRID: xl:grid-cols-4
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {filteredCharacters.map((char) => (
                                 <CharacterCard 
                                   key={char.id} 
@@ -472,7 +471,6 @@ function CharacterApp() {
 
         {/* MODAL DE MIGRACIÓN CORREGIDO */}
         <AlertDialog open={isMigrateOpen} onOpenChange={(open) => { 
-            // Bloquear cierre si está cargando o en éxito
             if(!isMigrating && !isSuccess) setIsMigrateOpen(open) 
         }}>
           <AlertDialogContent>
@@ -485,7 +483,7 @@ function CharacterApp() {
                     </p>
                 </div>
             ) : isSuccess ? (
-                // 2. ÉXITO (con animación de entrada)
+                // 2. ÉXITO
                 <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-in fade-in zoom-in duration-300">
                     <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                         <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
@@ -510,7 +508,6 @@ function CharacterApp() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                     <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                    {/* onClick ahora pasa el evento automáticamente */}
                     <AlertDialogAction onClick={confirmMigrate} className="bg-primary text-primary-foreground">
                         {storageMode === 'local' ? <Cloud className="mr-2 h-4 w-4" /> : <HardDrive className="mr-2 h-4 w-4" />}
                         {t("move")}

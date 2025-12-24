@@ -18,11 +18,16 @@ import { CharacterViewer } from "@/components/character-viewer"
 import { Header } from "@/components/layout/header"
 import type { Character, CharacterEra } from "@/lib/character-types"
 import { ERA_LABELS } from "@/lib/character-types"
-import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorageMode, type StorageMode } from "@/lib/character-storage"
+import { 
+    getCharacters, getCharacter, deleteCharacter, 
+    getStorageMode, setStorageMode, 
+    saveToLocal, saveToCloud, deleteFromLocal, deleteFromCloud,
+    type StorageMode 
+} from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
 import { initGoogleDrive, signInToGoogle, checkSessionActive } from "@/lib/google-drive"
 import { parseCharacterCode } from "@/lib/sharing"
-import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown } from "lucide-react"
+import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown, HardDrive, Loader2, Check } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
 import { PopupBlockedModal } from "@/components/popup-blocked-modal"
@@ -55,6 +60,12 @@ function CharacterApp() {
   
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
+  
+  // Estados para MIGRACIÓN
+  const [isMigrateOpen, setIsMigrateOpen] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  
   const [isPopupBlockedOpen, setIsPopupBlockedOpen] = useState(false)
   
   const { t } = useLanguage()
@@ -167,6 +178,76 @@ function CharacterApp() {
     }
   }
 
+  // FUNCIÓN PARA ABRIR EL MODAL DE MIGRACIÓN
+  const requestMigrate = () => {
+    if (currentCharacter) {
+        // Reseteamos estados visuales antes de abrir
+        setIsMigrating(false)
+        setIsSuccess(false)
+        setIsMigrateOpen(true)
+    }
+  }
+
+  const confirmMigrate = async () => {
+    if (!currentCharacter) return;
+    
+    setIsMigrating(true) // 1. Mostrar carga
+    
+    const oldId = currentCharacter.id
+    const isLocal = storageMode === 'local'
+    
+    try {
+        if (isLocal) {
+            // -- LOCAL -> CLOUD --
+            if (!isGoogleReady || !checkSessionActive()) {
+                 await signInToGoogle()
+            }
+            
+            const charToMigrate = { ...currentCharacter }
+            
+            await saveToCloud(charToMigrate)
+            await deleteFromLocal(oldId)
+            
+            // Actualizar contexto
+            setStorageMode("cloud")
+            setStorageModeState("cloud")
+            setCurrentCharacter(charToMigrate)
+            
+        } else {
+            // -- CLOUD -> LOCAL --
+            const newLocalChar = { 
+                ...currentCharacter, 
+                id: crypto.randomUUID(),
+                updatedAt: Date.now() 
+            }
+            
+            await saveToLocal(newLocalChar)
+            await deleteFromCloud(oldId)
+            
+            // Actualizar contexto
+            setStorageMode("local")
+            setStorageModeState("local")
+            setCurrentCharacter(newLocalChar)
+        }
+        
+        // 2. Mostrar Éxito
+        setIsMigrating(false)
+        setIsSuccess(true)
+        
+        // 3. Esperar un momento para que el usuario vea el éxito
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        // 4. Cerrar modal
+        setIsMigrateOpen(false)
+
+    } catch (error) {
+        console.error(error)
+        toast.error(t("migration_error"))
+        setIsMigrating(false)
+        setIsSuccess(false)
+    }
+  }
+
   const handleManualLogin = async () => {
     try {
         await signInToGoogle()
@@ -218,7 +299,10 @@ function CharacterApp() {
         character={currentCharacter} 
         showShare={view === "edit" || view === "view"} 
         storageMode={storageMode}
+        // Pasamos null/undefined en vistas no-lista para activar el modo Badge
         onStorageChange={view === "list" ? handleToggleStorage : undefined}
+        // Activamos onMigrate SOLO si NO estamos en lista y NO estamos creando (solo view/edit)
+        onMigrate={view !== "list" && view !== "create" ? requestMigrate : undefined}
         isGoogleReady={isGoogleReady}
       />
       
@@ -380,6 +464,56 @@ function CharacterApp() {
                 {t("delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* MODAL DE MIGRACIÓN CORREGIDO */}
+        <AlertDialog open={isMigrateOpen} onOpenChange={(open) => { 
+            // Bloquear cierre si está cargando o en éxito
+            if(!isMigrating && !isSuccess) setIsMigrateOpen(open) 
+        }}>
+          <AlertDialogContent>
+            {isMigrating ? (
+                // 1. CARGA
+                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-lg font-medium text-foreground animate-pulse">
+                        {t("migrating_text")}
+                    </p>
+                </div>
+            ) : isSuccess ? (
+                // 2. ÉXITO (con animación de entrada)
+                <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-in fade-in zoom-in duration-300">
+                    <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <p className="text-lg font-bold text-center">
+                        {storageMode === 'cloud' 
+                            ? t("migration_success_cloud")
+                            : t("migration_success_local")
+                        }
+                    </p>
+                </div>
+            ) : (
+                // 3. CONFIRMACIÓN
+                <>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {storageMode === 'local' ? t("migrate_modal_title_cloud") : t("migrate_modal_title_local")}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {storageMode === 'local' ? t("migrate_modal_desc_cloud") : t("migrate_modal_desc_local")}
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmMigrate} className="bg-primary text-primary-foreground">
+                        {storageMode === 'local' ? <Cloud className="mr-2 h-4 w-4" /> : <HardDrive className="mr-2 h-4 w-4" />}
+                        {t("move")}
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </>
+            )}
           </AlertDialogContent>
         </AlertDialog>
 

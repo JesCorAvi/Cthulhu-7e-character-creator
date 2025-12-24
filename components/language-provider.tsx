@@ -89,6 +89,15 @@ const translations = {
     rolling: "Rodando...",
 
     // --- TABS & FORMULARIOS ---
+    move: "Mover",
+    migrate_modal_title_cloud: "Mover a la Nube",
+    migrate_modal_title_local: "Mover a Local",
+    migrate_modal_desc_cloud: "Esta acción subirá el personaje a tu Google Drive y lo eliminará de este dispositivo. ¿Continuar?",
+    migrate_modal_desc_local: "Esta acción descargará el personaje a tu dispositivo y lo eliminará de Google Drive. ¿Continuar?",
+    migrating_text: "Moviendo personaje...",
+    migration_success_cloud: "Personaje movido a la nube correctamente",
+    migration_success_local: "Personaje movido a local correctamente",
+    migration_error: "Error al mover el personaje",
     character_cloud_indicator: "Personaje en la nube",
     character_local_indicator: "Personaje local",
     tab_backstory: "Trasfondo",
@@ -295,6 +304,16 @@ const translations = {
     tut_brave_4: "Reload the page and try again.",
 
     // --- GENERAL UI ---
+  // Dentro de translations.en
+    migrate_modal_title_cloud: "Move to Cloud",
+    migrate_modal_title_local: "Move to Local",
+    migrate_modal_desc_cloud: "This action will upload the character to your Google Drive and delete it from this device. Continue?",
+    migrate_modal_desc_local: "This action will download the character to your device and delete it from Google Drive. Continue?",
+    migrating_text: "Moving character...",
+    migration_success_cloud: "Character successfully moved to cloud",
+    migration_success_local: "Character successfully moved to local",
+    migration_error: "Error moving character",
+    move: "Move",
     popup_error_generic: "Error signing in with Google",
     app_title: "Cthulhu Builder",
     app_subtitle: "Character Creator",

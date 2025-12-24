@@ -32,16 +32,7 @@ export const saveCharacter = async (character: Character): Promise<void> => {
   }
 
   // Fallback o modo local
-  const characters = await getCharactersLocal()
-  const existingIndex = characters.findIndex((c) => c.id === character.id)
-
-  if (existingIndex >= 0) {
-    characters[existingIndex] = character
-  } else {
-    characters.push(character)
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(characters))
+  await saveToLocal(character);
 }
 
 // AHORA ES ASÍNCRONO (Promise<Character[]>)
@@ -85,11 +76,45 @@ export const deleteCharacter = async (id: string): Promise<void> => {
       return;
   }
 
-  const characters = await getCharactersLocal()
-  const newCharacters = characters.filter((c) => c.id !== id)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(newCharacters))
+  await deleteFromLocal(id);
 }
 
 export const generateId = (): string => {
   return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+// --- NUEVAS FUNCIONES EXPORTADAS PARA MIGRACIÓN ---
+
+/** Guarda explícitamente en LocalStorage */
+export const saveToLocal = async (character: Character): Promise<void> => {
+  const characters = await getCharactersLocal()
+  const existingIndex = characters.findIndex((c) => c.id === character.id)
+
+  const charToSave = { ...character, updatedAt: Date.now() }
+
+  if (existingIndex >= 0) {
+    characters[existingIndex] = charToSave
+  } else {
+    characters.push(charToSave)
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(characters))
+}
+
+/** Elimina explícitamente de LocalStorage */
+export const deleteFromLocal = async (id: string): Promise<void> => {
+    const characters = await getCharactersLocal()
+    const newCharacters = characters.filter((c) => c.id !== id)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newCharacters))
+}
+
+/** Guarda explícitamente en Drive */
+// CAMBIO: Ahora devuelve Promise<void> para ser consistente y evitar confusiones
+export const saveToCloud = async (character: Character): Promise<void> => {
+    await drive.saveCharacterToDrive(character);
+}
+
+/** Elimina explícitamente de Drive */
+export const deleteFromCloud = async (id: string): Promise<void> => {
+    await drive.deleteCharacterFromDrive(id);
 }

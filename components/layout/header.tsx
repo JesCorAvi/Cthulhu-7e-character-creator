@@ -1,7 +1,8 @@
 "use client";
 
-import { Share2, Sun, Moon, HardDrive, Cloud, Info } from "lucide-react";
+import { Share2, Sun, Moon, HardDrive, Cloud, Info, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { LanguageSelector } from "@/components/language-selector";
 import { useLanguage } from "@/components/language-provider";
 import { useTheme } from "next-themes";
@@ -10,13 +11,13 @@ import { Character } from "@/lib/character-types";
 import { ShareCharacterModal } from "@/components/share-character-modal";
 import { StorageMode } from "@/lib/character-storage";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Badge } from "@/components/ui/badge"; // [NUEVO] Importamos Badge
 
 interface HeaderProps {
   character?: Character | null;
   showShare?: boolean;
   storageMode?: StorageMode;
   onStorageChange?: (checked: boolean) => void;
+  onMigrate?: () => void;
   isGoogleReady?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function Header({
   showShare,
   storageMode,
   onStorageChange,
+  onMigrate,
   isGoogleReady,
 }: HeaderProps) {
   const { t } = useLanguage();
@@ -72,7 +74,8 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Selector de Almacenamiento */}
+          {/* Lógica: Si hay onStorageChange (Vista Lista) mostramos el Selector.
+              Si NO hay onStorageChange (Vista Ver/Editar) mostramos el Badge de migración. */}
           {onStorageChange ? (
             <div className="flex flex-row items-center gap-1 border rounded-lg p-1 bg-muted/30">
               <ToggleGroup
@@ -83,7 +86,6 @@ export function Header({
                 }}
                 className="flex gap-1"
               >
-                {/* OPCIÓN LOCAL */}
                 <ToggleGroupItem 
                   value="local" 
                   className="h-9 sm:h-10 px-2 sm:px-3 flex items-center gap-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
@@ -95,7 +97,6 @@ export function Header({
                   </div>
                 </ToggleGroupItem>
 
-                {/* OPCIÓN GOOGLE DRIVE */}
                 <ToggleGroupItem 
                   value="cloud" 
                   onClick={() => {
@@ -121,24 +122,31 @@ export function Header({
               </ToggleGroup>
             </div>
           ) : (
-            // [MODIFICADO] Usamos Badge para el estilo de recuadro
-            <div className="hidden sm:flex items-center">
-              <Badge 
-                variant="outline" 
-                className="gap-2 font-normal text-muted-foreground py-1.5 h-9 bg-muted/20 hover:bg-muted/20 border-border/60"
-              >
-                {storageMode === 'cloud' ? (
-                    <>
-                        <Cloud className="h-3.5 w-3.5 text-blue-500/70" />
-                        <span>{t("character_cloud_indicator")}</span>
-                    </>
-                ) : (
-                    <>
-                        <HardDrive className="h-3.5 w-3.5 opacity-70" />
-                        <span>{t("character_local_indicator")}</span>
-                    </>
-                )}
-              </Badge>
+            // [MODIFICADO] Badge interactivo
+            <div 
+                className={`hidden sm:flex items-center transition-opacity ${onMigrate ? 'cursor-pointer hover:opacity-80 active:scale-95 transition-transform' : 'opacity-80'}`}
+                onClick={() => {
+                   if (onMigrate) onMigrate();
+                }}
+            >
+                <Badge 
+                    variant="outline" 
+                    className="gap-2 font-normal py-1.5 h-9 bg-muted/20 border-border/60 select-none"
+                >
+                    {storageMode === 'cloud' ? (
+                        <>
+                            <Cloud className="h-3.5 w-3.5 text-blue-500/70" />
+                            <span>{t("character_cloud_indicator")}</span>
+                        </>
+                    ) : (
+                        <>
+                            <HardDrive className="h-3.5 w-3.5 opacity-70" />
+                            <span>{t("character_local_indicator")}</span>
+                        </>
+                    )}
+                    {/* Flechas indicando que es accionable */}
+                    {onMigrate && <ArrowLeftRight className="h-3 w-3 ml-1.5 opacity-40" />}
+                </Badge>
             </div>
           )}
 

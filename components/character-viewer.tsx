@@ -5,7 +5,7 @@ import type { Character, CharacteristicValue } from "@/lib/character-types"
 import { useLanguage } from "@/components/language-provider"
 import { getTranslatedSkillName } from "@/lib/skills-data"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Printer, Pencil, Shield, Heart, Zap, Brain, Wallet, Package, BookOpen } from "lucide-react"
+import { ArrowLeft, Printer, Pencil, Shield, Heart, Zap, Brain, Wallet, Package, BookOpen, User } from "lucide-react"
 
 interface CharacterViewerProps {
   character: Character
@@ -48,17 +48,39 @@ export function CharacterViewer({ character, onBack, onEdit }: CharacterViewerPr
       <div className="bg-white dark:bg-stone-900 text-black dark:text-stone-100 p-8 max-w-[210mm] mx-auto shadow-2xl print:shadow-none border dark:border-stone-800 rounded-lg">
         {/* CABECERA */}
         <div className="border-b-4 border-stone-800 dark:border-stone-100 pb-4 mb-6">
-          <div className="flex justify-between items-end">
-            <div>
+          <div className="flex justify-between items-end gap-6">
+            
+            {/* Texto Cabecera */}
+            <div className="flex-1">
               <h1 className="text-4xl font-black font-serif uppercase tracking-tight">{character.name || t("unnamed")}</h1>
               <p className="text-lg font-serif italic text-stone-600 dark:text-stone-400">
                 {character.occupationLabel || character.occupation}
               </p>
+              
+              {/* Datos movidos aquí si hay foto para equilibrar */}
+              <div className="mt-2 flex gap-4 text-sm font-mono text-stone-500 dark:text-stone-400">
+                  <div>{t("age")}: <span className="font-bold text-black dark:text-white">{character.age}</span></div>
+                  <div>{t("birthplace")}: <span className="font-bold text-black dark:text-white">{character.birthplace}</span></div>
+              </div>
             </div>
-            <div className="text-right text-sm font-mono text-stone-500 dark:text-stone-400">
-              <div>{t("age")}: <span className="font-bold text-black dark:text-white text-lg">{character.age}</span></div>
-              <div>{t("birthplace")}: <span className="font-bold text-black dark:text-white">{character.birthplace}</span></div>
-            </div>
+
+            {/* FOTO (Si existe) */}
+            {character.imageUrl ? (
+                <div className="shrink-0 w-28 h-36 border-4 border-white bg-stone-200 shadow-md rotate-[-2deg] overflow-hidden relative">
+                    <img 
+                        src={character.imageUrl} 
+                        alt="Portrait" 
+                        className="w-full h-full object-cover grayscale-[0.2]" 
+                    />
+                    {/* Efecto clip visual */}
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-8 bg-stone-800/10 border border-stone-400 rounded-full"></div>
+                </div>
+            ) : (
+                // Si no hay foto, mostramos el sello de la era o nada
+                <div className="text-right text-sm font-mono text-stone-300">
+                   <User className="w-16 h-16 opacity-20" />
+                </div>
+            )}
           </div>
         </div>
 
@@ -172,7 +194,7 @@ export function CharacterViewer({ character, onBack, onEdit }: CharacterViewerPr
             </div>
         </div>
 
-        {/* TRASFONDO (REFORMULADO) */}
+        {/* TRASFONDO */}
         <div className="mb-8">
             <h3 className="font-serif font-bold text-lg border-b-2 border-stone-800 dark:border-stone-100 mb-4 uppercase">
                 {t("backstory")}
@@ -198,7 +220,7 @@ export function CharacterViewer({ character, onBack, onEdit }: CharacterViewerPr
             </div>
         </div>
 
-        {/* EQUIPO Y DINERO (NUEVA SECCIÓN) */}
+        {/* EQUIPO Y DINERO */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
                 <h3 className="font-serif font-bold text-lg border-b-2 border-stone-800 dark:border-stone-100 mb-3 uppercase flex items-center gap-2">

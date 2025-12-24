@@ -16,17 +16,17 @@ import {
   calculateMagicPoints,
   createDefaultWeapon,
 } from "@/lib/character-utils"
-import { Plus, Trash2, Search, Shield, Sun, Moon, Settings2, Dices } from "lucide-react"
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
+import { Plus, Trash2, Search, Shield, Settings2, Dices, Share2, User, Camera } from "lucide-react" // <--- Iconos User y Camera añadidos
+import { useState, useEffect, useRef } from "react" // <--- useRef añadido
+import { cn, compressImage } from "@/lib/utils" // <--- compressImage añadido
 import { useTheme } from "next-themes"
 import { OccupationDetailsModal } from "./occupation-details-modal"
 import { DiceRoller } from "@/components/dice-roller"
 import { SkillImprovementModal } from "@/components/skill-improvement-modal"
 import { useLanguage } from "@/components/language-provider"
 import { getTranslatedSkillName } from "@/lib/skills-data"
-import { ShareCharacterModal } from "@/components/share-character-modal" // <--- Importar modal
-import { Share2 } from "lucide-react" // <--- Importar icono
+import { ShareCharacterModal } from "@/components/share-character-modal"
+
 interface CharacterSheetProps {
   character: Character
   onChange: (character: Character) => void
@@ -93,13 +93,17 @@ function SheetTracker({
 export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const { t, language } = useLanguage()
   const [skillSearch, setSkillSearch] = useState("")
-  const { theme, setTheme } = useTheme()
+  // const { theme, setTheme } = useTheme() // (No se usa setTheme de momento)
   const [mounted, setMounted] = useState(false)
   const [isOccupationModalOpen, setIsOccupationModalOpen] = useState(false)
   const [showDiceRoller, setShowDiceRoller] = useState(false)
   const [hasRolledCharacteristics, setHasRolledCharacteristics] = useState(false)
   const [improvingSkill, setImprovingSkill] = useState<{ skill: Skill; index: number } | null>(null)
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false) // <--- Nuevo estado
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  
+  // Ref para el input de archivo
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     setMounted(true)
     const hasNonDefaultValues = Object.keys(character.characteristics).some((key) => {
@@ -116,6 +120,20 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
   const handleBasicChange = (field: keyof Character, value: string | number) => {
     onChange({ ...character, [field]: value })
+  }
+
+  // MANEJADOR DE IMAGEN
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      // Usamos la utilidad compressImage que ya tienes en lib/utils
+      const compressedBase64 = await compressImage(file)
+      onChange({ ...character, imageUrl: compressedBase64 })
+    } catch (error) {
+      console.error("Error al procesar imagen", error)
+    }
   }
 
   const handleModalChange = (updates: Partial<Character>) => {
@@ -338,8 +356,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const actualIndex = character.skills.indexOf(skill)
     const half = Math.floor(skill.value / 2)
     const fifth = Math.floor(skill.value / 5)
-
-    // TRADUCCIÓN DE HABILIDAD
     const translatedName = skill.customName || getTranslatedSkillName(skill.name, language)
 
     if (skill.isFieldHeader) {
@@ -368,7 +384,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     const isSlot = skill.isFieldSlot || isHardcodedSubSkill
     
     let displayName = translatedName
-    // Si es una sub-habilidad fija (ej: "Armas de fuego: Arma corta"), mostramos solo la parte específica
     if (isHardcodedSubSkill && translatedName.includes(":")) {
       displayName = translatedName.split(":")[1].trim()
     }
@@ -483,18 +498,58 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
           onCancel={() => setImprovingSkill(null)}
         />
       )}
-
    
       {/* CABECERA (DATOS PERSONALES) */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row gap-6 mb-6">
-          <div className="lg:w-1/4 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-stone-300 dark:border-stone-800 pb-4 lg:pb-0 lg:pr-4">
-            <h1 className="text-3xl lg:text-4xl font-serif font-black text-center leading-none tracking-tighter text-stone-900 dark:text-stone-100">
-              {t("app_title")}
-            </h1>
-            <span className="text-xs tracking-[0.5em] text-stone-500 mt-2 font-bold">7E</span>
+          
+          {/* --- COLUMNA IZQUIERDA: FOTO DEL INVESTIGADOR --- */}
+          <div className="lg:w-1/4 flex flex-col items-center justify-start lg:border-r border-stone-300 dark:border-stone-800 pb-4 lg:pb-0 lg:pr-4">
+             {/* Marco Foto */}
+             <div className="relative group mb-3">
+                 <div 
+                    className="w-32 h-40 bg-stone-100 dark:bg-stone-900 border-2 border-dashed border-stone-300 dark:border-stone-700 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors shadow-sm"
+                    onClick={() => fileInputRef.current?.click()}
+                 >
+                    {character.imageUrl ? (
+                        <img 
+                            src={character.imageUrl} 
+                            alt="Character" 
+                            className="w-full h-full object-cover sepia-[0.2]" 
+                        />
+                    ) : (
+                        <div className="text-center p-4">
+                            <User className="w-10 h-10 mx-auto text-stone-300 mb-2" />
+                            <span className="text-[10px] text-stone-400 uppercase font-bold">{t("add_photo") || "FOTO"}</span>
+                        </div>
+                    )}
+                    
+                    {/* Overlay al pasar el ratón */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                        <Camera className="w-6 h-6 mb-1" />
+                        <span className="text-[10px] font-bold">CAMBIAR</span>
+                    </div>
+                 </div>
+                 {/* Input oculto */}
+                 <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleImageUpload} 
+                 />
+             </div>
+             
+             {/* Título de la App debajo de la foto */}
+             <div className="text-center opacity-60">
+                <h1 className="text-xl font-serif font-black leading-none tracking-tighter text-stone-900 dark:text-stone-100">
+                {t("app_title")}
+                </h1>
+                <span className="text-[10px] tracking-[0.3em] text-stone-500 font-bold">7E EDITION</span>
+             </div>
           </div>
 
+          {/* --- COLUMNA DERECHA: DATOS --- */}
           <div className="lg:w-3/4 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
             <div className="col-span-2 space-y-1">
               <Label className="text-[9px] uppercase font-bold text-stone-500">{t("name")}</Label>

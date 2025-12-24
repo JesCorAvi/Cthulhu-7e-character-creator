@@ -49,6 +49,7 @@ export interface Character {
   id: string
   era: CharacterEra
   createdAt: number
+  imageUrl?: string
 
   // Información básica
   name: string

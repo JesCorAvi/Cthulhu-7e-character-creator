@@ -3,22 +3,28 @@
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 import { CharacterCard } from "@/components/character-card"
 import { EraSelector } from "@/components/era-selector"
 import { CharacterForm } from "@/components/character-form"
 import { CharacterViewer } from "@/components/character-viewer"
 import { Header } from "@/components/layout/header"
 import type { Character, CharacterEra } from "@/lib/character-types"
+import { ERA_LABELS } from "@/lib/character-types"
 import { getCharacters, getCharacter, deleteCharacter, getStorageMode, setStorageMode, type StorageMode } from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
-// IMPORTANTE: Importamos checkSessionActive
 import { initGoogleDrive, signInToGoogle, checkSessionActive } from "@/lib/google-drive"
 import { parseCharacterCode } from "@/lib/sharing"
-import { Plus, Users, Cloud, RefreshCw, Trash2 } from "lucide-react"
+import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown } from "lucide-react" // [AÑADIDO: ArrowUpDown]
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
-
-// IMPORTAMOS EL MODAL DE ERROR
 import { PopupBlockedModal } from "@/components/popup-blocked-modal"
 
 import {
@@ -32,6 +38,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+// [NUEVO] Tipo para el orden
+type SortOrder = "newest" | "oldest" | "alpha"
+
 function CharacterApp() {
   const [view, setView] = useState<"list" | "create" | "edit" | "view">("list")
   const [characters, setCharacters] = useState<Character[]>([])
@@ -41,10 +50,13 @@ function CharacterApp() {
   const [isGoogleReady, setIsGoogleReady] = useState(false)
   const [needsLogin, setNeedsLogin] = useState(false)
   
+  // Estados para búsqueda, filtrado y [NUEVO] orden
+  const [searchQuery, setSearchQuery] = useState("")
+  const [eraFilter, setEraFilter] = useState<CharacterEra | "all">("all")
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest") // [NUEVO]
+  
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
-  
-  // ESTADO PARA EL MODAL DE POPUP
   const [isPopupBlockedOpen, setIsPopupBlockedOpen] = useState(false)
   
   const { t } = useLanguage()
@@ -63,22 +75,42 @@ function CharacterApp() {
     }
   }, [])
 
-  // 1. Inicialización
+  // [MODIFICADO] Lógica de filtrado Y ordenación
+  const filteredCharacters = characters
+    .filter((char) => {
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = 
+        (char.name?.toLowerCase() || "").includes(query) ||
+        (char.occupation?.toLowerCase() || "").includes(query)
+      
+      const matchesEra = eraFilter === "all" || char.era === eraFilter
+
+      return matchesSearch && matchesEra
+    })
+    .sort((a, b) => {
+      // [NUEVO] Lógica de sort
+      switch (sortOrder) {
+        case "oldest":
+          return (a.createdAt || 0) - (b.createdAt || 0)
+        case "alpha":
+          return (a.name || "").localeCompare(b.name || "")
+        case "newest":
+        default:
+          return (b.createdAt || 0) - (a.createdAt || 0)
+      }
+    })
+
+  // ... (UseEffects se mantienen igual) ...
   useEffect(() => {
     initGoogleDrive((success) => setIsGoogleReady(success))
-    
     const savedMode = getStorageMode()
     setStorageModeState(savedMode)
-
     if (searchParams.get("d") || searchParams.get("data")) return 
-
-    // Si es local, cargar inmediatamente
     if (savedMode === 'local') {
         loadCharacters()
     }
   }, [loadCharacters, searchParams])
 
-  // 2. Importación URL
   useEffect(() => {
     const code = searchParams.get("d") || searchParams.get("data")
     if (code) {
@@ -93,20 +125,16 @@ function CharacterApp() {
     }
   }, [searchParams, t])
 
-  // 3. Reacción a Google Ready (CORREGIDO)
   useEffect(() => {
     if (!isGoogleReady) return
     if (searchParams.get("d") || searchParams.get("data")) return 
 
     const currentMode = getStorageMode()
-    
     if (currentMode === 'cloud') {
-        // CORRECCIÓN: Comprobamos si la sesión se restauró automáticamente
         if (checkSessionActive()) {
             setNeedsLogin(false)
             loadCharacters()
         } else {
-            // Solo si no hay sesión válida pedimos login
             setNeedsLogin(true)
             setLoading(false)
         }
@@ -124,14 +152,11 @@ function CharacterApp() {
         await loadCharacters()
       } catch (e: any) {
         console.error("Google Login Error:", e)
-        
-        // DETECCIÓN DE POPUP BLOQUEADO
         if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user' || e?.type === 'popup_failed_to_open') {
             setIsPopupBlockedOpen(true)
         } else {
             toast.error(t("error_save"), { description: "Error connecting to Google Drive" })
         }
-        
         setStorageMode("local")
         setStorageModeState("local")
       } finally {
@@ -152,7 +177,6 @@ function CharacterApp() {
         await signInToGoogle()
         await loadCharacters()
     } catch (e: any) {
-         // DETECCIÓN TAMBIÉN AQUÍ
          if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_failed_to_open') {
             setIsPopupBlockedOpen(true)
         } else {
@@ -221,7 +245,7 @@ function CharacterApp() {
             <>
                 {view === "list" && (
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
                         <h2 className="text-2xl font-serif font-bold text-foreground">
                             {t("your_investigators")}
                         </h2>
@@ -229,6 +253,57 @@ function CharacterApp() {
                             <Plus className="h-4 w-4 mr-2" /> {t("new")}
                         </Button>
                     </div>
+
+                    {/* BARRA DE BÚSQUEDA, FILTRO Y ORDEN */}
+                    {characters.length > 0 && (
+                      <div className="flex flex-col md:flex-row gap-3">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar por nombre o profesión..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 bg-background/50"
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                            <Select 
+                              value={eraFilter} 
+                              onValueChange={(value) => setEraFilter(value as CharacterEra | "all")}
+                            >
+                              <SelectTrigger className="w-full md:w-[180px] bg-background/50">
+                                <SelectValue placeholder="Época" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todas las épocas</SelectItem>
+                                {Object.entries(ERA_LABELS).map(([key, label]) => (
+                                  <SelectItem key={key} value={key}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            {/* [NUEVO] Selector de Orden */}
+                            <Select 
+                              value={sortOrder} 
+                              onValueChange={(value) => setSortOrder(value as SortOrder)}
+                            >
+                              <SelectTrigger className="w-full md:w-[180px] bg-background/50">
+                                <div className="flex items-center gap-2">
+                                    <ArrowUpDown className="h-3.5 w-3.5 opacity-70" />
+                                    <SelectValue placeholder="Orden" />
+                                </div>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="newest">Más recientes</SelectItem>
+                                <SelectItem value="oldest">Más antiguos</SelectItem>
+                                <SelectItem value="alpha">Nombre (A-Z)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                        </div>
+                      </div>
+                    )}
 
                     {characters.length === 0 ? (
                         <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-stone-50/50 dark:bg-stone-900/20">
@@ -241,9 +316,21 @@ function CharacterApp() {
                               <Plus className="h-4 w-4 mr-2" /> {t("create_char_button")}
                             </Button>
                         </div>
+                    ) : filteredCharacters.length === 0 ? (
+                        <div className="text-center py-16 border border-dashed rounded-xl bg-muted/20">
+                           <Search className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                           <p className="text-muted-foreground">No se encontraron investigadores con esos filtros.</p>
+                           <Button 
+                                variant="link" 
+                                onClick={() => { setSearchQuery(""); setEraFilter("all"); }}
+                                className="mt-2"
+                           >
+                                Limpiar filtros
+                           </Button>
+                        </div>
                     ) : (
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {characters.map((char) => (
+                            {filteredCharacters.map((char) => (
                                 <CharacterCard 
                                   key={char.id} 
                                   character={char} 
@@ -257,6 +344,7 @@ function CharacterApp() {
                 </div>
                 )}
 
+                {/* ... (Resto de vistas create, edit, view igual que antes) ... */}
                 {view === "create" && (
                     <div className="max-w-4xl mx-auto space-y-8">
                         <div className="text-center">
@@ -303,7 +391,6 @@ function CharacterApp() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* MODAL DE AYUDA PARA POPUPS BLOQUEADOS */}
         <PopupBlockedModal 
             isOpen={isPopupBlockedOpen} 
             onClose={() => setIsPopupBlockedOpen(false)} 

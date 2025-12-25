@@ -86,7 +86,8 @@ export function CharacterCard({ character, onView, onEdit, onDelete }: Character
                 <div className="font-mono text-[9px] tracking-[0.2em] text-stone-400 uppercase border-b border-stone-200 dark:border-stone-800 pb-1 mb-1">
                     EXP-{fileNumber}
                 </div>
-                <h3 className="font-serif font-black text-lg leading-5 text-stone-900 dark:text-stone-100 truncate w-full" title={character.name || "Desconocido"}>
+                {/* CAMBIO AQUÍ: 'break-all' forzará el corte aunque sea una sola palabra gigante */}
+                <h3 className="font-serif font-black text-lg leading-5 text-stone-900 dark:text-stone-100 line-clamp-2 w-full break-all" title={character.name || "Desconocido"}>
                   {character.name || t("unnamed") || "N.N."}
                 </h3>
                 <p className="font-serif italic text-xs text-stone-500 truncate">
@@ -137,7 +138,6 @@ export function CharacterCard({ character, onView, onEdit, onDelete }: Character
           <Button 
             variant="outline" 
             size="sm"
-            // AÑADIDO: cursor-pointer explícitamente aquí
             className="flex-1 cursor-pointer font-bold uppercase tracking-wider border-stone-300 dark:border-stone-700 bg-white/50 dark:bg-stone-950/50 text-stone-600 dark:text-stone-300 shadow-sm hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 hover:border-stone-400 dark:hover:border-stone-500 active:scale-95 active:bg-stone-200 transition-all duration-100 ease-in-out"
             onClick={(e) => {
                 e.stopPropagation();
@@ -152,7 +152,6 @@ export function CharacterCard({ character, onView, onEdit, onDelete }: Character
           <Button 
             variant="ghost" 
             size="icon"
-             // AÑADIDO: cursor-pointer explícitamente aquí
             className="shrink-0 cursor-pointer h-9 w-9 text-stone-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 active:scale-90 transition-all duration-200"
             onClick={(e) => {
                 e.stopPropagation();

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, useCallback, Suspense, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,9 +44,10 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type SortOrder = "newest" | "oldest" | "alpha"
+type ViewMode = "list" | "create" | "edit" | "view"
 
 function CharacterApp() {
-  const [view, setView] = useState<"list" | "create" | "edit" | "view">("list")
+  const [view, setView] = useState<ViewMode>("list")
   const [characters, setCharacters] = useState<Character[]>([])
   const [currentCharacter, setCurrentCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
@@ -68,6 +69,10 @@ function CharacterApp() {
   
   const [isPopupBlockedOpen, setIsPopupBlockedOpen] = useState(false)
   
+  // NUEVO: Control de estado sucio (saving) y navegación manual
+  const isDirtyRef = useRef(false)
+  const isManualBackRef = useRef(false)
+  
   const { t } = useLanguage()
   const searchParams = useSearchParams()
 
@@ -83,6 +88,111 @@ function CharacterApp() {
         setLoading(false)
     }
   }, [])
+
+  // -----------------------------------------------------------------------
+  // LÓGICA DE NAVEGACIÓN (History API + Dirty Check)
+  // -----------------------------------------------------------------------
+
+  const navigateTo = useCallback((newView: ViewMode, char?: Character) => {
+    const url = new URL(window.location.href);
+    
+    if (newView === "list") {
+        url.searchParams.delete("mode");
+        window.history.pushState(null, "", url);
+    } else {
+        url.searchParams.set("mode", newView);
+        window.history.pushState({ mode: newView }, "", url);
+    }
+
+    // Resetear estado sucio al cambiar de vista programáticamente
+    isDirtyRef.current = false;
+
+    if (char) setCurrentCharacter(char);
+    setView(newView);
+    
+    if (newView === "list") {
+      loadCharacters();
+    }
+  }, [loadCharacters]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // 1. Si venimos del botón "Volver" de la UI (flecha), CharacterForm ya gestionó la confirmación.
+      // Simplemente reseteamos la bandera y dejamos proceder.
+      if (isManualBackRef.current) {
+        isManualBackRef.current = false;
+      } 
+      // 2. Si es el botón del navegador y estamos guardando:
+      else if (isDirtyRef.current) {
+         const warningMsg = t("wait_saving") || "Se están guardando los cambios. ¿Seguro que quieres salir?";
+         const confirmLeave = window.confirm(warningMsg);
+         
+         if (!confirmLeave) {
+            // El usuario quiere quedarse.
+            // Como el navegador ya cambió la URL (popstate sucede después), debemos restaurarla.
+            // Asumimos que estábamos en la vista actual antes de ir atrás.
+            const currentMode = view; // 'edit', 'view', etc.
+            if (currentMode !== 'list') {
+                const url = new URL(window.location.href);
+                url.searchParams.set("mode", currentMode);
+                window.history.pushState({ mode: currentMode }, "", url);
+            }
+            return; // ABORTAR el cambio de vista
+         } else {
+            // El usuario aceptó salir, reseteamos dirty
+            isDirtyRef.current = false;
+         }
+      }
+
+      // Proceceder con el cambio de vista normal
+      const params = new URLSearchParams(window.location.search);
+      const mode = params.get("mode") as ViewMode | null;
+
+      if (!mode || mode === 'list') {
+        setView("list");
+        setCurrentCharacter(null);
+        loadCharacters();
+      } else {
+        if (currentCharacter) {
+             setView(mode);
+        } else {
+             const url = new URL(window.location.href);
+             url.searchParams.delete("mode");
+             window.history.replaceState(null, "", url);
+             setView("list");
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [loadCharacters, currentCharacter, view, t]);
+
+  const handleBack = useCallback(() => {
+    if (view !== "list") {
+        // Marcamos que es navegación manual para evitar doble confirmación en popstate
+        // (ya que CharacterForm tiene su propia confirmación en el botón UI)
+        isManualBackRef.current = true;
+        window.history.back();
+    } else {
+        setView("list");
+        setCurrentCharacter(null);
+        loadCharacters();
+    }
+  }, [view, loadCharacters]);
+
+  // Wrappers para actualizar el estado "sucio" desde el formulario
+  const onCharacterChange = useCallback((c: Character) => {
+      setCurrentCharacter(c);
+      isDirtyRef.current = true; // Empezamos a guardar/modificar
+  }, []);
+
+  const onCharacterSaved = useCallback(() => {
+      loadCharacters();
+      isDirtyRef.current = false; // Guardado completado
+  }, [loadCharacters]);
+
+  // -----------------------------------------------------------------------
 
   const filteredCharacters = characters
     .filter((char) => {
@@ -123,10 +233,15 @@ function CharacterApp() {
       const importedChar = parseCharacterCode(code)
       if (importedChar) {
         setCurrentCharacter(importedChar)
+        const url = new URL(window.location.href);
+        url.searchParams.set("mode", "view");
+        url.searchParams.delete("d"); 
+        url.searchParams.delete("data");
+        window.history.replaceState({ mode: "view" }, "", url);
+        
         setView("view")
         setLoading(false)
         toast.success(t("character_imported_url"))
-        window.history.replaceState({}, "", window.location.pathname)
       }
     }
   }, [searchParams, t])
@@ -178,69 +293,53 @@ function CharacterApp() {
     }
   }
 
-  // FUNCIÓN PARA ABRIR EL MODAL DE MIGRACIÓN
   const requestMigrate = () => {
     if (currentCharacter) {
-        // Reseteamos estados visuales antes de abrir
         setIsMigrating(false)
         setIsSuccess(false)
         setIsMigrateOpen(true)
     }
   }
 
-  // --- Función de migración con preventDefault para evitar cierre automático ---
   const confirmMigrate = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
 
     if (!currentCharacter) return;
     
-    setIsMigrating(true) // 1. Mostrar carga
+    setIsMigrating(true)
     
     const oldId = currentCharacter.id
     const isLocal = storageMode === 'local'
     
     try {
         if (isLocal) {
-            // -- LOCAL -> CLOUD --
             if (!isGoogleReady || !checkSessionActive()) {
                  await signInToGoogle()
             }
-            
             const charToMigrate = { ...currentCharacter }
-            
             await saveToCloud(charToMigrate)
             await deleteFromLocal(oldId)
             
-            // Actualizar contexto
             setStorageMode("cloud")
             setStorageModeState("cloud")
             setCurrentCharacter(charToMigrate)
-            
         } else {
-            // -- CLOUD -> LOCAL --
             const newLocalChar = { 
                 ...currentCharacter, 
                 id: crypto.randomUUID(),
                 updatedAt: Date.now() 
             }
-            
             await saveToLocal(newLocalChar)
             await deleteFromCloud(oldId)
             
-            // Actualizar contexto
             setStorageMode("local")
             setStorageModeState("local")
             setCurrentCharacter(newLocalChar)
         }
         
-        // 2. Mostrar Éxito
         setIsMigrating(false)
         setIsSuccess(true)
-        
-        // 3. Esperar un momento para que el usuario vea el éxito
         await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        // 4. Cerrar modal
         setIsMigrateOpen(false)
 
     } catch (error) {
@@ -266,14 +365,7 @@ function CharacterApp() {
 
   const handleCreateNew = (era: CharacterEra) => {
     const newChar = createNewCharacter(era, t("unarmed"))
-    setCurrentCharacter(newChar)
-    setView("edit")
-  }
-
-  const handleBack = () => {
-    setView("list")
-    setCurrentCharacter(null)
-    loadCharacters()
+    navigateTo("edit", newChar)
   }
 
   const requestDelete = (id: string) => {
@@ -330,7 +422,7 @@ function CharacterApp() {
                             <h2 className="text-2xl font-serif font-bold text-foreground">
                                 {t("your_investigators")}
                             </h2>
-                            <Button onClick={() => setView("create")} size="sm" className="shadow-md">
+                            <Button onClick={() => navigateTo("create")} size="sm" className="shadow-md">
                                 <Plus className="h-4 w-4 mr-2" /> {t("new")}
                             </Button>
                         </div>
@@ -391,7 +483,7 @@ function CharacterApp() {
                                 <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
                                     {storageMode === 'cloud' ? t("no_characters_cloud") : t("no_characters_local")}
                                 </p>
-                                <Button onClick={() => setView("create")} variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all">
+                                <Button onClick={() => navigateTo("create")} variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all">
                                   <Plus className="h-4 w-4 mr-2" /> {t("create_char_button")}
                                 </Button>
                             </div>
@@ -413,8 +505,8 @@ function CharacterApp() {
                                     <CharacterCard 
                                       key={char.id} 
                                       character={char} 
-                                      onView={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("view")})}
-                                      onEdit={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("edit")})}
+                                      onView={(id) => getCharacter(id).then(c => navigateTo("view", c ?? undefined))}
+                                      onEdit={(id) => getCharacter(id).then(c => navigateTo("edit", c ?? undefined))}
                                       onDelete={requestDelete} 
                                     />
                                 ))}
@@ -443,13 +535,17 @@ function CharacterApp() {
                     <CharacterForm 
                       character={currentCharacter} 
                       onBack={handleBack} 
-                      onSave={loadCharacters} 
-                      onChange={setCurrentCharacter}
+                      onSave={onCharacterSaved} 
+                      onChange={onCharacterChange}
                     />
                 )}
 
                 {view === "view" && currentCharacter && (
-                    <CharacterViewer character={currentCharacter} onBack={handleBack} onEdit={() => setView("edit")} />
+                    <CharacterViewer 
+                        character={currentCharacter} 
+                        onBack={handleBack} 
+                        onEdit={() => navigateTo("edit", currentCharacter)} 
+                    />
                 )}
             </>
         )}
@@ -472,13 +568,11 @@ function CharacterApp() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* MODAL DE MIGRACIÓN CORREGIDO */}
         <AlertDialog open={isMigrateOpen} onOpenChange={(open) => { 
             if(!isMigrating && !isSuccess) setIsMigrateOpen(open) 
         }}>
           <AlertDialogContent>
             {isMigrating ? (
-                // 1. CARGA
                 <div className="flex flex-col items-center justify-center py-10 space-y-4">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                     <p className="text-lg font-medium text-foreground animate-pulse">
@@ -486,7 +580,6 @@ function CharacterApp() {
                     </p>
                 </div>
             ) : isSuccess ? (
-                // 2. ÉXITO
                 <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-in fade-in zoom-in duration-300">
                     <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                         <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
@@ -499,7 +592,6 @@ function CharacterApp() {
                     </p>
                 </div>
             ) : (
-                // 3. CONFIRMACIÓN
                 <>
                     <AlertDialogHeader>
                     <AlertDialogTitle>

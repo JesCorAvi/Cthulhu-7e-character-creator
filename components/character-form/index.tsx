@@ -43,6 +43,9 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
   }, [])
 
   useEffect(() => {
+    // CORRECCIÓN IMPORTANTE: No emitir onChange en el primer render para evitar marcar como dirty/saving inmediatamente
+    if (isFirstRender.current) return 
+    
     if (onChange) {
       onChange(character)
     }
@@ -163,9 +166,6 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
         </div>
       </div>
 
-      {/* HE ELIMINADO LOS CONTENEDORES "bg-card" Y "bg-white" QUE CREABAN EL MARCO.
-        Ahora CharacterSheet se renderiza directamente, integrado con el fondo de la aplicación.
-      */}
       <div className="py-2">
          <CharacterSheet character={character} onChange={handleCharacterChange} />
       </div>

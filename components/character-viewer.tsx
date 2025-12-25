@@ -28,9 +28,9 @@ export function CharacterViewer({ character, onBack, onEdit }: CharacterViewerPr
   })
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10 text-foreground">
+    <div className="space-y-6 pb-10 text-foreground animate-in fade-in slide-in-from-bottom-10 duration-700 ease-out">
       {/* Navegación interna */}
-      <div className="flex justify-between items-center print:hidden bg-card/50 p-2 rounded-lg border">
+      <div className="flex justify-between items-center print:hidden bg-card/50 p-2 rounded-lg border backdrop-blur-sm">
         <Button variant="ghost" onClick={onBack} size="sm">
           <ArrowLeft className="h-4 w-4 mr-2" /> {t("back")}
         </Button>
@@ -45,7 +45,7 @@ export function CharacterViewer({ character, onBack, onEdit }: CharacterViewerPr
       </div>
 
       {/* HOJA DE PERSONAJE */}
-      <div className="bg-white dark:bg-stone-900 text-black dark:text-stone-100 p-8 max-w-[210mm] mx-auto shadow-2xl print:shadow-none border dark:border-stone-800 rounded-lg">
+      <div className="bg-white dark:bg-stone-900 text-black dark:text-stone-100 p-8 max-w-[210mm] mx-auto shadow-2xl print:shadow-none border dark:border-stone-800 rounded-lg transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
         {/* CABECERA */}
         <div className="border-b-4 border-stone-800 dark:border-stone-100 pb-4 mb-6">
           <div className="flex justify-between items-end gap-6">

@@ -307,7 +307,7 @@ function CharacterApp() {
         isGoogleReady={isGoogleReady}
       />
       
-      <main className="container mx-auto px-4 py-8 flex-1">
+      <main className="container mx-auto px-4 py-8 flex-1 overflow-hidden">
         {loading && !currentCharacter ? (
             <div className="flex flex-col items-center justify-center py-20">
                 <RefreshCw className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -324,114 +324,117 @@ function CharacterApp() {
         ) : (
             <>
                 {view === "list" && (
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                        <h2 className="text-2xl font-serif font-bold text-foreground">
-                            {t("your_investigators")}
-                        </h2>
-                        <Button onClick={() => setView("create")} size="sm" className="shadow-md">
-                            <Plus className="h-4 w-4 mr-2" /> {t("new")}
-                        </Button>
-                    </div>
-
-                    {characters.length > 0 && (
-                      <div className="flex flex-col md:flex-row gap-3">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Buscar por nombre o profesión..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 bg-background/50"
-                          />
-                        </div>
-                        <div className="flex gap-3">
-                            <Select 
-                              value={eraFilter} 
-                              onValueChange={(value) => setEraFilter(value as CharacterEra | "all")}
-                            >
-                              <SelectTrigger className="w-full md:w-[180px] bg-background/50">
-                                <SelectValue placeholder="Época" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">Todas las épocas</SelectItem>
-                                {Object.entries(ERA_LABELS).map(([key, label]) => (
-                                  <SelectItem key={key} value={key}>
-                                    {label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Select 
-                              value={sortOrder} 
-                              onValueChange={(value) => setSortOrder(value as SortOrder)}
-                            >
-                              <SelectTrigger className="w-full md:w-[180px] bg-background/50">
-                                <div className="flex items-center gap-2">
-                                    <ArrowUpDown className="h-3.5 w-3.5 opacity-70" />
-                                    <SelectValue placeholder="Orden" />
-                                </div>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="newest">Más recientes</SelectItem>
-                                <SelectItem value="oldest">Más antiguos</SelectItem>
-                                <SelectItem value="alpha">Nombre (A-Z)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                        </div>
-                      </div>
-                    )}
-
-                    {characters.length === 0 ? (
-                        <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-stone-50/50 dark:bg-stone-900/20">
-                            <Users className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
-                            <h2 className="text-xl font-bold mb-2">{t("no_characters")}</h2>
-                            <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-                                {storageMode === 'cloud' ? t("no_characters_cloud") : t("no_characters_local")}
-                            </p>
-                            <Button onClick={() => setView("create")} variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all">
-                              <Plus className="h-4 w-4 mr-2" /> {t("create_char_button")}
+                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-both">
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                            <h2 className="text-2xl font-serif font-bold text-foreground">
+                                {t("your_investigators")}
+                            </h2>
+                            <Button onClick={() => setView("create")} size="sm" className="shadow-md">
+                                <Plus className="h-4 w-4 mr-2" /> {t("new")}
                             </Button>
                         </div>
-                    ) : filteredCharacters.length === 0 ? (
-                        <div className="text-center py-16 border border-dashed rounded-xl bg-muted/20">
-                           <Search className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                           <p className="text-muted-foreground">No se encontraron investigadores con esos filtros.</p>
-                           <Button 
-                                variant="link" 
-                                onClick={() => { setSearchQuery(""); setEraFilter("all"); }}
-                                className="mt-2"
-                           >
-                                Limpiar filtros
-                           </Button>
-                        </div>
-                    ) : (
-                        // AQUI ESTA EL CAMBIO DE GRID: xl:grid-cols-4
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {filteredCharacters.map((char) => (
-                                <CharacterCard 
-                                  key={char.id} 
-                                  character={char} 
-                                  onView={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("view")})}
-                                  onEdit={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("edit")})}
-                                  onDelete={requestDelete} 
-                                />
-                            ))}
-                        </div>
-                    )}
+
+                        {characters.length > 0 && (
+                          <div className="flex flex-col md:flex-row gap-3">
+                            <div className="relative flex-1">
+                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Buscar por nombre o profesión..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 bg-background/50"
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                                <Select 
+                                  value={eraFilter} 
+                                  onValueChange={(value) => setEraFilter(value as CharacterEra | "all")}
+                                >
+                                  <SelectTrigger className="w-full md:w-[180px] bg-background/50">
+                                    <SelectValue placeholder="Época" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todas las épocas</SelectItem>
+                                    {Object.entries(ERA_LABELS).map(([key, label]) => (
+                                      <SelectItem key={key} value={key}>
+                                        {label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+
+                                <Select 
+                                  value={sortOrder} 
+                                  onValueChange={(value) => setSortOrder(value as SortOrder)}
+                                >
+                                  <SelectTrigger className="w-full md:w-[180px] bg-background/50">
+                                    <div className="flex items-center gap-2">
+                                        <ArrowUpDown className="h-3.5 w-3.5 opacity-70" />
+                                        <SelectValue placeholder="Orden" />
+                                    </div>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="newest">Más recientes</SelectItem>
+                                    <SelectItem value="oldest">Más antiguos</SelectItem>
+                                    <SelectItem value="alpha">Nombre (A-Z)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                            </div>
+                          </div>
+                        )}
+
+                        {characters.length === 0 ? (
+                            <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-stone-50/50 dark:bg-stone-900/20">
+                                <Users className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+                                <h2 className="text-xl font-bold mb-2">{t("no_characters")}</h2>
+                                <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
+                                    {storageMode === 'cloud' ? t("no_characters_cloud") : t("no_characters_local")}
+                                </p>
+                                <Button onClick={() => setView("create")} variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all">
+                                  <Plus className="h-4 w-4 mr-2" /> {t("create_char_button")}
+                                </Button>
+                            </div>
+                        ) : filteredCharacters.length === 0 ? (
+                            <div className="text-center py-16 border border-dashed rounded-xl bg-muted/20">
+                               <Search className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                               <p className="text-muted-foreground">No se encontraron investigadores con esos filtros.</p>
+                               <Button 
+                                    variant="link" 
+                                    onClick={() => { setSearchQuery(""); setEraFilter("all"); }}
+                                    className="mt-2"
+                               >
+                                    Limpiar filtros
+                               </Button>
+                            </div>
+                        ) : (
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {filteredCharacters.map((char) => (
+                                    <CharacterCard 
+                                      key={char.id} 
+                                      character={char} 
+                                      onView={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("view")})}
+                                      onEdit={(id) => getCharacter(id).then(c => {setCurrentCharacter(c); setView("edit")})}
+                                      onDelete={requestDelete} 
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 )}
 
                 {view === "create" && (
-                    <div className="max-w-4xl mx-auto space-y-8">
-                        <div className="text-center">
-                            <h2 className="text-3xl font-serif font-bold mb-2">{t("new_investigator")}</h2>
-                            <p className="text-muted-foreground">{t("select_era")}</p>
-                        </div>
-                        <EraSelector onSelect={handleCreateNew} />
-                        <div className="text-center">
-                          <Button variant="ghost" onClick={handleBack} className="text-muted-foreground underline">{t("cancel")}</Button>
+                    <div className="animate-in fade-in zoom-in-95 duration-500 ease-out fill-mode-both">
+                        <div className="max-w-4xl mx-auto space-y-8">
+                            <div className="text-center">
+                                <h2 className="text-3xl font-serif font-bold mb-2">{t("new_investigator")}</h2>
+                                <p className="text-muted-foreground">{t("select_era")}</p>
+                            </div>
+                            <EraSelector onSelect={handleCreateNew} />
+                            <div className="text-center">
+                              <Button variant="ghost" onClick={handleBack} className="text-muted-foreground underline">{t("cancel")}</Button>
+                            </div>
                         </div>
                     </div>
                 )}

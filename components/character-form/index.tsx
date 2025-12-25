@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip" //
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip" 
 import type { Character } from "@/lib/character-types"
 import { ERA_LABELS } from "@/lib/character-types"
 import { CharacterSheet } from "./character-sheet"
@@ -94,14 +94,14 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+    // Mantenemos la animación de entrada en el contenedor principal
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-12 duration-700 ease-out">
+      {/* HEADER DE EDICIÓN FLOTANTE */}
+      <div className="flex items-center justify-between flex-wrap gap-2 bg-background/95 backdrop-blur-sm p-3 rounded-lg sticky top-0 z-20 border-b shadow-sm">
         <div className="flex items-center gap-3">
-          {/* LÓGICA MODIFICADA: Botón Atrás con Tooltip si está guardando */}
           {status === 'saving' ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* Envolvemos en un span porque el botón disabled ignora eventos de ratón */}
                 <span className="cursor-not-allowed" tabIndex={0}>
                   <Button variant="ghost" size="sm" disabled>
                     <ArrowLeft className="h-4 w-4 mr-1" />
@@ -121,8 +121,8 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
           )}
 
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-foreground">{character.name || t("new_investigator")}</h2>
-            <Badge variant="outline" className="text-xs">
+            <h2 className="text-lg font-bold text-foreground truncate max-w-[200px] md:max-w-none">{character.name || t("new_investigator")}</h2>
+            <Badge variant="outline" className="text-xs shrink-0">
               {ERA_LABELS[character.era]}
             </Badge>
           </div>
@@ -134,12 +134,12 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
             {status === 'saving' ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                <span>{t("saving")}...</span>
+                <span className="hidden sm:inline">{t("saving")}...</span>
               </>
             ) : status === 'saved' ? (
               <>
                 <Cloud className="h-3 w-3 text-primary" />
-                <span>{t("saved")}</span>
+                <span className="hidden sm:inline">{t("saved")}</span>
               </>
             ) : (
               <span>...</span>
@@ -148,12 +148,12 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
 
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="shadow-sm">
                 <BookOpen className="h-4 w-4 mr-1" />
                 {t("backstory_equipment")}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto font-serif">
               <DialogHeader>
                 <DialogTitle>{t("backstory_equipment")}</DialogTitle>
               </DialogHeader>
@@ -163,7 +163,12 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
         </div>
       </div>
 
-      <CharacterSheet character={character} onChange={handleCharacterChange} />
+      {/* HE ELIMINADO LOS CONTENEDORES "bg-card" Y "bg-white" QUE CREABAN EL MARCO.
+        Ahora CharacterSheet se renderiza directamente, integrado con el fondo de la aplicación.
+      */}
+      <div className="py-2">
+         <CharacterSheet character={character} onChange={handleCharacterChange} />
+      </div>
     </div>
   )
 }

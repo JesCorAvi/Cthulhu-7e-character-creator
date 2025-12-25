@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 
 // --- DICCIONARIO DE TRADUCCIÓN DE HABILIDADES ---
 const SKILL_TRANSLATIONS: Record<string, string> = {
+  // Habilidades Base
   "Antropología": "Anthropology",
   "Arqueología": "Archaeology",
   "Charlatanería": "Fast Talk",
@@ -64,6 +65,8 @@ const SKILL_TRANSLATIONS: Record<string, string> = {
   "Buscar libros": "Library Use",
   "Tasación": "Appraise",
   "Contabilidad": "Accounting",
+  
+  // Campos
   "Ciencia": "Science",
   "Arte/Artesanía": "Art/Craft",
   "Otras lenguas": "Language (Other)",
@@ -71,7 +74,40 @@ const SKILL_TRANSLATIONS: Record<string, string> = {
   "Combatir": "Fighting",
   "Supervivencia": "Survival",
   "Lengua propia": "Language (Own)",
-  "Pilotar": "Pilot"
+  "Pilotar": "Pilot",
+
+  // Especialidades (Opciones)
+  "Alpino": "Alpine",
+  "Actuar": "Acting",
+  "Cantar": "Singing",
+  "Comedia": "Comedy",
+  "Dibujo técnico": "Technical Drawing",
+  "Matemáticas": "Mathematics",
+  "Literatura": "Literature",
+  "Aviación": "Aircraft",
+  "Pelea": "Brawl",
+  "Bote": "Boat",
+  "Biología": "Biology",
+  "Botánica": "Botany",
+  "Zoología": "Zoology",
+  "Farmacia": "Pharmacy",
+  "Química": "Chemistry",
+  "Geología": "Geology",
+  "Historia Natural": "Natural History",
+  "Naturaleza": "Natural World", // A veces se usa como sinónimo
+  "Ingeniería": "Engineering",
+  "Física": "Physics",
+  "Astronomía": "Astronomy",
+  "Fotografía": "Photography",
+  "Falsificación": "Forgery",
+  "Latín": "Latin",
+  "Agricultura": "Farming",
+  "Mecanografía": "Typing",
+  "Motosierra": "Chainsaw",
+  "Soldadura": "Welding",
+  "Carpintería": "Carpentry",
+  "Mar": "Sea",
+  "Rifle/Escopeta": "Rifle/Shotgun"
 }
 
 function PointsInput({
@@ -530,7 +566,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     onChange({ skills: newSkills })
   }
 
-  const FieldSelector = ({
+const FieldSelector = ({
     req,
     uniqueId,
     isInsideChoice = false,
@@ -548,7 +584,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
       if (specName) {
         const fullName = `${req.field}: ${specName}`
         const baseVal = needsBaseValue ? Number.parseInt(tempBaseValue) || 0 : undefined
-        // Empieza con 0 puntos
         updateSkillPoints(fullName, 0, baseVal)
         setTempSpecValue("")
         setTempBaseValue("")
@@ -558,7 +593,9 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
 
     const getDisplayName = (s: (typeof character.skills)[0]) => {
       if (s.customName && s.name === req.field) {
-        return `${tSkill(req.field)}: ${s.customName}`
+        // CORRECCIÓN: Traducimos también la especialidad si es una de las conocidas
+        const translatedSpec = SKILL_TRANSLATIONS[s.customName] || s.customName
+        return `${tSkill(req.field)}: ${translatedSpec}`
       }
       return tSkill(s.name)
     }
@@ -617,7 +654,8 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
               className="w-full h-8 border-dashed text-xs bg-transparent"
               onClick={() => {
                 setActiveFieldKey(uniqueId)
-                setTempSpecValue("")
+                const prefill = req.options && req.options.length === 1 ? req.options[0] : ""
+                setTempSpecValue(prefill)
                 setTempBaseValue("")
               }}
             >
@@ -628,17 +666,48 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           {isAdding && (
             <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex gap-1">
-                <TextInput
-                  autoFocus
-                  placeholder={placeholderText}
-                  className="h-8 text-xs flex-1"
-                  value={tempSpecValue}
-                  onChange={setTempSpecValue}
-                  onKeyDown={(e) => e.key === "Enter" && !needsBaseValue && handleAdd()}
-                />
+                {req.options && req.options.length > 0 ? (
+                  req.options.length === 1 ? (
+                    // Caso 1 opción: Input bloqueado pero mostrando la TRADUCCIÓN
+                    <Input
+                      readOnly
+                      className="h-8 text-xs flex-1 bg-muted font-medium opacity-100"
+                      value={tSkill(tempSpecValue)} 
+                    />
+                  ) : (
+                    // Caso múltiples opciones: Select mostrando TRADUCCIONES
+                    <Select value={tempSpecValue} onValueChange={setTempSpecValue}>
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="Selecciona..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {req.options.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {tSkill(opt)} 
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
+                ) : (
+                  <TextInput
+                    autoFocus
+                    placeholder={placeholderText}
+                    className="h-8 text-xs flex-1"
+                    value={tempSpecValue}
+                    onChange={setTempSpecValue}
+                    onKeyDown={(e) => e.key === "Enter" && !needsBaseValue && handleAdd()}
+                  />
+                )}
+
                 {!needsBaseValue && (
                   <>
-                    <Button size="sm" className="h-8 px-2" onClick={handleAdd}>
+                    <Button 
+                      size="sm" 
+                      className="h-8 px-2" 
+                      onClick={handleAdd}
+                      disabled={!tempSpecValue}
+                    >
                       Ok
                     </Button>
                     <Button
@@ -665,7 +734,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
                     onChange={setTempBaseValue}
                     onKeyDown={(e) => e.key === "Enter" && handleAdd()}
                   />
-                  <Button size="sm" className="h-8 px-2" onClick={handleAdd}>
+                  <Button size="sm" className="h-8 px-2" onClick={handleAdd} disabled={!tempSpecValue}>
                     Ok
                   </Button>
                   <Button

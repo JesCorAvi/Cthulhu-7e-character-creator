@@ -117,6 +117,11 @@ function CharacterApp() {
 
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      // CORRECCIÓN: Si el modal de migración está abierto, cerrarlo automáticamente
+      if (isMigrateOpen) {
+        setIsMigrateOpen(false)
+      }
+
       // 1. Si venimos del botón "Volver" de la UI (flecha), CharacterForm ya gestionó la confirmación.
       // Simplemente reseteamos la bandera y dejamos proceder.
       if (isManualBackRef.current) {
@@ -166,7 +171,7 @@ function CharacterApp() {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [loadCharacters, currentCharacter, view, t]);
+  }, [loadCharacters, currentCharacter, view, t, isMigrateOpen]); // Añadida dependencia isMigrateOpen
 
   const handleBack = useCallback(() => {
     if (view !== "list") {

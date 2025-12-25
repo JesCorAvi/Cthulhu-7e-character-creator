@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { createPortal } from "react-dom"
+import { useState, useEffect, Suspense } from "react" // ✅ Añadido useEffect
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,10 +20,15 @@ interface SkillImprovementModalProps {
 
 export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImprovementModalProps) {
   const { t, language } = useLanguage()
+  const [mounted, setMounted] = useState(false) // ✅ Estado para SSR
   const [stage, setStage] = useState<"initial" | "roll-d100" | "result-d100" | "roll-d10" | "final">("initial")
   const [d100Result, setD100Result] = useState<number | null>(null)
   const [d10Result, setD10Result] = useState<number | null>(null)
   const [manualResult, setManualResult] = useState("")
+
+  useEffect(() => {
+    setMounted(true)
+  }, []) // ✅ Montaje en cliente
 
   const translatedSkillName = skill.customName || getTranslatedSkillName(skill.name, language)
 
@@ -40,24 +46,21 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
 
   const checkSuccess = () => {
     if (d100Result === null) return false
-    // Reglas de mejora de Cthulhu 7e:
-    // Si la habilidad es > 95, necesitas sacar 96-100 para mejorar.
-    if (skill.value >= 95) {
-      return d100Result >= 96
-    }
-    // Si no, necesitas sacar MÁS que tu habilidad actual.
+    if (skill.value >= 95) return d100Result >= 96
     return d100Result > skill.value
   }
 
   const handleManualResult = () => {
     const amount = Number.parseInt(manualResult) || 0
-    if (amount > 0) {
-      onComplete(amount)
-    }
+    if (amount > 0) onComplete(amount)
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  // ✅ Evita renderizado en SSR
+  if (!mounted) return null
+
+  // ✅ Envuelve el modal en createPortal
+  return createPortal(
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div className="bg-card border-2 border-primary rounded-xl p-6 max-w-2xl w-full shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -75,9 +78,7 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
           <div className="space-y-6">
             <div className="bg-muted/30 p-4 rounded-lg space-y-3">
               <h3 className="font-semibold text-sm">{t("how_to_proceed")}</h3>
-              <p className="text-xs text-muted-foreground">
-                {t("how_to_proceed_desc")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t("how_to_proceed_desc")}</p>
             </div>
 
             <div className="grid gap-3">
@@ -132,12 +133,8 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
                 </div>
               }
             >
-              <Dice3DScene 
-                diceConfig={["d100"]} 
-                onRollComplete={handleD100Complete} 
-              />
+              <Dice3DScene diceConfig={["d100"]} onRollComplete={handleD100Complete} />
             </Suspense>
-
           </div>
         )}
 
@@ -197,7 +194,6 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
             >
               <Dice3DScene diceCount={1} diceType="d10" onRollComplete={handleD10Complete} />
             </Suspense>
-
           </div>
         )}
 
@@ -207,10 +203,10 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
               <div className="text-6xl font-bold">+{d10Result}</div>
               <div className="text-lg font-semibold">{t("skill_improved")}</div>
               <p className="text-sm text-muted-foreground">
-                {t("skill_improved_desc", { 
-                    name: translatedSkillName, 
-                    old: skill.value, 
-                    new: skill.value + d10Result 
+                {t("skill_improved_desc", {
+                  name: translatedSkillName,
+                  old: skill.value,
+                  new: skill.value + d10Result,
                 })}
               </p>
             </div>
@@ -221,6 +217,7 @@ export function SkillImprovementModal({ skill, onComplete, onCancel }: SkillImpr
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

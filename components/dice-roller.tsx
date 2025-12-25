@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { createPortal } from "react-dom"
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
@@ -132,6 +133,11 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
   const [use3DDice, setUse3DDice] = useState(true)
   const [waitingForNextRoll, setWaitingForNextRoll] = useState(false)
   const processingRoll = useRef(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleStart = () => {
     setStarted(true)
@@ -223,10 +229,12 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
     return CHARACTERISTIC_FORMULAS[currentIndex].formula === "3d6" ? 3 : 2
   }
 
+  if (!mounted) return null
+
   if (!started) {
-    return (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-card border-2 border-primary rounded-xl p-8 max-w-md w-full shadow-2xl">
+    return createPortal(
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div className="bg-card border-2 border-primary rounded-xl p-8 max-w-md w-full shadow-2xl overflow-y-auto max-h-[90vh]">
           <div className="flex flex-col items-center gap-6">
             <div className="relative">
               <Dices className="h-20 w-20 text-primary" />
@@ -295,16 +303,17 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
             </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )
   }
 
   const currentChar = CHARACTERISTIC_FORMULAS[currentIndex]
   const isComplete = rolls.length === CHARACTERISTIC_FORMULAS.length
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-card border-2 border-primary rounded-xl p-6 max-w-4xl w-full shadow-2xl my-8">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto">
+      <div className="bg-card border-2 border-primary rounded-xl p-6 max-w-4xl w-full shadow-2xl my-8 relative">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-foreground">
             {isComplete ? t("rolls_complete") : (currentChar ? t(currentChar.key.toLowerCase()) : "")}
@@ -467,7 +476,8 @@ export function DiceRoller({ onComplete, onCancel }: DiceRollerProps) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

@@ -53,6 +53,7 @@ export type FieldSkillName = keyof typeof FIELD_SKILLS
 
 export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
 // --- A ---
+// --- A ---
   {
     name: "Administrativo / Oficinista",
     nameEn: "Clerk",
@@ -71,7 +72,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Alpinista",
     nameEn: "Mountain Climber",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Trepar",
       "Escuchar",
@@ -80,7 +81,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       "Primeros auxilios",
       "Saltar",
       { type: "field", field: "Supervivencia", count: 1, label: "Supervivencia (Alpino)", labelEn: "Survival (Alpine)" },
-      { type: "choice", options: ["Seguir rastros", "Ciencia"], count: 1, label: "Seguir rastros o Ciencia (Geología)", labelEn: "Track or Science (Geology)" }
+      { type: "choice", options: ["Seguir rastros", "Ciencia"], count: 1, label: "Seguir rastros o Ciencia", labelEn: "Track or Science" }
     ],
     creditRating: [30, 60],
   },
@@ -89,7 +90,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     nameEn: "Entertainer",
     formula: "EDU*2 + APP*2",
     skills: [
-      { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Actuar/Cantar/Comedia)", labelEn: "Art (Act/Sing/Comedy)" },
+      { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Actuar/Cantar)", labelEn: "Art (Act/Sing)" },
       "Disfrazarse",
       "Escuchar",
       "Psicología",
@@ -99,28 +100,12 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     creditRating: [9, 60],
   },
   {
-    name: "Anticuario", // Ya lo tienes, pero comprueba si falta la variante 'Librero' abajo
-    nameEn: "Antiquarian",
-    formula: "EDU*4",
-    skills: [
-      "Tasación",
-      { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte/Artesanía", labelEn: "Art/Craft" },
-      "Historia",
-      "Buscar libros",
-      { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
-      "Descubrir",
-      { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal", labelEn: "Interpersonal" },
-      { type: "any", count: 1, label: "Otra habilidad", labelEn: "Any other skill" }
-    ],
-    creditRating: [30, 70],
-  },
-  {
     name: "Aristócrata",
     nameEn: "Aristocrat",
     formula: "EDU*2 + APP*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte/Artesanía", labelEn: "Art/Craft" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       "Equitación",
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 2, label: "Dos interpersonales", labelEn: "Two interpersonal skills" },
@@ -150,7 +135,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*2 + DEX*2",
     skills: [
       "Contabilidad",
-      { type: "field", field: "Arte/Artesanía", count: 2, label: "Dos Artesanías (Carpintería, etc.)", labelEn: "Two Crafts" },
+      { type: "field", field: "Arte/Artesanía", count: 2, label: "Dos Artesanías", labelEn: "Two Crafts" },
       "Descubrir",
       "Mecánica",
       { type: "field", field: "Ciencia", count: 1, label: "Ciencia (Naturales/Química)", labelEn: "Science (Nature/Chem)" },
@@ -161,7 +146,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Atleta",
     nameEn: "Athlete",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Trepar",
       "Saltar",
@@ -182,7 +167,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Literatura)", labelEn: "Art (Literature)" },
       "Historia",
       "Buscar libros",
-      { type: "choice", options: ["Ciencia", "Ciencias ocultas"], count: 1, label: "Ciencias Naturales u Ocultismo", labelEn: "Natural World or Occult" },
+      { type: "choice", options: ["Ciencia", "Ciencias ocultas"], count: 1, label: "Ciencias o Ocultismo", labelEn: "Science or Occult" },
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       { type: "field", field: "Lengua propia", count: 1, label: "Lengua propia", labelEn: "Language (Own)" },
       "Psicología",
@@ -215,7 +200,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       "Buscar libros",
       "Descubrir",
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
-      { type: "field", field: "Ciencia", count: 3, label: "Tres ciencias (Química, Biología, etc.)", labelEn: "Three sciences" },
+      { type: "field", field: "Ciencia", count: 3, label: "Tres ciencias", labelEn: "Three sciences" },
       { type: "any", count: 1, label: "Otra habilidad", labelEn: "Any other skill" }
     ],
     creditRating: [10, 30],
@@ -253,7 +238,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Bombero",
     nameEn: "Firefighter",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
       "Conducir automóvil",
       "Esquivar",
@@ -286,7 +271,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     nameEn: "Diver",
     formula: "EDU*2 + DEX*2",
     skills: [
-      "Nadar", // Equivalente a Diving en CoC7, o se usa Swim con especialidad
+      "Nadar",
       "Descubrir",
       "Primeros auxilios",
       "Mecánica",
@@ -301,7 +286,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Camarero",
     nameEn: "Waiter/Waitress",
-    formula: "EDU*2 + APP*2", // O DEX*2
+    formula: "EDU*2 + APP*2",
     skills: [
       "Contabilidad",
       "Esquivar",
@@ -332,11 +317,11 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Cazador",
     nameEn: "Big Game Hunter",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego (Rifle/Escopeta)", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Escuchar",
-      { type: "field", field: "Ciencia", count: 1, label: "Ciencia (Biología/Botánica)", labelEn: "Science (Bio/Botany)" }, // Representando Natural World
+      { type: "field", field: "Ciencia", count: 1, label: "Ciencia (Biología/Botánica)", labelEn: "Science (Bio/Botany)" },
       "Orientarse",
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       "Descubrir",
@@ -348,12 +333,12 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Cazador de Recompensas",
     nameEn: "Bounty Hunter",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Conducir automóvil",
       { type: "choice", options: ["Electricidad", "Mecánica"], count: 1, label: "Electr. o Mecánica", labelEn: "Elec or Mech" },
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Derecho",
       "Psicología",
       "Seguir rastros",
@@ -409,10 +394,10 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Conductor",
     nameEn: "Driver",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Contabilidad",
-      "Conducir automóvil", // O Camión
+      "Conducir automóvil",
       "Escuchar",
       "Mecánica",
       "Orientarse",
@@ -456,9 +441,9 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Contrabandista",
     nameEn: "Smuggler",
-    formula: "EDU*2 + DEX*2", // O APA*2
+    formula: "EDU*2 + DEX*2",
     skills: [
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Escuchar",
       "Descubrir",
       "Orientarse",
@@ -487,13 +472,13 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Criminal",
     nameEn: "Criminal",
-    formula: "EDU*2 + DEX*2", // O APA*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal", labelEn: "Interpersonal" },
       "Psicología",
       "Descubrir",
       "Sigilo",
-      { type: "any", count: 4, label: "Cuatro esp. criminales (Cerrajería, Armas, etc.)", labelEn: "Four criminal specialties" }
+      { type: "any", count: 4, label: "Cuatro esp. criminales", labelEn: "Four criminal specialties" }
     ],
     creditRating: [5, 65],
   },
@@ -506,7 +491,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       "Esquivar",
       "Primeros auxilios",
       { type: "field", field: "Ciencia", count: 2, label: "Zoología y Farmacia", labelEn: "Zoology/Biology and Pharmacy" },
-      "Medicina", // Veterinary medicine usually
+      "Medicina",
       "Seguir rastros",
       { type: "any", count: 1, label: "Otra habilidad", labelEn: "Any other skill" }
     ],
@@ -520,7 +505,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*2 + APP*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte/Artesanía", labelEn: "Art/Craft" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       "Equitación",
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal", labelEn: "Interpersonal" },
@@ -538,7 +523,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       "Mecánica",
       "Psicología",
       "Descubrir",
-      "Buscar libros", // O Informática en era moderna
+      "Buscar libros",
       { type: "any", count: 1, label: "Otra habilidad", labelEn: "Any other skill" }
     ],
     creditRating: [20, 60],
@@ -581,7 +566,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*4",
     skills: [
       "Contabilidad",
-      { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Restauración/Cosmética)", labelEn: "Art (Restoration/Cosmetic)" },
+      { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Restauración)", labelEn: "Art (Restoration)" },
       "Conducir automóvil",
       { type: "field", field: "Ciencia", count: 2, label: "Ciencia (Biología y Química)", labelEn: "Science (Biology/Chemistry)" },
       "Descubrir",
@@ -593,10 +578,10 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Entrenador de Animales",
     nameEn: "Animal Trainer",
-    formula: "EDU*2 + APP*2", // O POD*2 o DEX*2
+    formula: "EDU*2 + APP*2",
     skills: [
       "Escuchar",
-      { type: "field", field: "Ciencia", count: 1, label: "Ciencia (Zoología)", labelEn: "Science (Zoology)" }, // Natural World
+      { type: "field", field: "Ciencia", count: 1, label: "Ciencia (Zoología)", labelEn: "Science (Zoology)" },
       "Psicología",
       "Descubrir",
       "Sigilo",
@@ -624,11 +609,11 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Espía",
     nameEn: "Spy",
-    formula: "EDU*2 + DEX*2", // O APA*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Actuar)", labelEn: "Art (Acting)" },
       "Disfrazarse",
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Escuchar",
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       "Psicología",
@@ -647,7 +632,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       "Escuchar",
       "Psicología",
       "Juego de manos",
-      { type: "choice", options: ["Charlatanería", "Persuasión"], count: 1, label: "Charlatanería o Persuasión", labelEn: "Fast Talk or Persuade" }, // Key skills
+      { type: "choice", options: ["Charlatanería", "Persuasión"], count: 1, label: "Charlatanería o Persuasión", labelEn: "Fast Talk or Persuade" },
       { type: "choice", options: INTERPERSONAL_OPTIONS, count: 1, label: "Interpersonal", labelEn: "Interpersonal" },
       { type: "any", count: 1, label: "Otra habilidad", labelEn: "Any other skill" }
     ],
@@ -686,8 +671,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   },
   {
     name: "Fanático",
-    nameEn: "Cult Leader", // O Zealot
-    formula: "EDU*2 + APP*2", // O POD*2
+    nameEn: "Cult Leader",
+    formula: "EDU*2 + APP*2",
     skills: [
       "Contabilidad",
       "Historia",
@@ -732,11 +717,11 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   // --- G ---
   {
     name: "Gamberro",
-    nameEn: "Street Punk", // O Thug
-    formula: "EDU*2 + STR*2", // O DEX*2
+    nameEn: "Street Punk",
+    formula: "EDU*2 + STR*2",
     skills: [
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Saltar",
       "Juego de manos",
       "Sigilo",
@@ -748,11 +733,11 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   },
   {
     name: "Gánster",
-    nameEn: "Gangster", // O Boss
-    formula: "EDU*2 + APP*2", // O POD*2
+    nameEn: "Gangster",
+    formula: "EDU*2 + APP*2",
     skills: [
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Derecho",
       "Escuchar",
       "Psicología",
@@ -764,7 +749,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Granjero",
     nameEn: "Farmer",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Agricultura)", labelEn: "Art (Farming)" },
       "Conducir automóvil",
@@ -797,10 +782,10 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Inspector de Policía",
     nameEn: "Police Detective",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Actuar) o Disfrazarse", labelEn: "Art (Acting) or Disguise" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Derecho",
       "Escuchar",
       "Psicología",
@@ -838,8 +823,6 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     ],
     creditRating: [9, 30],
   },
-  // Investigador Privado ya lo tenías como Detective Privado.
-
   // --- J ---
   {
     name: "Juez",
@@ -860,7 +843,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Jugador",
     nameEn: "Gambler",
-    formula: "EDU*2 + DEX*2", // O APA*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Contabilidad",
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Actuar)", labelEn: "Art (Acting)" },
@@ -907,12 +890,12 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Ladrón de Bancos",
     nameEn: "Bank Robber",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
       "Conducir automóvil",
       { type: "choice", options: ["Electricidad", "Mecánica"], count: 1, label: "Elec. o Mec.", labelEn: "Elec or Mech" },
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Intimidar",
       "Cerrajería",
       "Conducir maquinaria",
@@ -923,7 +906,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Leñador",
     nameEn: "Lumberjack",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
       "Trepar",
       "Esquivar",
@@ -957,9 +940,9 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Marinero",
     nameEn: "Sailor",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
-      "Electricidad", // O Mecánica
+      "Electricidad",
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
       "Primeros auxilios",
       "Orientarse",
@@ -1004,7 +987,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Miembro de la Tribu",
     nameEn: "Tribe Member",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Trepar",
       { type: "choice", options: ["Combatir", "Lanzar"], count: 1, label: "Combatir o Lanzar", labelEn: "Fight or Throw" },
@@ -1020,7 +1003,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Minero",
     nameEn: "Miner",
-    formula: "EDU*2 + STR*2", // O DEX*2
+    formula: "EDU*2 + STR*2",
     skills: [
       "Trepar",
       { type: "field", field: "Ciencia", count: 1, label: "Geología", labelEn: "Geology" },
@@ -1052,9 +1035,9 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Montañero",
     nameEn: "Outdoorsman",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Primeros auxilios",
       "Escuchar",
       { type: "field", field: "Ciencia", count: 1, label: "Naturaleza", labelEn: "Natural World" },
@@ -1068,7 +1051,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Músico",
     nameEn: "Musician",
-    formula: "EDU*2 + DEX*2", // O APA*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Instrumento)", labelEn: "Art (Instrument)" },
       "Escuchar",
@@ -1099,10 +1082,10 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Oficial Militar",
     nameEn: "Military Officer",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Contabilidad",
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Orientarse",
       "Psicología",
       { type: "field", field: "Supervivencia", count: 1, label: "Supervivencia", labelEn: "Survival" },
@@ -1132,7 +1115,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Pareja de Gánster",
     nameEn: "Gun Moll",
-    formula: "EDU*2 + APP*2", // O POD*2
+    formula: "EDU*2 + APP*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte/Artesanía", labelEn: "Art/Craft" },
       { type: "choice", options: ["Combatir", "Armas de fuego"], count: 1, label: "Combatir o Armas", labelEn: "Fight or Firearms" },
@@ -1162,10 +1145,10 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   },
   {
     name: "Pirata Informático",
-    nameEn: "Hacker", // O Computer Programmer en Modern
+    nameEn: "Hacker",
     formula: "EDU*4",
     skills: [
-      "Informática", // Computer Use
+      "Informática",
       "Electricidad",
       "Electrónica",
       "Buscar libros",
@@ -1185,7 +1168,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       "Electrónica",
       "Buscar libros",
       { type: "field", field: "Ciencia", count: 1, label: "Matemáticas", labelEn: "Mathematics" },
-      "Lógica", // No es standard, quizás sea solo skill custom, pongo Any
+      "Lógica",
       { type: "any", count: 2, label: "Otras dos habilidades", labelEn: "Any two other skills" }
     ],
     creditRating: [10, 50],
@@ -1193,7 +1176,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Prospector",
     nameEn: "Prospector",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Trepar",
       { type: "field", field: "Ciencia", count: 1, label: "Geología", labelEn: "Geology" },
@@ -1208,7 +1191,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Prostituta",
     nameEn: "Prostitute",
-    formula: "EDU*2 + APP*2", // O DEX*2
+    formula: "EDU*2 + APP*2",
     skills: [
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte/Artesanía", labelEn: "Art/Craft" },
       "Esquivar",
@@ -1257,7 +1240,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Secretaria",
     nameEn: "Secretary",
-    formula: "EDU*2 + DEX*2", // O APA*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Contabilidad",
       { type: "field", field: "Arte/Artesanía", count: 1, label: "Arte (Mecanografía)", labelEn: "Art (Typing)" },
@@ -1293,7 +1276,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     skills: [
       "Contabilidad",
       "Conducir automóvil",
-      "Electricidad", // Arreglar luces/motor ligero
+      "Electricidad",
       "Charlatanería",
       "Mecánica",
       "Orientarse",
@@ -1307,7 +1290,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Vagabundo",
     nameEn: "Drifter",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Trepar",
       "Saltar",
@@ -1322,11 +1305,11 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
   {
     name: "Vaquero",
     nameEn: "Cowboy",
-    formula: "EDU*2 + DEX*2", // O FUE*2
+    formula: "EDU*2 + DEX*2",
     skills: [
       "Esquivar",
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
-      { type: "field", field: "Armas de fuego", count: 1, label: "Armas de fuego", labelEn: "Firearms" },
+      { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       { type: "field", field: "Ciencia", count: 1, label: "Naturaleza", labelEn: "Natural World" },
       "Equitación",
       "Supervivencia",
@@ -1357,7 +1340,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*4",
     skills: [
       "Contabilidad",
-      "Esquivar", // Ojo, el libro a veces no pone esquivar aquí, sino track. Pero en Zoólogo es típico.
+      "Esquivar",
       "Primeros auxilios",
       { type: "field", field: "Ciencia", count: 3, label: "Tres Ciencias (Zoología, Bio, Farma)", labelEn: "Three Sciences" },
       "Medicina",
@@ -1365,6 +1348,8 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     ],
     creditRating: [10, 40],
   },
+
+  // --- OTHERS ---
     {
     name: "Otra",
     nameEn: "Custom",

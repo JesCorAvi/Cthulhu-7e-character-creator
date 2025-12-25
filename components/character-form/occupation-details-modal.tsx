@@ -346,7 +346,10 @@ interface OccupationDetailsModalProps {
 export function OccupationDetailsModal({ isOpen, onClose, character, onChange }: OccupationDetailsModalProps) {
   const { t, language } = useLanguage()
   const currentOccupation = PRESET_OCCUPATIONS.find((occ) => occ.name === character.occupation)
-  const isCustomOccupation = character.occupation === "Otra"
+  
+  // MODIFICADO: Si no encontramos la ocupación en los presets (currentOccupation es undefined),
+  // o el nombre es explícitamente "Otra", lo tratamos como una ocupación personalizada.
+  const isCustomOccupation = !currentOccupation || character.occupation === "Otra"
 
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null)
   const [activeFieldKey, setActiveFieldKey] = useState<string | null>(null)
@@ -411,6 +414,8 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const { occupationalSpent } = calculateSpentPoints(character)
   const remainingPoints = totalPoints - occupationalSpent
 
+  // Si no es custom y no se encuentra la ocupación, no mostramos nada.
+  // Pero gracias al cambio en isCustomOccupation, si el usuario escribió un nombre manual, isCustomOccupation será true.
   if (!currentOccupation && !isCustomOccupation) return null
 
   // Helper to get localized properties

@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+// Usamos Command y Popover para el buscador
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { Character, CharacteristicValue, Skill, Weapon } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS } from "@/lib/occupations-data"
 import {
@@ -16,9 +18,9 @@ import {
   calculateMagicPoints,
   createDefaultWeapon,
 } from "@/lib/character-utils"
-import { Plus, Trash2, Search, Shield, Settings2, Dices, Share2, User, Camera } from "lucide-react" // <--- Iconos User y Camera añadidos
-import { useState, useEffect, useRef } from "react" // <--- useRef añadido
-import { cn, compressImage } from "@/lib/utils" // <--- compressImage añadido
+import { Plus, Trash2, Search, Shield, Settings2, Dices, Share2, User, Camera, Check, ChevronsUpDown } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { cn, compressImage } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import { OccupationDetailsModal } from "./occupation-details-modal"
 import { DiceRoller } from "@/components/dice-roller"
@@ -93,9 +95,10 @@ function SheetTracker({
 export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
   const { t, language } = useLanguage()
   const [skillSearch, setSkillSearch] = useState("")
-  // const { theme, setTheme } = useTheme() // (No se usa setTheme de momento)
+  // const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [isOccupationModalOpen, setIsOccupationModalOpen] = useState(false)
+  const [openOccupation, setOpenOccupation] = useState(false) // Estado para el buscador de ocupaciones
   const [showDiceRoller, setShowDiceRoller] = useState(false)
   const [hasRolledCharacteristics, setHasRolledCharacteristics] = useState(false)
   const [improvingSkill, setImprovingSkill] = useState<{ skill: Skill; index: number } | null>(null)
@@ -128,7 +131,6 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     if (!file) return
 
     try {
-      // Usamos la utilidad compressImage que ya tienes en lib/utils
       const compressedBase64 = await compressImage(file)
       onChange({ ...character, imageUrl: compressedBase64 })
     } catch (error) {
@@ -142,12 +144,16 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
 
   const handleOccupationChange = (value: string) => {
     if (value === "custom") {
+      // Buscamos la definición de "Otra" en los presets para usar su fórmula y skills base
+      const customPreset = PRESET_OCCUPATIONS.find(p => p.name === "Otra")
+      
       onChange({
         ...character,
-        occupation: "Personalizada",
+        occupation: "Personalizada", // Mantenemos "Personalizada" para activar el input
         occupationLabel: t("custom_occupation"),
-        occupationFormula: "EDU*4",
-        occupationalSkills: [],
+        // Usamos la fórmula y skills de la ocupación "Otra" definida en occupations-data
+        occupationFormula: customPreset ? customPreset.formula : "EDU*4", 
+        occupationalSkills: customPreset ? customPreset.skills : [],
       })
     } else {
       const preset = PRESET_OCCUPATIONS.find((p) => p.name === value)
@@ -161,6 +167,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
         })
       }
     }
+    setOpenOccupation(false)
   }
 
   const handleCharChange = (key: keyof typeof character.characteristics, value: number) => {
@@ -564,31 +571,72 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
             <div className="col-span-2 space-y-1">
               <Label className="text-[9px] uppercase font-bold text-stone-500">{t("occupation")}</Label>
               <div className="relative">
-                <Select
-                  value={
-                    PRESET_OCCUPATIONS.some((p) => p.name === character.occupation)
-                      ? character.occupation
-                      : character.occupation
-                        ? "custom"
-                        : ""
-                  }
-                  onValueChange={handleOccupationChange}
-                >
-                  <SelectTrigger className="w-full h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus:ring-0 bg-transparent text-left font-serif text-base font-medium p-0">
-                    <SelectValue placeholder={t("select_occupation")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRESET_OCCUPATIONS.map((occ) => (
-                      <SelectItem key={occ.name} value={occ.name}>
-                        {language === 'en' ? occ.nameEn : occ.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="custom" className="font-semibold text-primary">
-                      {t("custom_occupation")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* BUSCADOR DE OCUPACIONES (POPOVER + COMMAND) */}
+                <Popover open={openOccupation} onOpenChange={setOpenOccupation}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      role="combobox"
+                      aria-expanded={openOccupation}
+                      className="w-full h-8 border-x-0 border-t-0 border-b border-stone-400 rounded-none px-0 focus:ring-0 bg-transparent text-left font-serif text-base font-medium p-0 justify-between hover:bg-transparent hover:text-stone-900 dark:hover:text-stone-100"
+                    >
+                      <span className="truncate">
+                        {character.occupation
+                          ? PRESET_OCCUPATIONS.find((p) => p.name === character.occupation)
+                            ? (language === 'en' 
+                                ? PRESET_OCCUPATIONS.find((p) => p.name === character.occupation)?.nameEn 
+                                : character.occupation)
+                            : t("custom_occupation")
+                          : <span className="text-muted-foreground font-normal text-sm italic">{t("select_occupation")}</span>}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder={t("search") + "..."} />
+                      <CommandList>
+                        <CommandEmpty>No se encontró ocupación.</CommandEmpty>
+                        <CommandGroup>
+                          {/* Filtramos "Otra" para que no salga duplicada, y añadimos la opción custom manual abajo */}
+                          {PRESET_OCCUPATIONS.filter(occ => occ.name !== "Otra").map((occ) => (
+                            <CommandItem
+                              key={occ.name}
+                              value={language === 'en' ? occ.nameEn : occ.name}
+                              onSelect={() => handleOccupationChange(occ.name)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  character.occupation === occ.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {language === 'en' ? occ.nameEn : occ.name}
+                            </CommandItem>
+                          ))}
+                          {/* Opción personalizada al final (usa datos de "Otra" pero permite editar nombre) */}
+                          <CommandItem
+                            value="custom"
+                            onSelect={() => handleOccupationChange("custom")}
+                            className="font-semibold text-primary"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                (!PRESET_OCCUPATIONS.some((p) => p.name === character.occupation) && character.occupation) 
+                                  ? "opacity-100" 
+                                  : "opacity-0"
+                              )}
+                            />
+                            {t("custom_occupation")}
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
 
+                {/* Input para nombre personalizado: aparece si la ocupación no está en la lista de presets O es "Personalizada" */}
                 {character.occupation !== "" &&
                   (!PRESET_OCCUPATIONS.some((p) => p.name === character.occupation) ||
                     character.occupation === "Personalizada") && (

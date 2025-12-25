@@ -181,6 +181,7 @@ const translations = {
     indef_insanity: "Locura Indef.",
 
     // --- HABILIDADES ---
+    add_photo: "Añadir retrato",
     investigator_skills: "Habilidades del Investigador",
     filter_skills: "Filtrar...",
     add_skill: "Añadir",
@@ -441,6 +442,7 @@ const translations = {
     investigator_skills: "Investigator Skills",
     filter_skills: "Filter...",
     add_skill: "Add",
+    add_photo: "Add portrait",
     total_skills: "Total Skills",
     occupation_points: "Occupation Points",
     personal_points: "Pers. Points",

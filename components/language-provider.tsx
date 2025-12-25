@@ -48,6 +48,7 @@ const translations = {
     // --- GENERAL UI ---
     popup_error_generic: "Error al iniciar sesión con Google",
     wait_saving: "Espere a que los datos se guarden",
+    wait_saving2: "Se están guardando los cambios. ¿Seguro que quieres salir?",
     delete_confirm_title: "Confirmar Eliminación",
     app_title: "Cthulhu Builder",
     app_subtitle: "Creador de Personajes",
@@ -276,6 +277,7 @@ const translations = {
   en: {
     // --- STORAGE ---
     wait_saving: "Please wait for the data to be saved",
+    wait_saving2: "Changes are being saved. Are you sure you want to leave?",
     delete_confirm_title: "Confirm Deletion",
     storage_local: "Local",
     storage_local_desc: "On Device",

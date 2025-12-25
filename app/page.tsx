@@ -124,7 +124,7 @@ function CharacterApp() {
       } 
       // 2. Si es el botón del navegador y estamos guardando:
       else if (isDirtyRef.current) {
-         const warningMsg = t("wait_saving") || "Se están guardando los cambios. ¿Seguro que quieres salir?";
+         const warningMsg = t("wait_saving2") || "Se están guardando los cambios. ¿Seguro que quieres salir?";
          const confirmLeave = window.confirm(warningMsg);
          
          if (!confirmLeave) {

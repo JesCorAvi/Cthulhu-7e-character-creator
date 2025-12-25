@@ -52,9 +52,7 @@ export const FIELD_SKILLS = {
 export type FieldSkillName = keyof typeof FIELD_SKILLS
 
 export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
-// --- A ---
-// --- A ---
-// --- A ---
+  // --- A ---
   {
     name: "Administrativo / Oficinista",
     nameEn: "Clerk",
@@ -81,7 +79,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       "Primeros auxilios",
       "Saltar",
-      { type: "field", field: "Supervivencia", count: 1, options: ["Alpino"], label: "Supervivencia", labelEn: "Survival" },
+      { type: "field", field: "Supervivencia", count: 1, options: ["Alpino"], label: "Supervivencia (Alpino)", labelEn: "Survival (Alpine)" },
       { type: "choice", options: ["Seguir rastros", "Ciencia"], count: 1, label: "Seguir rastros o Ciencia", labelEn: "Track or Science" }
     ],
     creditRating: [30, 60],
@@ -136,10 +134,16 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*2 + DEX*2",
     skills: [
       "Contabilidad",
-      { type: "field", field: "Arte/Artesanía", count: 2, label: "Dos Artesanías", labelEn: "Two Crafts" },
+      { type: "field", field: "Arte/Artesanía", count: 2, label: "Dos Artesanías (A elección)", labelEn: "Two Crafts (Any)" },
       "Descubrir",
       "Mecánica",
-      { type: "field", field: "Ciencia", count: 1, label: "Ciencia (Naturales/Química)", labelEn: "Science (Nature/Chem)" },
+      { 
+        type: "choice", 
+        options: ["Naturaleza", { type: "field", field: "Ciencia", count: 1, options: ["Química"] }], 
+        count: 1, 
+        label: "Naturaleza o Ciencia (Química)", 
+        labelEn: "Natural World or Science (Chemistry)" 
+      },
       { type: "any", count: 2, label: "Otras dos habilidades", labelEn: "Any two other skills" }
     ],
     creditRating: [10, 40],
@@ -337,7 +341,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     formula: "EDU*2 + DEX*2",
     skills: [
       "Conducir automóvil",
-      { type: "choice", options: ["Electricidad", "Mecánica"], count: 1, label: "Electr. o Mecánica", labelEn: "Elec or Mech" },
+      { type: "choice", options: ["Electricidad", "Mecánica"], count: 1, label: "Electr. o Mec.", labelEn: "Elec or Mech" },
       { type: "field", field: "Combatir", count: 1, requiresBaseValue: true, label: "Combatir", labelEn: "Fighting" },
       { type: "field", field: "Armas de fuego", count: 1, requiresBaseValue: true, label: "Armas de fuego", labelEn: "Firearms" },
       "Derecho",

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+// --- DICCIONARIO DE TRADUCCIÓN DE HABILIDADES ---
 const SKILL_TRANSLATIONS: Record<string, string> = {
   // Habilidades Base
   "Antropología": "Anthropology",
@@ -393,70 +394,107 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const [customStat1, setCustomStat1] = useState<string>("EDU")
   const [customStat2, setCustomStat2] = useState<string>("DEX")
 
-  // --- DISTRIBUCIÓN DE HABILIDADES (CORREGIDA CON ÍNDICE) ---
+  // --- DISTRIBUCIÓN DE HABILIDADES ---
   const skillAssignments = useMemo(() => {
     const assignments: Record<number, Skill[]> = {}
-    // Filtramos solo las que están marcadas como ocupacionales
     let pool = character.skills.filter(s => s.isOccupational)
 
     const requirements = currentOccupation?.skills || 
          (isCustomOccupation ? [{ type: "any", count: 8, label: t("skills_choice") } as SkillRequirement] : [])
 
-    // PASO 1: Asignación Explícita (Por índice de requisito)
-    // Si la habilidad tiene guardado "yo pertenezco al bloque 2", va al bloque 2.
+    // PASO 1: Asignación Explícita
     requirements.forEach((_, index) => {
         const assignedExplicitly = pool.filter(s => s.occupationRequirementIndex === index)
         assignments[index] = assignedExplicitly
-        // Las quitamos del pool para que no se reasignen
         pool = pool.filter(s => s.occupationRequirementIndex !== index)
     })
 
-    // PASO 2: Asignación Implícita (Heurística para skills viejas o sin índice)
-    // Usamos el pool restante para rellenar huecos vacíos
+    // PASO 2: Asignación Implícita (Prioridad Estándar > Custom)
     const assignBestMatches = (
-        matcher: (s: Skill) => boolean, 
+        matcher: (s: Skill) => { match: boolean; isStandard: boolean }, 
         count: number
     ): Skill[] => {
-        const matches = pool.filter(matcher)
-        const taken = matches.slice(0, count)
-        pool = pool.filter(s => !taken.includes(s)) // Removemos del pool
-        return taken
+        const candidates = pool.map(s => {
+            const result = matcher(s)
+            return result.match ? { skill: s, isStandard: result.isStandard } : null
+        }).filter((c): c is { skill: Skill; isStandard: boolean } => c !== null)
+        
+        candidates.sort((a, b) => {
+            if (a.isStandard && !b.isStandard) return -1
+            if (!a.isStandard && b.isStandard) return 1
+            return 0
+        })
+
+        const takenEntries = candidates.slice(0, count)
+        const takenSkills = takenEntries.map(c => c.skill)
+        pool = pool.filter(s => !takenSkills.includes(s))
+        return takenSkills
     }
 
     requirements.forEach((req, index) => {
-         // Si ya llenamos el cupo con explícitas, no buscamos más
          const currentCount = assignments[index]?.length || 0
          const needed = (typeof req === "object" ? req.count : 1) - currentCount
          
-         if (needed <= 0) return // Ya está lleno
+         if (needed <= 0) return 
 
          let found: Skill[] = []
 
          if (typeof req === "string") {
-             found = assignBestMatches(s => s.name === req, needed)
+             assignments[index] = [...(assignments[index] || []), ...assignBestMatches(s => ({ match: s.name === req, isStandard: true }), needed)]
          } else if (req.type === "field") {
-             found = assignBestMatches(s => 
-                (s.name === req.field && !!s.customName) || s.name.startsWith(`${req.field}: `)
-             , needed)
+             const definitions = getSkillDefinitionsForEra(character.era || "1920s")
+             const fieldDef = definitions.find(d => d.name === req.field)
+             const standardSubSkills = new Set<string>()
+             fieldDef?.subSkills?.forEach(s => {
+                 if (s.name) standardSubSkills.add(s.name)
+                 if (s.nameEn) standardSubSkills.add(s.nameEn)
+             })
+
+             found = assignBestMatches(s => {
+                const isExactStandard = s.name === req.field && !s.customName
+                const isSubSkillStandard = standardSubSkills.has(s.name)
+                const isPrefixMatch = (s.name === req.field && !!s.customName) || s.name.startsWith(`${req.field}: `)
+                
+                return {
+                    match: isExactStandard || isSubSkillStandard || isPrefixMatch,
+                    isStandard: isExactStandard || isSubSkillStandard
+                }
+             }, needed)
+             assignments[index] = [...(assignments[index] || []), ...found]
+
          } else if (req.type === "choice") {
              found = assignBestMatches(s => {
-                 return req.options.some(opt => {
+                 let isMatch = false
+                 let isStandard = false
+
+                 req.options.forEach(opt => {
                      if (typeof opt === "string") {
                          if (FIELDS.includes(opt)) {
-                             return s.name.startsWith(`${opt}: `)
+                             if (s.name.startsWith(`${opt}: `)) {
+                                 isMatch = true
+                                 isStandard = false 
+                             }
+                         } else {
+                             if (s.name === opt) {
+                                 isMatch = true
+                                 isStandard = true
+                             }
                          }
-                         return s.name === opt
                      } else {
-                         return (s.name === opt.field && !!s.customName) || s.name.startsWith(`${opt.field}: `)
+                         if ((s.name === opt.field && !!s.customName) || s.name.startsWith(`${opt.field}: `)) {
+                             isMatch = true
+                             isStandard = false 
+                         }
                      }
                  })
+                 return { match: isMatch, isStandard }
              }, needed)
-         } else if (req.type === "any") {
-             found = assignBestMatches(() => true, 999) // Todo lo que sobre
-         }
+             assignments[index] = [...(assignments[index] || []), ...found]
 
-         // Añadimos las encontradas a las explícitas
-         assignments[index] = [...(assignments[index] || []), ...found]
+         } else if (req.type === "any") {
+             found = assignBestMatches(() => ({ match: true, isStandard: false }), 999)
+             assignments[index] = [...(assignments[index] || []), ...found]
+         }
     })
     
     return assignments
@@ -526,18 +564,14 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     return obj[key]
   }
 
-  // --- UPDATE SKILLS (ACTUALIZADO CON REQ_INDEX) ---
   const updateSkillPoints = (name: string, pts: number, customBaseValue?: number, remove: boolean = false, reqIndex?: number) => {
     const newSkills = [...character.skills]
     const isFieldSpecialization = name.includes(": ")
 
-    // Función auxiliar para actualizar propiedades comunes
     const updateProps = (skill: Skill) => {
-        // Si estamos añadiendo/editando (no borrando), actualizamos el índice de requisito
         if (!remove && reqIndex !== undefined) {
             skill.occupationRequirementIndex = reqIndex
         }
-        // Si borramos, limpiamos el índice
         if (remove) {
             skill.occupationRequirementIndex = undefined
         }
@@ -596,8 +630,20 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           if (baseVal === undefined) {
              const definitions = getSkillDefinitionsForEra(character.era || "1920s")
              const def = definitions.find(d => d.name === fieldName)
-             if (def && typeof def.baseValue === 'number') {
-                 baseVal = def.baseValue
+             if (def) {
+                 if (typeof def.baseValue === 'number') {
+                     baseVal = def.baseValue
+                 } else if (def.baseValue === "special") {
+                     if (fieldName === "Lengua propia" || fieldName === "Language (Own)") {
+                         baseVal = character.characteristics.EDU?.value || 0
+                     } else if (fieldName === "Esquivar" || fieldName === "Dodge") {
+                         baseVal = Math.floor((character.characteristics.DEX?.value || 0) / 2)
+                     } else {
+                         baseVal = 0
+                     }
+                 } else {
+                     baseVal = 0
+                 }
              } else {
                  baseVal = 0 
              }
@@ -612,7 +658,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             isOccupational: true,
             isCustom: true,
             customName: specName,
-            occupationRequirementIndex: reqIndex // ASIGNAR ÍNDICE
+            occupationRequirementIndex: reqIndex
           }
 
           const headerIndex = newSkills.findIndex(s => s.name === fieldName)
@@ -657,8 +703,17 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
         let baseVal = 0
         const definitions = getSkillDefinitionsForEra(character.era || "1920s")
         const def = definitions.find(d => d.name === name)
-        if (def && typeof def.baseValue === 'number') {
-            baseVal = def.baseValue
+        
+        if (def) {
+             if (typeof def.baseValue === 'number') {
+                 baseVal = def.baseValue
+             } else if (def.baseValue === "special") {
+                 if (name === "Lengua propia" || name === "Language (Own)") {
+                     baseVal = character.characteristics.EDU?.value || 0
+                 } else if (name === "Esquivar" || name === "Dodge") {
+                     baseVal = Math.floor((character.characteristics.DEX?.value || 0) / 2)
+                 }
+             }
         }
 
         newSkills.push({
@@ -669,7 +724,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           personalPoints: 0,
           isOccupational: true,
           isCustom: true,
-          occupationRequirementIndex: reqIndex // ASIGNAR ÍNDICE
+          occupationRequirementIndex: reqIndex
         })
       }
     }
@@ -677,7 +732,7 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     onChange({ skills: newSkills })
   }
 
-const FieldSelector = ({
+  const FieldSelector = ({
     req,
     uniqueId,
     isInsideChoice = false,
@@ -692,7 +747,6 @@ const FieldSelector = ({
     assignedSkills?: Skill[];
     reqIndex: number;
   }) => {
-    // Usamos las asignadas explícitamente + implícitas calculadas en skillAssignments
     const added = assignedSkills
     
     const isAdding = activeFieldKey === uniqueId
@@ -703,7 +757,6 @@ const FieldSelector = ({
       if (specName) {
         const fullName = `${req.field}: ${specName}`
         const baseVal = needsBaseValue ? Number.parseInt(tempBaseValue) || 0 : undefined
-        // PASAMOS EL INDEX AQUÍ
         updateSkillPoints(fullName, 0, baseVal, false, reqIndex)
         setTempSpecValue("")
         setTempBaseValue("")
@@ -883,7 +936,9 @@ const FieldSelector = ({
       const skill = assignedSkills[0] || character.skills.find((s) => s.name === req)
       return (
         <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900 border rounded mb-2">
-          <div className="flex-1 font-medium text-sm">{tSkill(req)}</div>
+          <div className="flex-1 font-medium text-sm">
+            {tSkill(req)} <span className="text-muted-foreground font-normal text-xs">({skill?.baseValue || 0}%)</span>
+          </div>
           <PointsInput
             className="w-20 text-right h-9"
             value={skill?.occupationalPoints || 0}
@@ -920,7 +975,6 @@ const FieldSelector = ({
                  : (typeof opt === "object" ? opt : null);
 
               if (fieldReq) {
-                 // Verificamos si alguna de las asignadas pertenece a este campo
                  const thisOptionSelected = assignedSkills.some(s => s.name.startsWith(`${fieldReq.field}: `));
                  const limitReached = selectedCount >= req.count;
                  const isDisabled = limitReached && !thisOptionSelected;
@@ -959,7 +1013,9 @@ const FieldSelector = ({
                       }
                       disabled={!isSelected && selectedCount >= req.count}
                     />
-                    <span className="text-sm flex-1">{tSkill(opt)}</span>
+                    <span className="text-sm flex-1">
+                        {tSkill(opt)} <span className="text-muted-foreground text-xs">({skill?.baseValue || 0}%)</span>
+                    </span>
                     {isSelected && (
                       <PointsInput
                         className="w-16 h-7 text-right"

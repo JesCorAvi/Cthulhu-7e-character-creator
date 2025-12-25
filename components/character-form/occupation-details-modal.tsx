@@ -11,9 +11,10 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trash2, Settings2, Plus, X, Check, ChevronsUpDown } from "lucide-react"
-import type { Character, CharacteristicValue } from "@/lib/character-types"
+import type { Character, CharacteristicValue, Skill } from "@/lib/character-types"
 import { PRESET_OCCUPATIONS, type SkillRequirement, type FieldRequirement } from "@/lib/occupations-data"
 import { calculateSpentPoints } from "@/lib/occupation-utils"
+import { getSkillDefinitionsForEra } from "@/lib/skills-data"
 import { useLanguage } from "@/components/language-provider"
 import {
   Command,
@@ -30,7 +31,6 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-// --- DICCIONARIO DE TRADUCCIÓN DE HABILIDADES ---
 const SKILL_TRANSLATIONS: Record<string, string> = {
   // Habilidades Base
   "Antropología": "Anthropology",
@@ -245,7 +245,6 @@ function BaseValueInput({
   )
 }
 
-// --- COMPONENTE COMBOBOX BUSCABLE ---
 function SkillCombobox({
   fields,
   commonSkills,
@@ -361,6 +360,8 @@ const FIELDS = [
   "Pilotar",
 ]
 
+const FIELDS_REQUIRING_BASE_INPUT = ["Combatir", "Armas de fuego"]
+
 const STAT_OPTIONS = [
   { value: "STR", label: "FUE (STR)" },
   { value: "DEX", label: "DES (DEX)" },
@@ -383,8 +384,6 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const { t, language } = useLanguage()
   const currentOccupation = PRESET_OCCUPATIONS.find((occ) => occ.name === character.occupation)
   
-  // MODIFICADO: Si no encontramos la ocupación en los presets (currentOccupation es undefined),
-  // o el nombre es explícitamente "Otra", lo tratamos como una ocupación personalizada.
   const isCustomOccupation = !currentOccupation || character.occupation === "Otra"
 
   const [selectedAttribute, setSelectedAttribute] = useState<string | null>(null)
@@ -394,17 +393,84 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const [customStat1, setCustomStat1] = useState<string>("EDU")
   const [customStat2, setCustomStat2] = useState<string>("DEX")
 
-  // Helper to translate skill names
+  // --- DISTRIBUCIÓN DE HABILIDADES (CORREGIDA CON ÍNDICE) ---
+  const skillAssignments = useMemo(() => {
+    const assignments: Record<number, Skill[]> = {}
+    // Filtramos solo las que están marcadas como ocupacionales
+    let pool = character.skills.filter(s => s.isOccupational)
+
+    const requirements = currentOccupation?.skills || 
+         (isCustomOccupation ? [{ type: "any", count: 8, label: t("skills_choice") } as SkillRequirement] : [])
+
+    // PASO 1: Asignación Explícita (Por índice de requisito)
+    // Si la habilidad tiene guardado "yo pertenezco al bloque 2", va al bloque 2.
+    requirements.forEach((_, index) => {
+        const assignedExplicitly = pool.filter(s => s.occupationRequirementIndex === index)
+        assignments[index] = assignedExplicitly
+        // Las quitamos del pool para que no se reasignen
+        pool = pool.filter(s => s.occupationRequirementIndex !== index)
+    })
+
+    // PASO 2: Asignación Implícita (Heurística para skills viejas o sin índice)
+    // Usamos el pool restante para rellenar huecos vacíos
+    const assignBestMatches = (
+        matcher: (s: Skill) => boolean, 
+        count: number
+    ): Skill[] => {
+        const matches = pool.filter(matcher)
+        const taken = matches.slice(0, count)
+        pool = pool.filter(s => !taken.includes(s)) // Removemos del pool
+        return taken
+    }
+
+    requirements.forEach((req, index) => {
+         // Si ya llenamos el cupo con explícitas, no buscamos más
+         const currentCount = assignments[index]?.length || 0
+         const needed = (typeof req === "object" ? req.count : 1) - currentCount
+         
+         if (needed <= 0) return // Ya está lleno
+
+         let found: Skill[] = []
+
+         if (typeof req === "string") {
+             found = assignBestMatches(s => s.name === req, needed)
+         } else if (req.type === "field") {
+             found = assignBestMatches(s => 
+                (s.name === req.field && !!s.customName) || s.name.startsWith(`${req.field}: `)
+             , needed)
+         } else if (req.type === "choice") {
+             found = assignBestMatches(s => {
+                 return req.options.some(opt => {
+                     if (typeof opt === "string") {
+                         if (FIELDS.includes(opt)) {
+                             return s.name.startsWith(`${opt}: `)
+                         }
+                         return s.name === opt
+                     } else {
+                         return (s.name === opt.field && !!s.customName) || s.name.startsWith(`${opt.field}: `)
+                     }
+                 })
+             }, needed)
+         } else if (req.type === "any") {
+             found = assignBestMatches(() => true, 999) // Todo lo que sobre
+         }
+
+         // Añadimos las encontradas a las explícitas
+         assignments[index] = [...(assignments[index] || []), ...found]
+    })
+    
+    return assignments
+
+  }, [character.skills, currentOccupation, isCustomOccupation, t])
+
+
   const tSkill = (name: string) => {
     if (language === "es") return name
-    
-    // Handle specializations e.g. "Ciencia: Biología"
     if (name.includes(": ")) {
       const [field, spec] = name.split(": ")
       const translatedField = SKILL_TRANSLATIONS[field] || field
       return `${translatedField}: ${spec}`
     }
-    
     return SKILL_TRANSLATIONS[name] || name
   }
 
@@ -450,11 +516,8 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
   const { occupationalSpent } = calculateSpentPoints(character)
   const remainingPoints = totalPoints - occupationalSpent
 
-  // Si no es custom y no se encuentra la ocupación, no mostramos nada.
-  // Pero gracias al cambio en isCustomOccupation, si el usuario escribió un nombre manual, isCustomOccupation será true.
   if (!currentOccupation && !isCustomOccupation) return null
 
-  // Helper to get localized properties
   const loc = (obj: any, key: string = "label") => {
     if (!obj) return ""
     if (language === "en" && obj[key + "En"]) {
@@ -463,9 +526,23 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
     return obj[key]
   }
 
-  const updateSkillPoints = (name: string, pts: number, customBaseValue?: number, remove: boolean = false) => {
+  // --- UPDATE SKILLS (ACTUALIZADO CON REQ_INDEX) ---
+  const updateSkillPoints = (name: string, pts: number, customBaseValue?: number, remove: boolean = false, reqIndex?: number) => {
     const newSkills = [...character.skills]
     const isFieldSpecialization = name.includes(": ")
+
+    // Función auxiliar para actualizar propiedades comunes
+    const updateProps = (skill: Skill) => {
+        // Si estamos añadiendo/editando (no borrando), actualizamos el índice de requisito
+        if (!remove && reqIndex !== undefined) {
+            skill.occupationRequirementIndex = reqIndex
+        }
+        // Si borramos, limpiamos el índice
+        if (remove) {
+            skill.occupationRequirementIndex = undefined
+        }
+        return skill
+    }
 
     if (isFieldSpecialization) {
       const [fieldName, specName] = name.split(": ")
@@ -478,25 +555,25 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
         const skill = newSkills[existingSpecIndex]
         if (remove) {
           if (skill.isFieldSlot) {
-            newSkills[existingSpecIndex] = {
+            newSkills[existingSpecIndex] = updateProps({
               ...skill,
               customName: "",
               occupationalPoints: 0,
               isOccupational: false,
               value: skill.baseValue,
-            }
+            })
           } else {
             newSkills.splice(existingSpecIndex, 1)
           }
         } else {
           const baseVal = customBaseValue !== undefined ? customBaseValue : skill.baseValue
-          newSkills[existingSpecIndex] = {
+          newSkills[existingSpecIndex] = updateProps({
             ...skill,
             baseValue: baseVal,
             occupationalPoints: pts,
             value: baseVal + pts + (skill.personalPoints || 0),
             isOccupational: true,
-          }
+          })
         }
       } else if (!remove) {
         const emptySlotIndex = newSkills.findIndex(
@@ -506,17 +583,27 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
         if (emptySlotIndex >= 0) {
           const slot = newSkills[emptySlotIndex]
           const baseVal = customBaseValue !== undefined ? customBaseValue : slot.baseValue
-          newSkills[emptySlotIndex] = {
+          newSkills[emptySlotIndex] = updateProps({
             ...slot,
             customName: specName,
             baseValue: baseVal,
             occupationalPoints: pts,
             value: baseVal + pts,
             isOccupational: true,
-          }
+          })
         } else {
-          const baseVal = customBaseValue !== undefined ? customBaseValue : 0
-          newSkills.push({
+          let baseVal = customBaseValue
+          if (baseVal === undefined) {
+             const definitions = getSkillDefinitionsForEra(character.era || "1920s")
+             const def = definitions.find(d => d.name === fieldName)
+             if (def && typeof def.baseValue === 'number') {
+                 baseVal = def.baseValue
+             } else {
+                 baseVal = 0 
+             }
+          }
+          
+          const newSkill: Skill = {
             name: name,
             baseValue: baseVal,
             value: baseVal + pts,
@@ -524,7 +611,23 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
             personalPoints: 0,
             isOccupational: true,
             isCustom: true,
-          })
+            customName: specName,
+            occupationRequirementIndex: reqIndex // ASIGNAR ÍNDICE
+          }
+
+          const headerIndex = newSkills.findIndex(s => s.name === fieldName)
+          if (headerIndex !== -1) {
+             let insertIndex = headerIndex + 1
+             while (
+                insertIndex < newSkills.length && 
+                (newSkills[insertIndex].name === fieldName || newSkills[insertIndex].name.startsWith(fieldName + ": "))
+             ) {
+                insertIndex++
+             }
+             newSkills.splice(insertIndex, 0, newSkill)
+          } else {
+             newSkills.push(newSkill)
+          }
         }
       }
     } else {
@@ -535,30 +638,38 @@ export function OccupationDetailsModal({ isOpen, onClose, character, onChange }:
           if (skill.isCustom) {
             newSkills.splice(existingIndex, 1)
           } else {
-            newSkills[existingIndex] = {
+            newSkills[existingIndex] = updateProps({
               ...skill,
               occupationalPoints: 0,
               value: skill.baseValue + (skill.personalPoints || 0),
               isOccupational: false,
-            }
+            })
           }
         } else {
-          newSkills[existingIndex] = {
+          newSkills[existingIndex] = updateProps({
             ...skill,
             occupationalPoints: pts,
             value: skill.baseValue + pts + (skill.personalPoints || 0),
             isOccupational: true,
-          }
+          })
         }
       } else if (!remove) {
+        let baseVal = 0
+        const definitions = getSkillDefinitionsForEra(character.era || "1920s")
+        const def = definitions.find(d => d.name === name)
+        if (def && typeof def.baseValue === 'number') {
+            baseVal = def.baseValue
+        }
+
         newSkills.push({
           name: name,
-          baseValue: 0,
-          value: pts,
+          baseValue: baseVal,
+          value: baseVal + pts,
           occupationalPoints: pts,
           personalPoints: 0,
           isOccupational: true,
           isCustom: true,
+          occupationRequirementIndex: reqIndex // ASIGNAR ÍNDICE
         })
       }
     }
@@ -570,12 +681,20 @@ const FieldSelector = ({
     req,
     uniqueId,
     isInsideChoice = false,
-  }: { req: FieldRequirement; uniqueId: string; isInsideChoice?: boolean }) => {
-    const added = character.skills.filter(
-      (s) =>
-        s.isOccupational &&
-        ((s.name === req.field && s.customName && s.customName !== "") || s.name.startsWith(`${req.field}: `)),
-    )
+    disabled = false, 
+    assignedSkills = [],
+    reqIndex 
+  }: { 
+    req: FieldRequirement; 
+    uniqueId: string; 
+    isInsideChoice?: boolean;
+    disabled?: boolean;
+    assignedSkills?: Skill[];
+    reqIndex: number;
+  }) => {
+    // Usamos las asignadas explícitamente + implícitas calculadas en skillAssignments
+    const added = assignedSkills
+    
     const isAdding = activeFieldKey === uniqueId
     const needsBaseValue = req.requiresBaseValue || false
 
@@ -584,23 +703,23 @@ const FieldSelector = ({
       if (specName) {
         const fullName = `${req.field}: ${specName}`
         const baseVal = needsBaseValue ? Number.parseInt(tempBaseValue) || 0 : undefined
-        updateSkillPoints(fullName, 0, baseVal)
+        // PASAMOS EL INDEX AQUÍ
+        updateSkillPoints(fullName, 0, baseVal, false, reqIndex)
         setTempSpecValue("")
         setTempBaseValue("")
         setActiveFieldKey(null)
       }
     }
 
-    const getDisplayName = (s: (typeof character.skills)[0]) => {
+    const getDisplayName = (s: Skill) => {
       if (s.customName && s.name === req.field) {
-        // CORRECCIÓN: Traducimos también la especialidad si es una de las conocidas
         const translatedSpec = SKILL_TRANSLATIONS[s.customName] || s.customName
         return `${tSkill(req.field)}: ${translatedSpec}`
       }
       return tSkill(s.name)
     }
 
-    const getSkillKey = (s: (typeof character.skills)[0]) => {
+    const getSkillKey = (s: Skill) => {
       if (s.customName && s.name === req.field) {
         return `${req.field}: ${s.customName}`
       }
@@ -632,7 +751,7 @@ const FieldSelector = ({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-red-400"
-                onClick={() => updateSkillPoints(getSkillKey(s), 0, undefined, true)}
+                onClick={() => updateSkillPoints(getSkillKey(s), 0, undefined, true, reqIndex)}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
@@ -642,12 +761,12 @@ const FieldSelector = ({
               <PointsInput
                 className="w-14 h-6 text-right text-xs"
                 value={s.occupationalPoints}
-                onChange={(val) => updateSkillPoints(getSkillKey(s), val)}
+                onChange={(val) => updateSkillPoints(getSkillKey(s), val, undefined, false, reqIndex)}
               />
             </div>
           ))}
 
-          {added.length < req.count && !isAdding && (
+          {added.length < req.count && !isAdding && !disabled && (
             <Button
               variant="outline"
               size="sm"
@@ -668,14 +787,12 @@ const FieldSelector = ({
               <div className="flex gap-1">
                 {req.options && req.options.length > 0 ? (
                   req.options.length === 1 ? (
-                    // Caso 1 opción: Input bloqueado pero mostrando la TRADUCCIÓN
                     <Input
                       readOnly
                       className="h-8 text-xs flex-1 bg-muted font-medium opacity-100"
                       value={tSkill(tempSpecValue)} 
                     />
                   ) : (
-                    // Caso múltiples opciones: Select mostrando TRADUCCIONES
                     <Select value={tempSpecValue} onValueChange={setTempSpecValue}>
                       <SelectTrigger className="h-8 text-xs flex-1">
                         <SelectValue placeholder="Selecciona..." />
@@ -761,9 +878,9 @@ const FieldSelector = ({
     )
   }
 
-  const renderRequirement = (req: SkillRequirement, index: number) => {
+  const renderRequirement = (req: SkillRequirement, index: number, assignedSkills: Skill[]) => {
     if (typeof req === "string") {
-      const skill = character.skills.find((s) => s.name === req)
+      const skill = assignedSkills[0] || character.skills.find((s) => s.name === req)
       return (
         <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900 border rounded mb-2">
           <div className="flex-1 font-medium text-sm">{tSkill(req)}</div>
@@ -771,22 +888,16 @@ const FieldSelector = ({
             className="w-20 text-right h-9"
             value={skill?.occupationalPoints || 0}
             placeholder="0"
-            onChange={(val) => updateSkillPoints(req, val)}
+            onChange={(val) => updateSkillPoints(req, val, undefined, false, index)}
           />
         </div>
       )
     }
 
-    if (req.type === "field") return <FieldSelector key={index} req={req} uniqueId={`field-${index}`} />
+    if (req.type === "field") return <FieldSelector key={index} req={req} uniqueId={`field-${index}`} assignedSkills={assignedSkills} reqIndex={index} />
 
     if (req.type === "choice") {
-      const selectedCount = req.options.filter((opt) => {
-        if (typeof opt === "string") {
-          const s = character.skills.find((sk) => sk.name === opt)
-          return s && s.isOccupational 
-        }
-        return character.skills.some((s) => s.isOccupational && s.name.startsWith(`${opt.field}: `))
-      }).length
+      const selectedCount = assignedSkills.length
 
       const label = loc(req, "label")
 
@@ -803,17 +914,48 @@ const FieldSelector = ({
           </div>
           <div className="grid grid-cols-1 gap-3">
             {req.options.map((opt, i) => {
+              const isStringField = typeof opt === "string" && FIELDS.includes(opt);
+              const fieldReq = isStringField 
+                 ? { type: "field" as const, field: opt as string, count: 1 }
+                 : (typeof opt === "object" ? opt : null);
+
+              if (fieldReq) {
+                 // Verificamos si alguna de las asignadas pertenece a este campo
+                 const thisOptionSelected = assignedSkills.some(s => s.name.startsWith(`${fieldReq.field}: `));
+                 const limitReached = selectedCount >= req.count;
+                 const isDisabled = limitReached && !thisOptionSelected;
+                 
+                 const optionAssignedSkills = assignedSkills.filter(s => s.name.startsWith(`${fieldReq.field}: `))
+
+                return (
+                  <div key={i} className="p-2 rounded border bg-white dark:bg-slate-950">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary">{isStringField ? tSkill(fieldReq.field) : (loc(opt, "field") || tSkill(fieldReq.field))}</Badge>
+                      <span className="text-xs text-muted-foreground">{t("specialization")}</span>
+                    </div>
+                    <FieldSelector 
+                        req={fieldReq} 
+                        uniqueId={`choice-${index}-${i}`} 
+                        isInsideChoice={true} 
+                        disabled={isDisabled}
+                        assignedSkills={optionAssignedSkills}
+                        reqIndex={index}
+                    />
+                  </div>
+                )
+              }
+
               if (typeof opt === "string") {
                 const skill = character.skills.find((s) => s.name === opt)
-                const isSelected = !!(skill?.isOccupational)
+                const isSelected = assignedSkills.some(s => s.name === opt)
                 return (
                   <div key={i} className="flex items-center gap-2 p-2 rounded border bg-white dark:bg-slate-950">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(c) =>
                         c 
-                        ? selectedCount < req.count && updateSkillPoints(opt, 0) 
-                        : updateSkillPoints(opt, 0, undefined, true)
+                        ? selectedCount < req.count && updateSkillPoints(opt, 0, undefined, false, index) 
+                        : updateSkillPoints(opt, 0, undefined, true, index)
                       }
                       disabled={!isSelected && selectedCount >= req.count}
                     />
@@ -822,22 +964,13 @@ const FieldSelector = ({
                       <PointsInput
                         className="w-16 h-7 text-right"
                         value={skill?.occupationalPoints || 0}
-                        onChange={(val) => updateSkillPoints(opt, val)}
+                        onChange={(val) => updateSkillPoints(opt, val, undefined, false, index)}
                       />
                     )}
                   </div>
                 )
-              } else {
-                return (
-                  <div key={i} className="p-2 rounded border bg-white dark:bg-slate-950">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary">{loc(opt, "field") || tSkill(opt.field)}</Badge>
-                      <span className="text-xs text-muted-foreground">{t("specialization")}</span>
-                    </div>
-                    <FieldSelector req={opt} uniqueId={`choice-${index}-${i}`} isInsideChoice={true} />
-                  </div>
-                )
               }
+              return null;
             })}
           </div>
         </div>
@@ -845,35 +978,10 @@ const FieldSelector = ({
     }
 
     if (req.type === "any") {
-      // Recopilamos todas las habilidades que ya están siendo usadas en otras secciones
-      // (fijas o como opción en un 'choice') para EXCLUIRLAS de 'any'
-      const reservedSkills = new Set<string>()
-      
-      // Habilidades fijas (strings directos en skills[])
-      currentOccupation?.skills.forEach((r) => {
-        if (typeof r === "string") {
-          reservedSkills.add(r)
-        } else if (typeof r === "object" && r.type === "choice") {
-          // Opciones dentro de un 'choice'
-          r.options.forEach((opt) => {
-            if (typeof opt === "string") {
-              reservedSkills.add(opt)
-            }
-          })
-        }
-      })
-
-      const added = character.skills.filter(
-        (s) =>
-          s.isOccupational &&
-          !reservedSkills.has(s.name) && // Excluir si ya está reservada/usada por otra regla
-          !FIELDS.some((f) => s.name.startsWith(`${f}: `)),
-      )
-      
+      const added = assignedSkills
       const label = loc(req, "label")
       const placeholderSpec = language === "en" ? "Enter specialization..." : "Escribe la especialidad..."
 
-      // Skills available to pick (not already picked as occupational)
       const availableCommonSkills = COMMON_SKILLS.filter(
         (n) => !character.skills.some((s) => s.name === n && s.isOccupational)
       )
@@ -888,12 +996,8 @@ const FieldSelector = ({
           </div>
 
           {FIELDS.map((f) => {
-            const fieldSkills = character.skills.filter(
-              (s) =>
-                s.isOccupational &&
-                s.name.startsWith(`${f}: `) &&
-                !currentOccupation?.skills.some((r) => typeof r === "object" && r.type === "field" && r.field === f),
-            )
+            const fieldSkills = added.filter(s => s.name.startsWith(`${f}: `))
+            
             if (fieldSkills.length === 0) return null
             return (
               <div key={f} className="mb-2 p-2 border rounded bg-white/30">
@@ -909,15 +1013,15 @@ const FieldSelector = ({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-red-400"
-                      onClick={() => updateSkillPoints(s.name, 0, undefined, true)}
+                      onClick={() => updateSkillPoints(s.name, 0, undefined, true, index)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                    <span className="flex-1 text-sm">{tSkill(s.name)}</span>
+                    <span className="flex-1 text-sm">{tSkill(s.name)} <span className="text-muted-foreground opacity-70">({s.baseValue}%)</span></span>
                     <PointsInput
                       className="w-20 text-right h-8"
                       value={s.occupationalPoints}
-                      onChange={(val) => updateSkillPoints(s.name, val)}
+                      onChange={(val) => updateSkillPoints(s.name, val, undefined, false, index)}
                     />
                   </div>
                 ))}
@@ -925,21 +1029,21 @@ const FieldSelector = ({
             )
           })}
 
-          {added.map((s) => (
+          {added.filter(s => !FIELDS.some(f => s.name.startsWith(`${f}: `))).map((s) => (
             <div key={s.name} className="flex items-center gap-2 mb-2 bg-white/50 dark:bg-black/20 p-1 rounded border">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-red-400"
-                onClick={() => updateSkillPoints(s.name, 0, undefined, true)}
+                onClick={() => updateSkillPoints(s.name, 0, undefined, true, index)}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
-              <span className="flex-1 text-sm">{tSkill(s.name)}</span>
+              <span className="flex-1 text-sm">{tSkill(s.name)} <span className="text-muted-foreground opacity-70">({s.baseValue}%)</span></span>
               <PointsInput
                 className="w-20 text-right h-8"
                 value={s.occupationalPoints}
-                onChange={(val) => updateSkillPoints(s.name, val)}
+                onChange={(val) => updateSkillPoints(s.name, val, undefined, false, index)}
               />
             </div>
           ))}
@@ -955,8 +1059,10 @@ const FieldSelector = ({
                 onSelect={(v) => {
                   if (FIELDS.includes(v)) {
                     setActiveFieldKey(`any-${v}`)
+                    setTempSpecValue("")
+                    setTempBaseValue("")
                   } else {
-                    updateSkillPoints(v, 0)
+                    updateSkillPoints(v, 0, undefined, false, index)
                   }
                 }}
               />
@@ -964,30 +1070,61 @@ const FieldSelector = ({
           )}
 
           {activeFieldKey?.startsWith("any-") && (
-            <div className="mt-2 flex gap-1 bg-white dark:bg-slate-950 p-2 rounded border border-amber-200">
-              <Badge variant="outline" className="h-8">
+            <div className="mt-2 flex flex-wrap gap-1 bg-white dark:bg-slate-950 p-2 rounded border border-amber-200">
+              <Badge variant="outline" className="h-8 flex items-center">
                 {tSkill(activeFieldKey.split("-")[1])}:
               </Badge>
               <TextInput
                 autoFocus
                 placeholder={placeholderSpec}
-                className="h-8 text-xs flex-1"
+                className="h-8 text-xs w-40 flex-grow"
                 value={tempSpecValue}
                 onChange={setTempSpecValue}
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  tempSpecValue &&
-                  (updateSkillPoints(`${activeFieldKey.split("-")[1]}: ${tempSpecValue}`, 0),
-                  setTempSpecValue(""),
-                  setActiveFieldKey(null))
-                }
+                onKeyDown={(e) => {
+                  const fieldName = activeFieldKey.split("-")[1]
+                  const needsBase = FIELDS_REQUIRING_BASE_INPUT.includes(fieldName)
+                  if (e.key === "Enter" && tempSpecValue && !needsBase) {
+                    updateSkillPoints(`${fieldName}: ${tempSpecValue}`, 0, undefined, false, index)
+                    setTempSpecValue("")
+                    setActiveFieldKey(null)
+                  }
+                }}
               />
+              
+              {FIELDS_REQUIRING_BASE_INPUT.includes(activeFieldKey.split("-")[1]) && (
+                <div className="flex items-center gap-1">
+                   <span className="text-[10px] text-muted-foreground whitespace-nowrap">{t("base_value_label")}</span>
+                   <BaseValueInput
+                      placeholder="%"
+                      className="h-8 text-xs w-14"
+                      value={tempBaseValue}
+                      onChange={setTempBaseValue}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && tempSpecValue) {
+                           const fieldName = activeFieldKey.split("-")[1]
+                           const baseVal = Number.parseInt(tempBaseValue) || 0
+                           updateSkillPoints(`${fieldName}: ${tempSpecValue}`, 0, baseVal, false, index)
+                           setTempSpecValue("")
+                           setTempBaseValue("")
+                           setActiveFieldKey(null)
+                        }
+                      }}
+                   />
+                </div>
+              )}
+
               <Button
                 size="sm"
                 className="h-8"
                 onClick={() => {
-                  if (tempSpecValue) updateSkillPoints(`${activeFieldKey.split("-")[1]}: ${tempSpecValue}`, 0)
+                  if (tempSpecValue) {
+                    const fieldName = activeFieldKey.split("-")[1]
+                    const needsBase = FIELDS_REQUIRING_BASE_INPUT.includes(fieldName)
+                    const baseVal = needsBase ? (Number.parseInt(tempBaseValue) || 0) : undefined
+                    updateSkillPoints(`${fieldName}: ${tempSpecValue}`, 0, baseVal, false, index)
+                  }
                   setTempSpecValue("")
+                  setTempBaseValue("")
                   setActiveFieldKey(null)
                 }}
               >
@@ -999,6 +1136,7 @@ const FieldSelector = ({
                 onClick={() => {
                   setActiveFieldKey(null)
                   setTempSpecValue("")
+                  setTempBaseValue("")
                 }}
               >
                 <X className="w-3 h-3" />
@@ -1075,7 +1213,7 @@ const FieldSelector = ({
           {(
             currentOccupation?.skills ||
             (isCustomOccupation ? [{ type: "any", count: 8, label: t("skills_choice") } as SkillRequirement] : [])
-          ).map((req, i) => renderRequirement(req, i))}
+          ).map((req, i) => renderRequirement(req, i, skillAssignments[i] || []))}
         </div>
         <DialogFooter className="p-4 border-t bg-slate-50 dark:bg-slate-900">
           <Button onClick={onClose} className="w-full">

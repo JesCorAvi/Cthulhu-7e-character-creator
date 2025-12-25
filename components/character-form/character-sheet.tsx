@@ -18,6 +18,8 @@ import {
   calculateMagicPoints,
   createDefaultWeapon,
 } from "@/lib/character-utils"
+// IMPORTACIÓN NUEVA: resetCharacterSkillsForNewOccupation
+import { calculateSpentPoints, resetCharacterSkillsForNewOccupation } from "@/lib/occupation-utils"
 import { Plus, Trash2, Search, Shield, Settings2, Dices, Share2, User, Camera, Check, ChevronsUpDown } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { cn, compressImage } from "@/lib/utils"
@@ -142,13 +144,17 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
     onChange({ ...character, ...updates })
   }
 
+  // --- MODIFICADO: Lógica de limpieza al cambiar ocupación ---
   const handleOccupationChange = (value: string) => {
+    // 1. Limpiamos las habilidades del personaje (puntos ocupacionales y especialidades huérfanas)
+    const cleanedCharacter = resetCharacterSkillsForNewOccupation(character);
+
     if (value === "custom") {
       // Buscamos la definición de "Otra" en los presets para usar su fórmula y skills base
       const customPreset = PRESET_OCCUPATIONS.find(p => p.name === "Otra")
       
       onChange({
-        ...character,
+        ...cleanedCharacter,
         occupation: "Personalizada", // Mantenemos "Personalizada" para activar el input
         occupationLabel: t("custom_occupation"),
         // Usamos la fórmula y skills de la ocupación "Otra" definida en occupations-data
@@ -159,7 +165,7 @@ export function CharacterSheet({ character, onChange }: CharacterSheetProps) {
       const preset = PRESET_OCCUPATIONS.find((p) => p.name === value)
       if (preset) {
         onChange({
-          ...character,
+          ...cleanedCharacter,
           occupation: preset.name,
           occupationLabel: preset.name,
           occupationFormula: preset.formula,

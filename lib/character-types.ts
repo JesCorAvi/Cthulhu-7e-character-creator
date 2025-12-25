@@ -23,6 +23,9 @@ export interface Skill {
   improvementRoll?: number // Resultado del d100
   improvementAmount?: number // Cantidad subida con d10
   improvementSuccess?: boolean // Si tuvo éxito la mejora
+  
+  // NUEVO: Para recordar a qué requisito de ocupación pertenece (0, 1, 2...)
+  occupationRequirementIndex?: number 
 }
 
 export interface Weapon {

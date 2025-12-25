@@ -58,3 +58,40 @@ export function calculateSpentPoints(character: Character) {
 
   return { occupationalSpent, personalSpent };
 }
+
+// --- FUNCIÓN DE RESET (ACTUALIZADA) ---
+export function resetCharacterSkillsForNewOccupation(character: Character): Character {
+  let cleanedSkills = character.skills.map(skill => {
+      const hasInvestment = (skill.personalPoints && skill.personalPoints > 0) || (skill.improvementAmount && skill.improvementAmount > 0);
+      
+      let newValue = skill.baseValue + (skill.personalPoints || 0) + (skill.improvementAmount || 0);
+      let newCustomName = skill.customName;
+      
+      if (skill.isFieldSlot && skill.customName && !hasInvestment) {
+          newCustomName = "";
+          newValue = skill.baseValue; 
+      }
+
+      return {
+        ...skill,
+        occupationalPoints: 0,
+        value: newValue,
+        isOccupational: false,
+        customName: newCustomName,
+        occupationRequirementIndex: undefined // <--- Limpiamos el índice
+      };
+    });
+
+    cleanedSkills = cleanedSkills.filter(skill => {
+        if (skill.isCustom) {
+            const hasInvestment = (skill.personalPoints && skill.personalPoints > 0) || (skill.improvementAmount && skill.improvementAmount > 0);
+            if (!hasInvestment) return false; 
+        }
+        return true;
+    });
+
+  return {
+    ...character,
+    skills: cleanedSkills
+  };
+}

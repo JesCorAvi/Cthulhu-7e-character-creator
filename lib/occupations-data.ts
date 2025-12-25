@@ -81,7 +81,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
       { type: "field", field: "Otras lenguas", count: 1, label: "Otras lenguas", labelEn: "Language (Other)" },
       "Primeros auxilios",
       "Saltar",
-      { type: "field", field: "Supervivencia", count: 1, options: ["Alpino"], label: "Supervivencia (Alpino)", labelEn: "Survival (Alpine)" },
+      { type: "field", field: "Supervivencia", count: 1, options: ["Alpino"], label: "Supervivencia", labelEn: "Survival" },
       { type: "choice", options: ["Seguir rastros", "Ciencia"], count: 1, label: "Seguir rastros o Ciencia", labelEn: "Track or Science" }
     ],
     creditRating: [30, 60],

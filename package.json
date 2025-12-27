@@ -7,7 +7,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-    "deploy": "npx @opennextjs/cloudflare build && npx wrangler deploy --minify --compatibility-date=2024-12-01 --define:process.env.NODE_ENV='production'"
+    "deploy": "rm -rf .open-next && npx @opennextjs/cloudflare build && npx wrangler deploy --minify"
   },
   "dependencies": {
     "@3d-dice/dice-box": "^1.1.4",

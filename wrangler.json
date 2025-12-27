@@ -11,7 +11,8 @@
     {
       "binding": "DB",
       "database_name": "cthulhudb",
-      "database_id": "cb991319-4777-46a2-9f57-09aeff86716e"
+      "database_id": "cb991319-4777-46a2-9f57-09aeff86716e",
+      "migrations_dir": "drizzle"  
     }
   ],
   "kv_namespaces": [],

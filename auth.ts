@@ -5,7 +5,6 @@ import { getDb } from "@/db/drizzle"
 import { accounts, sessions, users, verificationTokens } from "@/db/schema"
 
 export const { handlers, signIn, signOut, auth } = NextAuth(async (req) => {
-  // Inicializamos la DB solo cuando hay una petición real
   let adapter;
   try {
     const db = await getDb();
@@ -16,13 +15,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async (req) => {
       verificationTokensTable: verificationTokens,
     });
   } catch (e) {
-    console.warn("No se pudo conectar a D1 (probablemente durante el build). Auth no funcionará en este contexto.");
-    // Devolvemos una config sin adaptador si falla (para que el build pase)
+    console.warn("No se pudo conectar a D1. Auth funcionará sin persistencia.");
   }
 
   return {
     adapter,
-    providers: [Google],
+    providers: [
+      // FORZAMOS LA CONFIGURACIÓN AQUÍ
+      Google({
+        clientId: process.env.AUTH_GOOGLE_ID,
+        clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      })
+    ],
+    secret: process.env.AUTH_SECRET, // Aseguramos que el secreto también se lea
     session: { strategy: "jwt" },
     callbacks: {
       async session({ session, token }) {

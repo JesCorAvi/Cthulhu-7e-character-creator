@@ -2,15 +2,31 @@
 
 import type React from "react"
 import { createPortal } from "react-dom"
+// 1. Importamos dynamic de next
+import dynamic from "next/dynamic"
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dices, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Dice3DScene } from "./dice-3d"
+// 2. ELIMINAMOS la importación estática antigua:
+// import { Dice3DScene } from "./dice-3d"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/components/language-provider"
+
+// 3. CREAMOS la importación dinámica con SSR desactivado
+const Dice3DScene = dynamic(
+  () => import("./dice-3d").then((mod) => mod.Dice3DScene),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[400px] md:h-[450px] bg-slate-900 rounded-xl flex items-center justify-center text-slate-500 animate-pulse">
+        Cargando entorno 3D...
+      </div>
+    ),
+  }
+)
 
 interface DiceProps {
   value: number

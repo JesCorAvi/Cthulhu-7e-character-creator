@@ -5,10 +5,9 @@
   "scripts": {
   "build": "next build",
   "dev": "next dev",
-  "build:pages": "npx @opennextjs/cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js && cp -r .open-next/server-functions .open-next/assets/ && cp -r .open-next/middleware .open-next/assets/ && cp -r .open-next/cloudflare .open-next/assets/ && cp -r .open-next/.build .open-next/assets/",
   "lint": "eslint .",
   "start": "next start",
-  "deploy": "npm run build:pages && npx wrangler pages deploy .open-next/assets"
+  "deploy": "npx @opennextjs/cloudflare build && npx wrangler deploy"
 },
   "dependencies": {
     "@3d-dice/dice-box": "^1.1.4",

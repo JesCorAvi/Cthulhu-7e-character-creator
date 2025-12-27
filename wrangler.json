@@ -1,0 +1,21 @@
+{
+  "name": "cthulhu-character-creator",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2024-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cthulhudb",
+      "database_id": "cb991319-4777-46a2-9f57-09aeff86716e"
+    }
+  ],
+  "kv_namespaces": [],
+  "vars": {
+    "AUTH_TRUST_HOST": "true"
+  }
+}

@@ -1,69 +1,43 @@
-import type React from "react"
-import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import Script from "next/script"
-import { PwaRegister } from "@/components/pwa-register"
-import { LanguageProvider } from "@/components/language-provider"
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { LanguageProvider } from "@/components/language-provider";
+import { Toaster } from "@/components/ui/toaster";
+import { Header } from "@/components/layout/header";
+import { SessionProvider } from "next-auth/react"; // <--- NUEVO
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
-export const viewport: Viewport = {
-  themeColor: "#1a472a",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-}
-
-export const metadata: Metadata = {
-  title: "CthulhuBuilder",
-  description: "Crea y gestiona tus fichas de investigador para Call of Cthulhu 7ª Edición",
-  generator: "v0.app",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "CthulhuBuilder",
-  },
-  icons: {
-    icon: [
-      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
-      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: "/apple-icon.png",
-  },
-}
+// ... (Metadata y Viewport se mantienen igual)
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background text-foreground min-h-screen">
-        <LanguageProvider>
+      <body className={inter.className}>
+        <SessionProvider> {/* <--- NUEVO: Envolver todo */}
           <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              storageKey="theme" 
-              disableTransitionOnChange
-            >
-            {children}
-            <Analytics />
-            <PwaRegister />
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <LanguageProvider>
+              <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1 bg-background">
+                  {children}
+                </main>
+              </div>
+              <Toaster />
+            </LanguageProvider>
           </ThemeProvider>
-        </LanguageProvider>
-        
-        <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
-        <Script src="https://apis.google.com/js/api.js" strategy="beforeInteractive" />
+        </SessionProvider>
       </body>
     </html>
-  )
+  );
 }

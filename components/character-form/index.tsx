@@ -9,7 +9,9 @@ import type { Character } from "@/lib/character-types"
 import { ERA_LABELS } from "@/lib/character-types"
 import { CharacterSheet } from "./character-sheet"
 import { BackstoryEquipmentModal } from "./backstory-equipment-modal"
-import { saveCharacter } from "@/lib/character-storage"
+// CAMBIO: Importamos la función inteligente y el hook de sesión
+import { saveCharacterSmart } from "@/lib/character-storage"
+import { useSession } from "next-auth/react"
 import { ArrowLeft, BookOpen, Loader2, Cloud } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
 
@@ -24,6 +26,9 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
   const [character, setCharacter] = useState<Character>(initialCharacter)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('saved')
   const [modalOpen, setModalOpen] = useState(false)
+  
+  // CAMBIO: Hook de sesión
+  const { data: session } = useSession()
   
   const statusRef = useRef<'idle' | 'saving' | 'saved'>('saved')
   const isFirstRender = useRef(true)
@@ -43,7 +48,6 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
   }, [])
 
   useEffect(() => {
-    // CORRECCIÓN IMPORTANTE: No emitir onChange en el primer render para evitar marcar como dirty/saving inmediatamente
     if (isFirstRender.current) return 
     
     if (onChange) {
@@ -61,7 +65,10 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
 
     const timer = setTimeout(async () => {
       try {
-        await saveCharacter(character)
+        // CAMBIO: Usamos saveCharacterSmart pasando el estado de autenticación
+        const isAuth = !!session?.user
+        await saveCharacterSmart(character, isAuth)
+        
         updateStatus('saved')
         onSave()
       } catch (error) {
@@ -71,7 +78,7 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [character, onSave])
+  }, [character, onSave, session]) // CAMBIO: Añadido session a dependencias
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -97,7 +104,6 @@ export function CharacterForm({ character: initialCharacter, onBack, onSave, onC
   }
 
   return (
-    // Mantenemos la animación de entrada en el contenedor principal
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-12 duration-700 ease-out">
       {/* HEADER DE EDICIÓN FLOTANTE */}
       <div className="flex items-center justify-between flex-wrap gap-2 bg-background/95 backdrop-blur-sm p-3 rounded-lg sticky top-0 z-20 border-b shadow-sm">

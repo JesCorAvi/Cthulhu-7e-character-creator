@@ -19,18 +19,17 @@ import { Header } from "@/components/layout/header"
 import type { Character, CharacterEra } from "@/lib/character-types"
 import { ERA_LABELS } from "@/lib/character-types"
 import { 
-    getCharacters, getCharacter, deleteCharacter, 
-    getStorageMode, setStorageMode, 
-    saveToLocal, saveToCloud, deleteFromLocal, deleteFromCloud,
+    loadCharactersSmart, 
+    deleteCharacterSmart, 
+    migrateLocalToCloud,
     type StorageMode 
 } from "@/lib/character-storage"
 import { createNewCharacter } from "@/lib/character-utils"
-import { initGoogleDrive, signInToGoogle, checkSessionActive } from "@/lib/google-drive"
 import { parseCharacterCode } from "@/lib/sharing"
-import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown, HardDrive, Loader2, Check } from "lucide-react"
+import { Plus, Users, Cloud, RefreshCw, Trash2, Search, ArrowUpDown, Loader2, Check, HardDrive } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage } from "@/components/language-provider"
-import { PopupBlockedModal } from "@/components/popup-blocked-modal"
+import { useSession, signIn } from "next-auth/react"
 
 import {
   AlertDialog,
@@ -51,9 +50,13 @@ function CharacterApp() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [currentCharacter, setCurrentCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
-  const [storageMode, setStorageModeState] = useState<StorageMode>("local")
-  const [isGoogleReady, setIsGoogleReady] = useState(false)
-  const [needsLogin, setNeedsLogin] = useState(false)
+  
+  // Auth State
+  const { data: session, status: authStatus } = useSession()
+  const isAuthenticated = authStatus === "authenticated"
+  
+  // Derived Storage Mode (Visual only)
+  const storageMode: StorageMode = isAuthenticated ? 'cloud' : 'local'
   
   const [searchQuery, setSearchQuery] = useState("")
   const [eraFilter, setEraFilter] = useState<CharacterEra | "all">("all")
@@ -62,40 +65,61 @@ function CharacterApp() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [charToDelete, setCharToDelete] = useState<string | null>(null)
   
-  // Estados para MIGRACIÓN
+  // MIGRACIÓN
   const [isMigrateOpen, setIsMigrateOpen] = useState(false)
   const [isMigrating, setIsMigrating] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
+  const [showMigrateSuccess, setShowMigrateSuccess] = useState(false)
   
-  const [isPopupBlockedOpen, setIsPopupBlockedOpen] = useState(false)
-  
-  // NUEVO: Control de estado sucio (saving) y navegación manual
   const isDirtyRef = useRef(false)
   const isManualBackRef = useRef(false)
   
   const { t } = useLanguage()
   const searchParams = useSearchParams()
 
+  // Carga de personajes
   const loadCharacters = useCallback(async () => {
+    if (authStatus === "loading") return
+    
     setLoading(true)
-    setNeedsLogin(false)
     try {
-        const chars = await getCharacters()
+        const chars = await loadCharactersSmart(isAuthenticated)
         setCharacters(chars)
     } catch (error) {
         console.error("Error cargando personajes:", error)
+        toast.error("Error al cargar personajes")
     } finally {
         setLoading(false)
     }
-  }, [])
+  }, [isAuthenticated, authStatus])
 
-  // -----------------------------------------------------------------------
-  // LÓGICA DE NAVEGACIÓN (History API + Dirty Check)
-  // -----------------------------------------------------------------------
+  // Recargar cuando cambia el estado de autenticación
+  useEffect(() => {
+    loadCharacters()
+  }, [loadCharacters])
 
+  // Detectar si hay personajes locales cuando el usuario se loguea
+  useEffect(() => {
+    if (isAuthenticated && view === 'list') {
+      // Comprobación rápida: ¿Hay algo en localStorage?
+      const localData = localStorage.getItem('cthulhu_characters')
+      if (localData && JSON.parse(localData).length > 0) {
+         // Sugerir migración (Podrías activar esto automáticamente o mostrar un botón)
+         // Por ahora lo dejamos manual a través del Header si se desea, 
+         // o mostramos un Toast.
+         toast("Se han detectado personajes locales", {
+           description: "¿Quieres moverlos a tu cuenta en la nube?",
+           action: {
+             label: "Importar",
+             onClick: () => setIsMigrateOpen(true)
+           }
+         })
+      }
+    }
+  }, [isAuthenticated, view])
+
+  // --- NAVEGACIÓN (History API) ---
   const navigateTo = useCallback((newView: ViewMode, char?: Character) => {
     const url = new URL(window.location.href);
-    
     if (newView === "list") {
         url.searchParams.delete("mode");
         window.history.pushState(null, "", url);
@@ -103,53 +127,28 @@ function CharacterApp() {
         url.searchParams.set("mode", newView);
         window.history.pushState({ mode: newView }, "", url);
     }
-
-    // Resetear estado sucio al cambiar de vista programáticamente
     isDirtyRef.current = false;
-
     if (char) setCurrentCharacter(char);
     setView(newView);
-    
-    if (newView === "list") {
-      loadCharacters();
-    }
+    if (newView === "list") loadCharacters();
   }, [loadCharacters]);
 
   useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      // CORRECCIÓN: Si el modal de migración está abierto, cerrarlo automáticamente
-      if (isMigrateOpen) {
-        setIsMigrateOpen(false)
-      }
-
-      // 1. Si venimos del botón "Volver" de la UI (flecha), CharacterForm ya gestionó la confirmación.
-      // Simplemente reseteamos la bandera y dejamos proceder.
+    const handlePopState = () => {
       if (isManualBackRef.current) {
         isManualBackRef.current = false;
-      } 
-      // 2. Si es el botón del navegador y estamos guardando:
-      else if (isDirtyRef.current) {
-         const warningMsg = t("wait_saving2") || "Se están guardando los cambios. ¿Seguro que quieres salir?";
-         const confirmLeave = window.confirm(warningMsg);
-         
+      } else if (isDirtyRef.current) {
+         const confirmLeave = window.confirm(t("unsaved_changes_warning") || "¿Salir sin guardar?");
          if (!confirmLeave) {
-            // El usuario quiere quedarse.
-            // Como el navegador ya cambió la URL (popstate sucede después), debemos restaurarla.
-            // Asumimos que estábamos en la vista actual antes de ir atrás.
-            const currentMode = view; // 'edit', 'view', etc.
-            if (currentMode !== 'list') {
-                const url = new URL(window.location.href);
-                url.searchParams.set("mode", currentMode);
-                window.history.pushState({ mode: currentMode }, "", url);
-            }
-            return; // ABORTAR el cambio de vista
-         } else {
-            // El usuario aceptó salir, reseteamos dirty
-            isDirtyRef.current = false;
+            const currentMode = view;
+            const url = new URL(window.location.href);
+            if (currentMode !== 'list') url.searchParams.set("mode", currentMode);
+            window.history.pushState({ mode: currentMode }, "", url);
+            return;
          }
+         isDirtyRef.current = false;
       }
-
-      // Proceceder con el cambio de vista normal
+      
       const params = new URLSearchParams(window.location.search);
       const mode = params.get("mode") as ViewMode | null;
 
@@ -158,9 +157,9 @@ function CharacterApp() {
         setCurrentCharacter(null);
         loadCharacters();
       } else {
-        if (currentCharacter) {
-             setView(mode);
-        } else {
+        if (currentCharacter) setView(mode);
+        else {
+             // Si intentan entrar directo a edit/view sin personaje cargado, volver a lista
              const url = new URL(window.location.href);
              url.searchParams.delete("mode");
              window.history.replaceState(null, "", url);
@@ -168,15 +167,12 @@ function CharacterApp() {
         }
       }
     };
-
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [loadCharacters, currentCharacter, view, t, isMigrateOpen]); // Añadida dependencia isMigrateOpen
+  }, [currentCharacter, view, t, loadCharacters]);
 
   const handleBack = useCallback(() => {
     if (view !== "list") {
-        // Marcamos que es navegación manual para evitar doble confirmación en popstate
-        // (ya que CharacterForm tiene su propia confirmación en el botón UI)
         isManualBackRef.current = true;
         window.history.back();
     } else {
@@ -186,52 +182,35 @@ function CharacterApp() {
     }
   }, [view, loadCharacters]);
 
-  // Wrappers para actualizar el estado "sucio" desde el formulario
   const onCharacterChange = useCallback((c: Character) => {
       setCurrentCharacter(c);
-      isDirtyRef.current = true; // Empezamos a guardar/modificar
+      isDirtyRef.current = true; 
   }, []);
 
   const onCharacterSaved = useCallback(() => {
       loadCharacters();
-      isDirtyRef.current = false; // Guardado completado
+      isDirtyRef.current = false; 
   }, [loadCharacters]);
 
-  // -----------------------------------------------------------------------
-
+  // --- FILTROS Y ORDEN ---
   const filteredCharacters = characters
     .filter((char) => {
       const query = searchQuery.toLowerCase()
       const matchesSearch = 
         (char.name?.toLowerCase() || "").includes(query) ||
         (char.occupation?.toLowerCase() || "").includes(query)
-      
       const matchesEra = eraFilter === "all" || char.era === eraFilter
-
       return matchesSearch && matchesEra
     })
     .sort((a, b) => {
       switch (sortOrder) {
-        case "oldest":
-          return (a.createdAt || 0) - (b.createdAt || 0)
-        case "alpha":
-          return (a.name || "").localeCompare(b.name || "")
-        case "newest":
-        default:
-          return (b.createdAt || 0) - (a.createdAt || 0)
+        case "oldest": return (a.createdAt || 0) - (b.createdAt || 0)
+        case "alpha": return (a.name || "").localeCompare(b.name || "")
+        case "newest": default: return (b.createdAt || 0) - (a.createdAt || 0)
       }
     })
 
-  useEffect(() => {
-    initGoogleDrive((success) => setIsGoogleReady(success))
-    const savedMode = getStorageMode()
-    setStorageModeState(savedMode)
-    if (searchParams.get("d") || searchParams.get("data")) return 
-    if (savedMode === 'local') {
-        loadCharacters()
-    }
-  }, [loadCharacters, searchParams])
-
+  // --- IMPORTACIÓN POR URL ---
   useEffect(() => {
     const code = searchParams.get("d") || searchParams.get("data")
     if (code) {
@@ -243,131 +222,14 @@ function CharacterApp() {
         url.searchParams.delete("d"); 
         url.searchParams.delete("data");
         window.history.replaceState({ mode: "view" }, "", url);
-        
         setView("view")
-        setLoading(false)
         toast.success(t("character_imported_url"))
       }
     }
   }, [searchParams, t])
 
-  useEffect(() => {
-    if (!isGoogleReady) return
-    if (searchParams.get("d") || searchParams.get("data")) return 
 
-    const currentMode = getStorageMode()
-    if (currentMode === 'cloud') {
-        if (checkSessionActive()) {
-            setNeedsLogin(false)
-            loadCharacters()
-        } else {
-            setNeedsLogin(true)
-            setLoading(false)
-        }
-    }
-  }, [isGoogleReady, searchParams, loadCharacters])
-
-  const handleToggleStorage = async (checked: boolean) => {
-    if (checked) {
-      try {
-        await signInToGoogle()
-        setLoading(true) 
-        setStorageMode("cloud")
-        setStorageModeState("cloud")
-        setNeedsLogin(false)
-        await loadCharacters()
-      } catch (e: any) {
-        console.error("Google Login Error:", e)
-        if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_closed_by_user' || e?.type === 'popup_failed_to_open') {
-            setIsPopupBlockedOpen(true)
-        } else {
-            toast.error(t("error_save"), { description: "Error connecting to Google Drive" })
-        }
-        setStorageMode("local")
-        setStorageModeState("local")
-      } finally {
-        setLoading(false)
-      }
-    } else {
-      setLoading(true)
-      setStorageMode("local")
-      setStorageModeState("local")
-      setNeedsLogin(false)
-      await loadCharacters()
-      setLoading(false)
-    }
-  }
-
-  const requestMigrate = () => {
-    if (currentCharacter) {
-        setIsMigrating(false)
-        setIsSuccess(false)
-        setIsMigrateOpen(true)
-    }
-  }
-
-  const confirmMigrate = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-
-    if (!currentCharacter) return;
-    
-    setIsMigrating(true)
-    
-    const oldId = currentCharacter.id
-    const isLocal = storageMode === 'local'
-    
-    try {
-        if (isLocal) {
-            if (!isGoogleReady || !checkSessionActive()) {
-                 await signInToGoogle()
-            }
-            const charToMigrate = { ...currentCharacter }
-            await saveToCloud(charToMigrate)
-            await deleteFromLocal(oldId)
-            
-            setStorageMode("cloud")
-            setStorageModeState("cloud")
-            setCurrentCharacter(charToMigrate)
-        } else {
-            const newLocalChar = { 
-                ...currentCharacter, 
-                id: crypto.randomUUID(),
-                updatedAt: Date.now() 
-            }
-            await saveToLocal(newLocalChar)
-            await deleteFromCloud(oldId)
-            
-            setStorageMode("local")
-            setStorageModeState("local")
-            setCurrentCharacter(newLocalChar)
-        }
-        
-        setIsMigrating(false)
-        setIsSuccess(true)
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        setIsMigrateOpen(false)
-
-    } catch (error) {
-        console.error(error)
-        toast.error(t("migration_error"))
-        setIsMigrating(false)
-        setIsSuccess(false)
-    }
-  }
-
-  const handleManualLogin = async () => {
-    try {
-        await signInToGoogle()
-        await loadCharacters()
-    } catch (e: any) {
-         if (e?.type === 'popup_blocked_by_browser' || e?.type === 'popup_failed_to_open') {
-            setIsPopupBlockedOpen(true)
-        } else {
-            toast.error("Error de conexión")
-        }
-    }
-  }
-
+  // --- ACCIONES ---
   const handleCreateNew = (era: CharacterEra) => {
     const newChar = createNewCharacter(era, t("unarmed"))
     navigateTo("edit", newChar)
@@ -381,7 +243,7 @@ function CharacterApp() {
   const confirmDelete = async () => {
     if (charToDelete) {
       try {
-        await deleteCharacter(charToDelete)
+        await deleteCharacterSmart(charToDelete, isAuthenticated)
         await loadCharacters()
         toast.success(t("character_deleted"))
       } catch (error) {
@@ -393,30 +255,48 @@ function CharacterApp() {
     }
   }
 
+  // --- LÓGICA DE MIGRACIÓN (Local -> Cloud) ---
+  const handleMigrate = async () => {
+    setIsMigrating(true)
+    try {
+        const result = await migrateLocalToCloud();
+        setIsMigrating(false)
+        if (result.count > 0) {
+            setShowMigrateSuccess(true)
+            await loadCharacters() // Recargar lista desde la nube
+            setTimeout(() => {
+                setShowMigrateSuccess(false)
+                setIsMigrateOpen(false)
+            }, 2000)
+        } else {
+            toast.info("No hay personajes locales para migrar")
+            setIsMigrateOpen(false)
+        }
+    } catch (e) {
+        console.error(e)
+        setIsMigrating(false)
+        toast.error("Error en la migración")
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col transition-colors duration-300">
       <Header 
         character={currentCharacter} 
         showShare={view === "edit" || view === "view"} 
         storageMode={storageMode}
-        onStorageChange={view === "list" ? handleToggleStorage : undefined}
-        onMigrate={view !== "list" && view !== "create" ? requestMigrate : undefined}
-        isGoogleReady={isGoogleReady}
+        // Eliminamos el toggle manual, el login es el toggle ahora
+        onStorageChange={undefined} 
+        // Botón de migración solo visible si estamos logueados y en lista
+        onMigrate={isAuthenticated && view === 'list' ? () => setIsMigrateOpen(true) : undefined}
+        isGoogleReady={true} // Dummy, ya no usamos la librería de GDrive
       />
       
       <main className="container mx-auto px-4 py-8 flex-1 overflow-hidden">
         {loading && !currentCharacter ? (
             <div className="flex flex-col items-center justify-center py-20">
                 <RefreshCw className="h-10 w-10 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground font-medium">{t("connecting")}</p>
-            </div>
-        ) : needsLogin && storageMode === 'cloud' && !currentCharacter ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-card/50">
-                <Cloud className="h-16 w-16 text-blue-500 mb-4" />
-                <h2 className="text-xl font-bold mb-2">{t("login_required")}</h2>
-                <Button onClick={handleManualLogin} className="gap-2">
-                    <RefreshCw className="h-4 w-4" /> {t("sync_now")}
-                </Button>
+                <p className="text-muted-foreground font-medium">{t("loading") || "Cargando..."}</p>
             </div>
         ) : (
             <>
@@ -425,7 +305,7 @@ function CharacterApp() {
                     <div className="space-y-6">
                         <div className="flex items-center justify-between flex-wrap gap-4">
                             <h2 className="text-2xl font-serif font-bold text-foreground">
-                                {t("your_investigators")}
+                                {isAuthenticated ? t("your_investigators") + " (Cloud)" : t("your_investigators") + " (Local)"}
                             </h2>
                             <Button onClick={() => navigateTo("create")} size="sm" className="shadow-md">
                                 <Plus className="h-4 w-4 mr-2" /> {t("new")}
@@ -437,7 +317,7 @@ function CharacterApp() {
                             <div className="relative flex-1">
                               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                               <Input
-                                placeholder="Buscar por nombre o profesión..."
+                                placeholder="Buscar..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9 bg-background/50"
@@ -452,11 +332,9 @@ function CharacterApp() {
                                     <SelectValue placeholder="Época" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="all">Todas las épocas</SelectItem>
+                                    <SelectItem value="all">Todas</SelectItem>
                                     {Object.entries(ERA_LABELS).map(([key, label]) => (
-                                      <SelectItem key={key} value={key}>
-                                        {label}
-                                      </SelectItem>
+                                      <SelectItem key={key} value={key}>{label}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
@@ -466,15 +344,13 @@ function CharacterApp() {
                                   onValueChange={(value) => setSortOrder(value as SortOrder)}
                                 >
                                   <SelectTrigger className="w-full md:w-[180px] bg-background/50">
-                                    <div className="flex items-center gap-2">
-                                        <ArrowUpDown className="h-3.5 w-3.5 opacity-70" />
-                                        <SelectValue placeholder="Orden" />
-                                    </div>
+                                    <ArrowUpDown className="h-3.5 w-3.5 mr-2 opacity-70" />
+                                    <SelectValue placeholder="Orden" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="newest">Más recientes</SelectItem>
                                     <SelectItem value="oldest">Más antiguos</SelectItem>
-                                    <SelectItem value="alpha">Nombre (A-Z)</SelectItem>
+                                    <SelectItem value="alpha">A-Z</SelectItem>
                                   </SelectContent>
                                 </Select>
                             </div>
@@ -486,21 +362,18 @@ function CharacterApp() {
                                 <Users className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
                                 <h2 className="text-xl font-bold mb-2">{t("no_characters")}</h2>
                                 <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-                                    {storageMode === 'cloud' ? t("no_characters_cloud") : t("no_characters_local")}
+                                    {isAuthenticated 
+                                        ? "No tienes personajes en la nube. ¡Crea uno o migra tus locales!" 
+                                        : "No hay personajes locales. Inicia sesión para ver tu nube o crea uno local."}
                                 </p>
-                                <Button onClick={() => navigateTo("create")} variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all">
+                                <Button onClick={() => navigateTo("create")} variant="outline">
                                   <Plus className="h-4 w-4 mr-2" /> {t("create_char_button")}
                                 </Button>
                             </div>
                         ) : filteredCharacters.length === 0 ? (
                             <div className="text-center py-16 border border-dashed rounded-xl bg-muted/20">
-                               <Search className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                               <p className="text-muted-foreground">No se encontraron investigadores con esos filtros.</p>
-                               <Button 
-                                    variant="link" 
-                                    onClick={() => { setSearchQuery(""); setEraFilter("all"); }}
-                                    className="mt-2"
-                               >
+                               <p className="text-muted-foreground">No se encontraron investigadores.</p>
+                               <Button variant="link" onClick={() => { setSearchQuery(""); setEraFilter("all"); }}>
                                     Limpiar filtros
                                </Button>
                             </div>
@@ -510,8 +383,8 @@ function CharacterApp() {
                                     <CharacterCard 
                                       key={char.id} 
                                       character={char} 
-                                      onView={(id) => getCharacter(id).then(c => navigateTo("view", c ?? undefined))}
-                                      onEdit={(id) => getCharacter(id).then(c => navigateTo("edit", c ?? undefined))}
+                                      onView={() => navigateTo("view", char)}
+                                      onEdit={() => navigateTo("edit", char)}
                                       onDelete={requestDelete} 
                                     />
                                 ))}
@@ -522,16 +395,11 @@ function CharacterApp() {
                 )}
 
                 {view === "create" && (
-                    <div className="animate-in fade-in zoom-in-95 duration-500 ease-out fill-mode-both">
-                        <div className="max-w-4xl mx-auto space-y-8">
-                            <div className="text-center">
-                                <h2 className="text-3xl font-serif font-bold mb-2">{t("new_investigator")}</h2>
-                                <p className="text-muted-foreground">{t("select_era")}</p>
-                            </div>
+                    <div className="animate-in fade-in zoom-in-95 duration-500 ease-out">
+                        <div className="max-w-4xl mx-auto space-y-8 text-center">
+                            <h2 className="text-3xl font-serif font-bold">{t("new_investigator")}</h2>
                             <EraSelector onSelect={handleCreateNew} />
-                            <div className="text-center">
-                              <Button variant="ghost" onClick={handleBack} className="text-muted-foreground underline">{t("cancel")}</Button>
-                            </div>
+                            <Button variant="ghost" onClick={handleBack}>{t("cancel")}</Button>
                         </div>
                     </div>
                 )}
@@ -559,69 +427,47 @@ function CharacterApp() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{t("delete_confirm_title")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("delete_confirm")}
-              </AlertDialogDescription>
+              <AlertDialogDescription>{t("delete_confirm")}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                <Trash2 className="w-4 h-4 mr-2" />
-                {t("delete")}
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+                <Trash2 className="w-4 h-4 mr-2" /> {t("delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog open={isMigrateOpen} onOpenChange={(open) => { 
-            if(!isMigrating && !isSuccess) setIsMigrateOpen(open) 
-        }}>
-          <AlertDialogContent>
-            {isMigrating ? (
-                <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-lg font-medium text-foreground animate-pulse">
-                        {t("migrating_text")}
-                    </p>
-                </div>
-            ) : isSuccess ? (
-                <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-in fade-in zoom-in duration-300">
-                    <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+        {/* MODAL DE MIGRACIÓN */}
+        <AlertDialog open={isMigrateOpen} onOpenChange={setIsMigrateOpen}>
+            <AlertDialogContent>
+                {isMigrating ? (
+                    <div className="flex flex-col items-center py-8">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary mb-2" />
+                        <p>Migrando personajes...</p>
                     </div>
-                    <p className="text-lg font-bold text-center">
-                        {storageMode === 'cloud' 
-                            ? t("migration_success_cloud")
-                            : t("migration_success_local")
-                        }
-                    </p>
-                </div>
-            ) : (
-                <>
+                ) : showMigrateSuccess ? (
+                    <div className="flex flex-col items-center py-8">
+                        <Check className="h-10 w-10 text-green-500 mb-2" />
+                        <p className="font-bold">¡Migración completada!</p>
+                    </div>
+                ) : (
+                    <>
                     <AlertDialogHeader>
-                    <AlertDialogTitle>
-                        {storageMode === 'local' ? t("migrate_modal_title_cloud") : t("migrate_modal_title_local")}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {storageMode === 'local' ? t("migrate_modal_desc_cloud") : t("migrate_modal_desc_local")}
-                    </AlertDialogDescription>
+                        <AlertDialogTitle>Importar personajes locales</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Se han detectado personajes guardados en este navegador. ¿Quieres subirlos a tu cuenta en la nube?
+                            <br/><span className="text-xs text-muted-foreground mt-2 block">Los personajes locales se borrarán tras subirse.</span>
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                    <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmMigrate} className="bg-primary text-primary-foreground">
-                        {storageMode === 'local' ? <Cloud className="mr-2 h-4 w-4" /> : <HardDrive className="mr-2 h-4 w-4" />}
-                        {t("move")}
-                    </AlertDialogAction>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleMigrate}>Importar ahora</AlertDialogAction>
                     </AlertDialogFooter>
-                </>
-            )}
-          </AlertDialogContent>
+                    </>
+                )}
+            </AlertDialogContent>
         </AlertDialog>
-
-        <PopupBlockedModal 
-            isOpen={isPopupBlockedOpen} 
-            onClose={() => setIsPopupBlockedOpen(false)} 
-        />
 
       </main>
     </div>
@@ -630,7 +476,7 @@ function CharacterApp() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin" /></div>}>
+    <Suspense fallback={<div className="h-screen grid place-items-center"><RefreshCw className="animate-spin" /></div>}>
       <CharacterApp />
     </Suspense>
   )

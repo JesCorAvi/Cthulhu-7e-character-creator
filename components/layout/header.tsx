@@ -11,6 +11,8 @@ import { Character } from "@/lib/character-types";
 import { ShareCharacterModal } from "@/components/share-character-modal";
 import { StorageMode } from "@/lib/character-storage";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+// CAMBIO: Importamos el botón de autenticación
+import { UserAuthBtn } from "@/components/user-auth-btn";
 
 interface HeaderProps {
   character?: Character | null;
@@ -74,8 +76,6 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Lógica: Si hay onStorageChange (Vista Lista) mostramos el Selector.
-              Si NO hay onStorageChange (Vista Ver/Editar) mostramos el Badge de migración. */}
           {onStorageChange ? (
             <div className="flex flex-row items-center gap-1 border rounded-lg p-1 bg-muted/30">
               <ToggleGroup
@@ -122,7 +122,6 @@ export function Header({
               </ToggleGroup>
             </div>
           ) : (
-            // [MODIFICADO] Badge interactivo
             <div 
                 className={`hidden sm:flex items-center transition-opacity ${onMigrate ? 'cursor-pointer hover:opacity-80 active:scale-95 transition-transform' : 'opacity-80'}`}
                 onClick={() => {
@@ -144,7 +143,6 @@ export function Header({
                             <span>{t("character_local_indicator")}</span>
                         </>
                     )}
-                    {/* Flechas indicando que es accionable */}
                     {onMigrate && <ArrowLeftRight className="h-3 w-3 ml-1.5 opacity-40" />}
                 </Badge>
             </div>
@@ -186,6 +184,9 @@ export function Header({
                 )}
               </Button>
             )}
+
+            {/* CAMBIO: Botón de Login/Avatar */}
+            <UserAuthBtn />
           </div>
         </div>
       </div>

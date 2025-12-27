@@ -1,6 +1,6 @@
 import type { Character, CharacterEra, CharacteristicValue, Weapon } from "./character-types"
 import { getBaseSkillsForEra } from "./skills-data"
-import { generateId } from "./character-storage"
+// ELIMINADO: import { generateId } from "./character-storage"
 
 export const createCharacteristicValue = (value: number): CharacteristicValue => ({
   value,
@@ -62,7 +62,6 @@ export const createDefaultWeapon = (): Weapon => ({
   malfunction: "",
 })
 
-// MODIFICADO: Acepta unarmedName
 export const createNewCharacter = (era: CharacterEra, unarmedName: string = "Desarmado"): Character => {
   const defaultPow = 50
   const defaultCon = 50
@@ -88,7 +87,8 @@ export const createNewCharacter = (era: CharacterEra, unarmedName: string = "Des
   const initialHP = calculateHitPoints(defaultCon, defaultSiz)
 
   return {
-    id: generateId(),
+    // CORREGIDO: Usamos crypto.randomUUID() nativo en lugar de importar generateId
+    id: crypto.randomUUID(),
     era,
     createdAt: Date.now(),
     name: "",
@@ -139,7 +139,7 @@ export const createNewCharacter = (era: CharacterEra, unarmedName: string = "Des
     skills,
     weapons: [
       {
-        name: unarmedName, // USAR NOMBRE PASADO
+        name: unarmedName,
         normal: 25,
         difficult: 12,
         extreme: 5,

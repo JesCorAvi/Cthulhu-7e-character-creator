@@ -11,6 +11,26 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // ESTA ES LA PARTE CLAVE:
+  experimental: {
+    outputFileTracingExcludes: {
+      "*": [
+        // Excluir el generador de imágenes pesadas (ahorra ~1.4MB)
+        "node_modules/@vercel/og/**/*",
+        
+        // Excluir librería nativa de sqlite (ahorra espacio y evita errores)
+        "node_modules/better-sqlite3/**/*",
+        
+        // Excluir librerías 3D del servidor (solo deben cargar en el cliente)
+        "node_modules/three/**/*",
+        "node_modules/@react-three/fiber/**/*",
+        "node_modules/@react-three/drei/**/*",
+        "node_modules/@react-three/cannon/**/*",
+        "node_modules/@3d-dice/dice-box/**/*",
+        "node_modules/yoga-wasm-web/**/*"
+      ],
+    },
+  },
 }
 
 export default nextConfig

@@ -28,6 +28,7 @@ const Dice3DScene = dynamic(
   }
 )
 
+
 interface DiceProps {
   value: number
   rolling: boolean

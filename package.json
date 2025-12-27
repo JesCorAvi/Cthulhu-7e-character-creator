@@ -4,11 +4,10 @@
   "private": true,
   "scripts": {
   "build": "next build",
-  "pages:build": "npx @opennextjs/cloudflare build",
   "dev": "next dev",
+  "build:pages": "npx @opennextjs/cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js",
   "lint": "eslint .",
-  "start": "next start",
-  "deploy": "npm run pages:build && npx wrangler pages deploy .open-next/assets"
+  "start": "next start"
 },
   "dependencies": {
     "@3d-dice/dice-box": "^1.1.4",

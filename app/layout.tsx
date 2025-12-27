@@ -4,8 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/language-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { Header } from "@/components/layout/header";
-import { SessionProvider } from "next-auth/react"; // <--- NUEVO
+// ELIMINAR ESTA LÍNEA: import { Header } from "@/components/layout/header";
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        <SessionProvider> {/* <--- NUEVO: Envolver todo */}
+        <SessionProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -28,7 +28,7 @@ export default function RootLayout({
           >
             <LanguageProvider>
               <div className="flex min-h-screen flex-col">
-                <Header />
+                {/* ELIMINAR ESTA LÍNEA: <Header /> */}
                 <main className="flex-1 bg-background">
                   {children}
                 </main>

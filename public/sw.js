@@ -3,11 +3,7 @@
  * Estrategia: Network First para HTML, Cache First para estáticos
  */
 
-// Incrementa v5 para limpiar la caché antigua de la versión v4
 const CACHE_NAME = 'cthulhu-builder-v5'; 
-// Como ahora usas un dominio raíz, REPO_NAME debe estar vacío
-const REPO_NAME = ''; 
-
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -19,13 +15,12 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Intentamos cachear, si falla un recurso no bloqueamos todo el SW
       return cache.addAll(ASSETS_TO_CACHE).catch(err => console.warn("Error en precache:", err));
     })
   );
 });
 
-// ACTIVACIÓN: Limpieza de cachés antiguas
+// ACTIVACIÓN
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -41,12 +36,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// FETCH: Estrategias de caché
+// FETCH
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // 1. IGNORAR MÉTODOS NO-GET
   if (event.request.method !== 'GET') {
-      return;
-    }
+    return;
+  }
+
+  // 2. IGNORAR RUTAS DE API Y NEXT-AUTH (CRÍTICO PARA EL LOGIN)
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/image')) {
+    return;
+  }
+
+  // 3. Estrategia para navegación (HTML)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -62,6 +66,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 4. Estrategia para archivos estáticos de Next.js
   if (url.pathname.includes('/_next/static/')) {
      event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
@@ -77,19 +82,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 5. Estrategia por defecto (Stale-while-revalidate / Cache fallback)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse.status === 200) {
+        // Solo cacheamos respuestas válidas http/https y status 200
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const cacheCopy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, cacheCopy);
           });
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
+      }).catch(() => cachedResponse); // Si falla red, devolver caché si existe
+      
       return cachedResponse || fetchPromise;
     })
   );
 });
-// ELIMINADA LA LLAVE } EXTRA QUE CAUSABA EL ERROR DE EVALUACIÓN

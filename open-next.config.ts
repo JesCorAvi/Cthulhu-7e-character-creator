@@ -1,10 +1,6 @@
-import type { OpenNextConfig } from '@opennextjs/aws/types/open-next.js';
+import { defineCloudflareConfig } from '@opennextjs/cloudflare';
 
-const config: OpenNextConfig = {
-  default: {
-    type: 'function',
-  },
-  buildCommand: 'next build',
-};
-
-export default config;
+export default defineCloudflareConfig({
+  // Si necesitas configurar caché específica, se hace aquí, 
+  // pero por defecto esto ya configura todo lo necesario para Cloudflare.
+});

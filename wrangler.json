@@ -7,6 +7,13 @@
     "binding": "ASSETS",
     "directory": ".open-next/assets"
   },
+  "rules": [
+    {
+      "type": "CompiledWasm",
+      "globs": ["**/*.wasm"],
+      "fallthrough": true
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -15,7 +22,6 @@
       "migrations_dir": "drizzle"  
     }
   ],
-  "kv_namespaces": [],
   "vars": {
     "AUTH_TRUST_HOST": "true"
   }

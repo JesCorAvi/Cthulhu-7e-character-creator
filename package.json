@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "build": "next build",
-  "dev": "next dev",
-  "lint": "eslint .",
-  "start": "next start",
-  "deploy": "npx @opennextjs/cloudflare build && npx wrangler deploy"
-},
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "eslint .",
+    "start": "next start",
+    "deploy": "npx @opennextjs/cloudflare build && npx wrangler deploy"
+  },
   "dependencies": {
     "@3d-dice/dice-box": "^1.1.4",
     "@auth/drizzle-adapter": "^1.11.1",

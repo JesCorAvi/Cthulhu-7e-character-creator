@@ -1,5 +1,6 @@
 "use client";
 
+import { log } from "console";
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Definimos los tipos
@@ -90,6 +91,7 @@ const translations = {
     rolling: "Rodando...",
 
     // --- TABS & FORMULARIOS ---
+    login: "Datos en la nube",
     move: "Mover",
     migrate_modal_title_cloud: "Mover a la Nube",
     migrate_modal_title_local: "Mover a Local",
@@ -308,6 +310,7 @@ const translations = {
 
     // --- GENERAL UI ---
   // Dentro de translations.en
+    login: "Cloud data",
     migrate_modal_title_cloud: "Move to Cloud",
     migrate_modal_title_local: "Move to Local",
     migrate_modal_desc_cloud: "This action will upload the character to your Google Drive and delete it from this device. Continue?",

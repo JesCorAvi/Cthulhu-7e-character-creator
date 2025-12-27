@@ -4,9 +4,11 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { useLanguage } from "@/components/language-provider"
 
 export function UserAuthBtn() {
   const { data: session } = useSession();
+  const { t } = useLanguage()
 
   if (session && session.user) {
     return (
@@ -30,7 +32,7 @@ export function UserAuthBtn() {
 
   return (
     <Button onClick={() => signIn("google")}>
-      Login con Google
+      {t("login")}
     </Button>
   );
 }

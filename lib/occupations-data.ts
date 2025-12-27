@@ -211,6 +211,7 @@ export const PRESET_OCCUPATIONS: OccupationDefinition[] = [
     creditRating: [10, 30],
   },
 
+  
   // --- B ---
   {
     name: "Barman",
